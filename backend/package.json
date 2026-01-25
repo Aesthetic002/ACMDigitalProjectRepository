@@ -1,0 +1,32 @@
+{
+  "name": "acm-project-archive-backend",
+  "version": "1.0.0",
+  "description": "Backend API for ACM Project Archive Platform - Authentication, User Management, and Project Write Operations",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "acm",
+    "project-archive",
+    "firebase",
+    "express",
+    "api"
+  ],
+  "author": "Hemanth",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "firebase-admin": "^12.0.0",
+    "jsonwebtoken": "^9.0.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

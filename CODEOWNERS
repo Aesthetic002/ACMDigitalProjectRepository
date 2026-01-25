@@ -1,0 +1,24 @@
+# Code Owners
+
+# Backend - Authentication & Project Writes (Hemanth)
+/backend/routes/auth.routes.js           @hemanth
+/backend/routes/users.routes.js          @hemanth
+/backend/routes/projects.write.js        @hemanth
+/backend/middleware/auth.js              @hemanth
+/backend/firebase.js                     @hemanth
+
+# Backend - Read & Discovery (Other Developer)
+/backend/routes/projects.read.js         @otherdeveloper
+/backend/routes/search.routes.js         @otherdeveloper
+/backend/routes/assets.routes.js         @otherdeveloper
+/backend/routes/tags.routes.js           @otherdeveloper
+/backend/routes/admin.routes.js          @otherdeveloper
+/backend/middleware/admin.js             @otherdeveloper
+/backend/services/                       @otherdeveloper
+
+# Documentation
+*.md                                     @hemanth @otherdeveloper
+
+# Configuration
+package.json                             @hemanth @otherdeveloper
+.gitignore                               @hemanth @otherdeveloper
