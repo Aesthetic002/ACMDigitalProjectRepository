@@ -10,6 +10,7 @@ const express = require("express");
 const router = express.Router();
 const { verifyToken } = require("../middleware/auth");
 const { db } = require("../firebase");
+const storageService = require("../services/storage.service");
 
 /**
  * GET /api/v1/projects
@@ -178,9 +179,19 @@ router.get("/:projectId", async (req, res) => {
     let assets = [];
     try {
       const assetsSnapshot = await projectRef.collection("assets").get();
-      assets = assetsSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
+      assets = await Promise.all(assetsSnapshot.docs.map(async (doc) => {
+        const data = doc.data();
+        let url = '';
+        try {
+          url = await storageService.generateSignedDownloadUrl(data.storagePath);
+        } catch (e) {
+          console.error(`Failed to generate signed URL for asset ${doc.id}:`, e.message);
+        }
+        return {
+          id: doc.id,
+          ...data,
+          url
+        };
       }));
     } catch (error) {
       // Assets collection may not exist yet, which is fine

@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment variables
+.env
+**/.env
+
+# Firebase credentials (NEVER commit this!)
+serviceAccountKey.json
+*-firebase-adminsdk-*.json
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build outputs
+dist/
+build/
+**/dist/
+**/build/
+
+# Test coverage
+coverage/
+
+# Vite
+.vite/
+**/.vite/
+
+# Package locks (optional - comment out if you want to track them)
+# package-lock.json
+# yarn.lock

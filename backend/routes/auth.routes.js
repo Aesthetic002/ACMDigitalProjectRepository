@@ -25,7 +25,7 @@ const { db } = require('../firebase');
  */
 router.post('/verify', verifyToken, async (req, res) => {
   try {
-    const { uid, email } = req.user;
+    const { uid, email, name, picture } = req.user;
 
     // Check if user exists in Firestore
     const userRef = db.collection('users').doc(uid);
@@ -37,7 +37,10 @@ router.post('/verify', verifyToken, async (req, res) => {
       // User doesn't exist in database, create a new user document
       userData = {
         uid,
+        uid,
         email,
+        name: name || '',
+        photoURL: picture || '',
         role: 'member', // Default role
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -54,6 +57,18 @@ router.post('/verify', verifyToken, async (req, res) => {
       // User exists, return existing data
       userData = userDoc.data();
 
+
+      // Update user data if it's missing (e.g. name/photo)
+      const needsUpdate = (!userData.name && name) || (!userData.photoURL && picture);
+
+      if (needsUpdate) {
+        if (!userData.name && name) userData.name = name;
+        if (!userData.photoURL && picture) userData.photoURL = picture;
+        userData.updatedAt = new Date().toISOString();
+
+        await userRef.update(userData);
+      }
+
       return res.status(200).json({
         success: true,
         message: 'User authenticated',
@@ -63,7 +78,7 @@ router.post('/verify', verifyToken, async (req, res) => {
 
   } catch (error) {
     console.error('Auth verification error:', error.message);
-    
+
     return res.status(500).json({
       success: false,
       error: 'InternalServerError',

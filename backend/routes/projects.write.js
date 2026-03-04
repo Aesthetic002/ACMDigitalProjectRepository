@@ -27,7 +27,7 @@ const { db } = require('../firebase');
  */
 router.post('/', verifyToken, async (req, res) => {
   try {
-    const { title, description, techStack, contributors, status } = req.body;
+    const { title, description, techStack, contributors, status, repoUrl, githubUrl, demoUrl } = req.body;
 
     // Validation: Required fields
     if (!title || title.trim() === '') {
@@ -54,6 +54,8 @@ router.post('/', verifyToken, async (req, res) => {
       contributors: contributors || [],
       ownerId: req.user.uid, // CRITICAL: ownerId comes from authenticated user, NOT request body
       status: status || 'pending',
+      repoUrl: repoUrl || githubUrl || '',
+      demoUrl: demoUrl || '',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       isDeleted: false // For soft delete functionality
@@ -91,7 +93,7 @@ router.post('/', verifyToken, async (req, res) => {
 
   } catch (error) {
     console.error('Create project error:', error.message);
-    
+
     return res.status(500).json({
       success: false,
       error: 'InternalServerError',
@@ -154,7 +156,7 @@ router.put('/:projectId', verifyToken, async (req, res) => {
     }
 
     // Extract updatable fields from request body
-    const { title, description, techStack, contributors, status } = req.body;
+    const { title, description, techStack, contributors, status, repoUrl, githubUrl, demoUrl } = req.body;
 
     // Build update object (only include provided fields)
     const updateData = {
@@ -189,7 +191,7 @@ router.put('/:projectId', verifyToken, async (req, res) => {
 
     if (contributors !== undefined) {
       updateData.contributors = Array.isArray(contributors) ? contributors : [contributors];
-      
+
       // Ensure owner is always in contributors
       if (!updateData.contributors.includes(projectData.ownerId)) {
         updateData.contributors.push(projectData.ownerId);
@@ -199,6 +201,11 @@ router.put('/:projectId', verifyToken, async (req, res) => {
     if (status !== undefined) {
       updateData.status = status;
     }
+
+    if (repoUrl !== undefined) updateData.repoUrl = repoUrl;
+    else if (githubUrl !== undefined) updateData.repoUrl = githubUrl;
+
+    if (demoUrl !== undefined) updateData.demoUrl = demoUrl;
 
     // Prevent updating protected fields
     // ownerId should NEVER be updated via API
@@ -223,7 +230,7 @@ router.put('/:projectId', verifyToken, async (req, res) => {
 
   } catch (error) {
     console.error('Update project error:', error.message);
-    
+
     return res.status(500).json({
       success: false,
       error: 'InternalServerError',
@@ -298,7 +305,7 @@ router.delete('/:projectId', verifyToken, async (req, res) => {
 
   } catch (error) {
     console.error('Delete project error:', error.message);
-    
+
     return res.status(500).json({
       success: false,
       error: 'InternalServerError',
