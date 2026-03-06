@@ -1,4 +1,6 @@
 "use client";
+
+import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { useScrollAnimation, useCountUp } from "@/hooks/useScrollAnimation";
 import {
@@ -11,6 +13,7 @@ import {
   Clock,
   AlertCircle,
 } from "lucide-react";
+import { adminAPI } from "@/api/admin.api";
 
 // Mock Chart Component
 function MockLineChart() {
@@ -101,6 +104,18 @@ function StatCard({ icon, label, value, trend, delay }) {
 export function AdminAnalytics() {
   const { ref: sectionRef, isInView } = useScrollAnimation({ threshold: 0.1 });
 
+  const { data: analyticsData } = useQuery({
+    queryKey: ['admin-analytics'],
+    queryFn: () => adminAPI.getAnalytics(),
+  });
+
+  const summary = analyticsData?.data?.summary || {
+    totalUsers: 423,
+    totalProjects: 156,
+    activeDomains: 8,
+    pendingApprovals: 3
+  };
+
   const users = [
     {
       name: "Alex Chen",
@@ -182,7 +197,7 @@ export function AdminAnalytics() {
             <StatCard
               icon={<Users className="h-5 w-5" />}
               label="Total Users"
-              value={423}
+              value={summary.totalUsers}
               trend="+12%"
               delay={0}
             />
@@ -190,7 +205,7 @@ export function AdminAnalytics() {
             <StatCard
               icon={<FolderGit2 className="h-5 w-5" />}
               label="Active Projects"
-              value={156}
+              value={summary.totalProjects}
               trend="+8%"
               delay={0.1}
             />
@@ -327,11 +342,10 @@ export function AdminAnalytics() {
                       </td>
                       <td className="py-3 px-4">
                         <span
-                          className={`flex items-center gap-1.5 text-xs font-medium ${
-                            user.status === "Active"
+                          className={`flex items-center gap-1.5 text-xs font-medium ${user.status === "Active"
                               ? "text-green-500"
                               : "text-yellow-500"
-                          }`}
+                            }`}
                         >
                           {user.status === "Active" ? (
                             <CheckCircle className="h-3 w-3" />
@@ -370,7 +384,7 @@ export function AdminAnalytics() {
                 </p>
               </div>
               <span className="px-2 py-1 rounded-full bg-yellow-500/10 text-yellow-500 text-xs font-medium">
-                3 pending
+                {summary.pendingApprovals} pending
               </span>
             </div>
 
@@ -414,3 +428,4 @@ export function AdminAnalytics() {
     </section>
   );
 }
+

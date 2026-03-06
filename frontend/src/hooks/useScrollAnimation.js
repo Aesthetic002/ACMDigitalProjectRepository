@@ -7,6 +7,7 @@ export function useScrollAnimation(options = {}) {
   const [hasAnimated, setHasAnimated] = useState(false);
 
   useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') return;
     const element = ref.current;
     if (!element) return;
 
@@ -71,7 +72,7 @@ export function useCountUp(end, duration = 2000, startOnView = true) {
     }
 
     const element = ref.current;
-    if (!element) return;
+    if (!element || typeof IntersectionObserver === 'undefined') return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {

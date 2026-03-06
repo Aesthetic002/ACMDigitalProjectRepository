@@ -1,7 +1,10 @@
 "use client";
+
+import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { Brain, Globe, Shield, Cpu, Code2, ArrowRight } from "lucide-react";
+import { adminAPI } from "@/api/admin.api";
 
 function DomainCard({
   icon,
@@ -97,50 +100,62 @@ function DomainCard({
 export function DomainDistribution() {
   const { ref: sectionRef, isInView } = useScrollAnimation({ threshold: 0.1 });
 
+  const { data: analyticsData } = useQuery({
+    queryKey: ['admin-analytics'],
+    queryFn: () => adminAPI.getAnalytics(),
+  });
+
+  const domainStats = analyticsData?.data?.distribution || {};
+
   const domains = [
     {
+      id: "ai-ml",
       icon: <Brain className="h-7 w-7" />,
       title: "AI / Machine Learning",
       description:
         "Deep learning, computer vision, NLP, and intelligent systems projects pushing the boundaries of AI.",
-      projectCount: 42,
-      memberCount: 89,
+      projectCount: domainStats["AI / Machine Learning"]?.count || 42,
+      memberCount: domainStats["AI / Machine Learning"]?.members || 89,
       color: "#8B5CF6",
     },
     {
+      id: "web-dev",
       icon: <Globe className="h-7 w-7" />,
       title: "Web Development",
       description:
         "Full-stack applications, progressive web apps, and modern web technologies for real-world solutions.",
-      projectCount: 56,
-      memberCount: 124,
+      projectCount: domainStats["Web Development"]?.count || 56,
+      memberCount: domainStats["Web Development"]?.members || 124,
       color: "#3B82F6",
     },
     {
+      id: "cybersecurity",
       icon: <Shield className="h-7 w-7" />,
       title: "Cybersecurity",
       description:
         "Security audits, penetration testing, cryptography, and defensive security implementations.",
-      projectCount: 28,
-      memberCount: 67,
+      projectCount: domainStats["Cybersecurity"]?.count || 28,
+      memberCount: domainStats["Cybersecurity"]?.members || 67,
       color: "#10B981",
     },
     {
+      id: "robotics",
       icon: <Cpu className="h-7 w-7" />,
       title: "Robotics",
       description:
         "Autonomous systems, robotic control, sensor integration, and hardware-software interfaces.",
-      projectCount: 19,
-      memberCount: 45,
+      projectCount: domainStats["Robotics"]?.count || 19,
+      memberCount: domainStats["Robotics"]?.members || 45,
       color: "#F59E0B",
     },
     {
+      id: "cp",
       icon: <Code2 className="h-7 w-7" />,
       title: "Competitive Programming",
       description:
         "Algorithm optimization, data structures, and competitive coding challenge solutions.",
-      projectCount: 35,
-      memberCount: 78,
+      projectCount: domainStats["Competitive Programming"]?.count || 35,
+      memberCount: domainStats["Competitive Programming"]?.members || 78,
       color: "#EF4444",
     },
   ];
@@ -200,3 +215,4 @@ export function DomainDistribution() {
     </section>
   );
 }
+

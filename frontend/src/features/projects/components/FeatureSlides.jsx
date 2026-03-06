@@ -1,6 +1,9 @@
 "use client";
+
+import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
+import { projectsAPI } from "@/api/projects.api";
 import {
   FolderOpen,
   FileText,
@@ -23,15 +26,13 @@ function FeatureSlide({ title, description, children, align, icon, index }) {
   return (
     <div
       ref={ref}
-      className={`min-h-screen flex items-center py-20 ${
-        index % 2 === 0 ? "bg-muted/30" : "bg-background"
-      }`}
+      className={`min-h-screen flex items-center py-20 ${index % 2 === 0 ? "bg-muted/30" : "bg-background"
+        }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div
-          className={`grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center ${
-            isLeft ? "" : "lg:flex-row-reverse"
-          }`}
+          className={`grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center ${isLeft ? "" : "lg:flex-row-reverse"
+            }`}
         >
           {/* Text Content */}
           <motion.div
@@ -91,30 +92,31 @@ function FeatureSlide({ title, description, children, align, icon, index }) {
 
 // Mockup Components
 function ProjectArchiveMockup() {
-  const projects = [
+  const { data: projectsData, isLoading } = useQuery({
+    queryKey: ['mock-projects'],
+    queryFn: () => projectsAPI.getAll({ limit: 4 }),
+  });
+
+  const projects = projectsData?.data?.projects?.slice(0, 4) || [
     {
-      name: "Neural Network Visualizer",
+      title: "Neural Network Visualizer",
       domain: "AI/ML",
-      status: "Active",
-      date: "Mar 2024",
+      status: "approved",
     },
     {
-      name: "Campus Navigation App",
+      title: "Campus Navigation App",
       domain: "Web Dev",
-      status: "Completed",
-      date: "Feb 2024",
+      status: "approved",
     },
     {
-      name: "Security Audit Tool",
+      title: "Security Audit Tool",
       domain: "Cybersecurity",
-      status: "Active",
-      date: "Mar 2024",
+      status: "approved",
     },
     {
-      name: "Autonomous Drone Controller",
+      title: "Autonomous Drone Controller",
       domain: "Robotics",
-      status: "In Review",
-      date: "Jan 2024",
+      status: "pending",
     },
   ];
 
@@ -141,6 +143,7 @@ function ProjectArchiveMockup() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
+            readOnly
             placeholder="Search projects..."
             className="w-full pl-10 pr-4 py-2 rounded-lg bg-muted text-sm text-foreground placeholder:text-muted-foreground border-0"
           />
@@ -152,7 +155,11 @@ function ProjectArchiveMockup() {
 
       {/* Project List */}
       <div className="space-y-3">
-        {projects.map((project, i) => (
+        {isLoading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map(i => <div key={i} className="h-16 rounded-xl bg-muted animate-pulse" />)}
+          </div>
+        ) : projects.map((project, i) => (
           <div
             key={i}
             className="p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors cursor-pointer group"
@@ -163,25 +170,22 @@ function ProjectArchiveMockup() {
                   <FolderOpen className="h-4 w-4 text-primary" />
                 </div>
                 <div>
-                  <p className="font-medium text-foreground group-hover:text-primary transition-colors">
-                    {project.name}
+                  <p className="font-medium text-foreground group-hover:text-primary transition-colors text-sm line-clamp-1">
+                    {project.title}
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    {project.domain}
+                  <p className="text-xs text-muted-foreground">
+                    {project.domain || "General"}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <span
-                  className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    project.status === "Active"
+                  className={`px-2 py-1 rounded-full text-[10px] font-medium capitalize ${project.status === "approved"
                       ? "bg-green-500/10 text-green-500"
-                      : project.status === "Completed"
-                        ? "bg-blue-500/10 text-blue-500"
-                        : "bg-yellow-500/10 text-yellow-500"
-                  }`}
+                      : "bg-yellow-500/10 text-yellow-500"
+                    }`}
                 >
-                  {project.status}
+                  {project.status === "approved" ? "Active" : project.status}
                 </span>
                 <MoreVertical className="h-4 w-4 text-muted-foreground" />
               </div>
@@ -194,45 +198,55 @@ function ProjectArchiveMockup() {
 }
 
 function ProjectDetailMockup() {
+  const { data: projectsData } = useQuery({
+    queryKey: ['mock-project-detail'],
+    queryFn: () => projectsAPI.getAll({ limit: 1 }),
+  });
+
+  const project = projectsData?.data?.projects?.[0] || {
+    title: "Neural Network Visualizer",
+    domain: "AI/ML",
+    status: "approved",
+    description: "An interactive visualization tool for understanding neural network architectures. Built with TensorFlow.js and D3.js for real-time model exploration.",
+    techStack: ["TensorFlow", "React", "D3.js"]
+  };
+
   return (
     <div className="p-6">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-6">
         <span>Projects</span>
         <span>/</span>
-        <span className="text-foreground">Neural Network Visualizer</span>
+        <span className="text-foreground line-clamp-1">{project.title}</span>
       </div>
 
       {/* Project Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h4 className="text-xl font-semibold text-foreground mb-2">
-            Neural Network Visualizer
+          <h4 className="text-lg font-semibold text-foreground mb-1 line-clamp-1">
+            {project.title}
           </h4>
           <div className="flex items-center gap-3">
-            <span className="px-2 py-1 rounded-full bg-green-500/10 text-green-500 text-xs font-medium">
-              Active
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium capitalize ${project.status === 'approved' ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'}`}>
+              {project.status === 'approved' ? 'Active' : project.status}
             </span>
-            <span className="text-sm text-muted-foreground">AI/ML Domain</span>
+            <span className="text-xs text-muted-foreground">{project.domain || 'General'} Domain</span>
           </div>
         </div>
-        <div className="flex gap-2">
-          <button className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium">
-            Edit Project
-          </button>
-        </div>
+        <button className="hidden sm:block px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium">
+          View Details
+        </button>
       </div>
 
       {/* Content Tabs */}
-      <div className="flex gap-1 mb-6 p-1 rounded-lg bg-muted">
+      <div className="flex gap-1 mb-6 p-1 rounded-lg bg-muted overflow-x-auto no-scrollbar">
         {["Overview", "Team", "Resources", "Activity"].map((tab, i) => (
           <button
             key={tab}
-            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-              i === 0
+            className={`flex-1 py-1.5 px-3 rounded-md text-[10px] font-medium transition-colors whitespace-nowrap ${i === 0
                 ? "bg-card text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
-            }`}
+              }`}
           >
             {tab}
           </button>
@@ -242,22 +256,20 @@ function ProjectDetailMockup() {
       {/* Overview Content */}
       <div className="space-y-4">
         <div className="p-4 rounded-xl bg-muted/50">
-          <h5 className="font-medium text-foreground mb-2">Description</h5>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            An interactive visualization tool for understanding neural network
-            architectures. Built with TensorFlow.js and D3.js for real-time
-            model exploration.
+          <h5 className="text-xs font-medium text-foreground mb-2">Description</h5>
+          <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-3">
+            {project.description}
           </p>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="p-4 rounded-xl bg-muted/50">
-            <h5 className="font-medium text-foreground mb-2">Technologies</h5>
-            <div className="flex flex-wrap gap-2">
-              {["TensorFlow", "React", "D3.js"].map((tech) => (
+            <h5 className="text-xs font-medium text-foreground mb-2">Technologies</h5>
+            <div className="flex flex-wrap gap-1">
+              {(project.techStack || ["React", "Node.js"]).slice(0, 3).map((tech) => (
                 <span
                   key={tech}
-                  className="px-2 py-1 rounded-md bg-primary/10 text-primary text-xs"
+                  className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[9px]"
                 >
                   {tech}
                 </span>
@@ -265,9 +277,9 @@ function ProjectDetailMockup() {
             </div>
           </div>
           <div className="p-4 rounded-xl bg-muted/50">
-            <h5 className="font-medium text-foreground mb-2">Timeline</h5>
-            <p className="text-sm text-muted-foreground">Jan 2024 - Present</p>
-            <p className="text-sm text-primary mt-1">3 months active</p>
+            <h5 className="text-xs font-medium text-foreground mb-2">Status</h5>
+            <p className="text-[10px] text-muted-foreground capitalize">{project.status}</p>
+            <p className="text-[9px] text-primary mt-1">Live in repo</p>
           </div>
         </div>
       </div>
@@ -316,43 +328,39 @@ function MemberDashboardMockup() {
           </p>
         </div>
         <div className="flex gap-2">
-          <button className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium">
-            Invite Member
+          <button className="hidden sm:block px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium">
+            Invite
           </button>
         </div>
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-2 mb-6">
         {[
-          { label: "Total Members", value: "423" },
-          { label: "Active This Month", value: "156" },
-          { label: "New Joiners", value: "28" },
+          { label: "Total", value: "423" },
+          { label: "Active", value: "156" },
+          { label: "New", value: "28" },
         ].map((stat) => (
           <div
             key={stat.label}
-            className="p-3 rounded-xl bg-muted/50 text-center"
+            className="p-2 rounded-xl bg-muted/50 text-center"
           >
-            <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-            <p className="text-xs text-muted-foreground">{stat.label}</p>
+            <p className="text-lg font-bold text-foreground">{stat.value}</p>
+            <p className="text-[9px] text-muted-foreground uppercase">{stat.label}</p>
           </div>
         ))}
       </div>
 
       {/* Member List */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between px-4 py-2 text-sm text-muted-foreground">
-          <span>Member</span>
-          <span>Contributions</span>
-        </div>
         {members.map((member, i) => (
           <div
             key={i}
-            className="flex items-center justify-between p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
+            className="flex items-center justify-between p-2.5 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-sm font-medium text-primary">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="text-[10px] font-medium text-primary">
                   {member.name
                     .split(" ")
                     .map((n) => n[0])
@@ -360,17 +368,17 @@ function MemberDashboardMockup() {
                 </span>
               </div>
               <div>
-                <p className="font-medium text-foreground">{member.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {member.role} • {member.domain}
+                <p className="text-xs font-medium text-foreground">{member.name}</p>
+                <p className="text-[10px] text-muted-foreground">
+                  {member.role}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-foreground">
+              <span className="text-xs font-medium text-foreground">
                 {member.contributions}
               </span>
-              <span className="text-xs text-muted-foreground">projects</span>
+              <span className="text-[10px] text-muted-foreground">pts</span>
             </div>
           </div>
         ))}
@@ -415,7 +423,7 @@ function AdminModerationMockup() {
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-500/10 text-yellow-500">
           <Clock className="h-4 w-4" />
-          <span className="text-sm font-medium">{queue.length} pending</span>
+          <span className="text-xs font-medium">{queue.length} pending</span>
         </div>
       </div>
 
@@ -429,53 +437,31 @@ function AdminModerationMockup() {
             <div className="flex items-start justify-between mb-3">
               <div>
                 <span
-                  className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium mb-2 ${
-                    item.type === "Project Submission"
+                  className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-medium mb-1 ${item.type === "Project Submission"
                       ? "bg-blue-500/10 text-blue-500"
                       : item.type === "Member Request"
                         ? "bg-green-500/10 text-green-500"
                         : "bg-purple-500/10 text-purple-500"
-                  }`}
+                    }`}
                 >
                   {item.type}
                 </span>
-                <p className="font-medium text-foreground">{item.title}</p>
-                <p className="text-sm text-muted-foreground">
-                  by {item.author} • {item.time}
+                <p className="text-sm font-medium text-foreground line-clamp-1">{item.title}</p>
+                <p className="text-[11px] text-muted-foreground">
+                  by {item.author}
                 </p>
               </div>
             </div>
             <div className="flex gap-2">
-              <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-green-500/10 text-green-500 text-sm font-medium hover:bg-green-500/20 transition-colors">
-                <CheckCircle className="h-4 w-4" />
+              <button className="flex-1 py-1.5 rounded-lg bg-green-500/10 text-green-500 text-xs font-medium">
                 Approve
               </button>
-              <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-red-500/10 text-red-500 text-sm font-medium hover:bg-red-500/20 transition-colors">
-                <XCircle className="h-4 w-4" />
+              <button className="flex-1 py-1.5 rounded-lg bg-red-500/10 text-red-500 text-xs font-medium">
                 Reject
               </button>
             </div>
           </div>
         ))}
-      </div>
-
-      {/* Quick Actions */}
-      <div className="mt-6 pt-6 border-t border-border">
-        <p className="text-sm font-medium text-foreground mb-3">
-          Quick Actions
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {["View All Projects", "Member Management", "Export Reports"].map(
-            (action) => (
-              <button
-                key={action}
-                className="px-4 py-2 rounded-lg bg-muted text-sm text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
-              >
-                {action}
-              </button>
-            ),
-          )}
-        </div>
       </div>
     </div>
   );
@@ -551,3 +537,4 @@ export function FeatureSlides() {
     </section>
   );
 }
+

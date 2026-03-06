@@ -1,12 +1,13 @@
+import PublicLayout from '@/layouts/PublicLayout';
 import { Hero } from '@/components/sections/Hero';
-import { Statistics } from '@/components/sections/Statistics';
-import { FeatureSlides } from '@/components/sections/FeatureSlides';
-import { DomainDistribution } from '@/components/sections/DomainDistribution';
-import { AdminAnalytics } from '@/components/sections/AdminAnalytics';
+import { Statistics } from '@/features/projects/components/Statistics';
+import { FeatureSlides } from '@/features/projects/components/FeatureSlides';
+import { DomainDistribution } from '@/features/projects/components/DomainDistribution';
+import { AdminAnalytics } from '@/features/admin/components/AdminAnalytics';
 
 export default function Home() {
   return (
-    <main>
+    <PublicLayout>
       <Hero />
       <Statistics />
       <div id="features">
@@ -18,6 +19,6 @@ export default function Home() {
       <div id="admin-preview">
         <AdminAnalytics />
       </div>
-    </main>
+    </PublicLayout>
   );
 }

@@ -1,7 +1,10 @@
 "use client";
+
+import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { useCountUp, useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { FolderGit2, Users, Layers, Calendar } from "lucide-react";
+import { adminAPI } from "@/api/admin.api";
 
 function StatCard({ icon, value, label, suffix = "", delay }) {
   const { count, ref } = useCountUp(value, 2000);
@@ -47,28 +50,33 @@ function StatCard({ icon, value, label, suffix = "", delay }) {
 export function Statistics() {
   const { ref: sectionRef, isInView } = useScrollAnimation({ threshold: 0.1 });
 
+  const { data: analyticsData } = useQuery({
+    queryKey: ['admin-analytics'],
+    queryFn: () => adminAPI.getAnalytics(),
+  });
+
   const stats = [
     {
       icon: <FolderGit2 className="h-6 w-6" />,
-      value: 156,
+      value: analyticsData?.data?.summary?.totalProjects || 156,
       label: "Total Projects",
       suffix: "+",
     },
     {
       icon: <Users className="h-6 w-6" />,
-      value: 423,
+      value: analyticsData?.data?.summary?.totalUsers || 423,
       label: "Total Members",
       suffix: "",
     },
     {
       icon: <Layers className="h-6 w-6" />,
-      value: 8,
+      value: analyticsData?.data?.summary?.activeDomains || 8,
       label: "Active Domains",
       suffix: "",
     },
     {
       icon: <Calendar className="h-6 w-6" />,
-      value: 48,
+      value: analyticsData?.data?.summary?.totalEvents || 48,
       label: "Events Conducted",
       suffix: "",
     },
@@ -125,3 +133,4 @@ export function Statistics() {
     </section>
   );
 }
+

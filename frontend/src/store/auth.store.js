@@ -1,16 +1,16 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { auth, googleProvider, githubProvider } from '../config/firebase'
-import { 
-  signInWithEmailAndPassword, 
+import {
+  signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
   signOut,
   onAuthStateChanged,
   updateProfile
 } from 'firebase/auth'
-import { usersAPI } from '../services/api'
-import toast from 'react-hot-toast'
+import { usersAPI } from '../api/users.api'
+import { toast } from 'sonner'
 
 export const useAuthStore = create(
   persist(
@@ -28,7 +28,7 @@ export const useAuthStore = create(
               const token = await firebaseUser.getIdToken()
               // Setting token immediately to ensure api interceptors have it
               set({ token })
-              
+
               // Try to get user data from backend
               let userData = null
               try {
@@ -83,10 +83,10 @@ export const useAuthStore = create(
         set({ isLoading: true })
         try {
           const result = await createUserWithEmailAndPassword(auth, email, password)
-          
+
           // Update display name
           await updateProfile(result.user, { displayName: name })
-          
+
           toast.success('Account created successfully!')
           return { success: true }
         } catch (error) {
@@ -208,5 +208,5 @@ function getAuthErrorMessage(errorCode) {
   }
 }
 
-// Initialize auth listener
-useAuthStore.getState().initAuth()
+// Initialize auth listener manually in a client-side layout or provider
+// useAuthStore.getState().initAuth()

@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import {
@@ -8,28 +9,29 @@ import {
   Mail,
   ExternalLink,
   Heart,
+  Globe,
+  BookOpen,
+  HelpCircle
 } from "lucide-react";
 
 export function Footer() {
   const { ref, isInView } = useScrollAnimation({ threshold: 0.1 });
 
   const links = {
-    platform: [
-      { label: "Projects", href: "#features" },
-      { label: "Domains", href: "#domains" },
-      { label: "Members", href: "#members" },
-      { label: "Analytics", href: "#admin-preview" },
+    repository: [
+      { label: "Archive", href: "/projects" },
+      { label: "Search", href: "/search" },
+      { label: "Submit", href: "/submit" },
+      { label: "My Profile", href: "/profile" },
     ],
     resources: [
-      { label: "Documentation", href: "#" },
-      { label: "API Reference", href: "#" },
-      { label: "Guidelines", href: "#" },
-      { label: "Support", href: "#" },
+      { label: "Documentation", href: "#", icon: BookOpen },
+      { label: "Guidelines", href: "#", icon: Globe },
+      { label: "Support", href: "#", icon: HelpCircle },
     ],
-    community: [
+    chapter: [
       { label: "About ACM", href: "#" },
       { label: "Events", href: "#" },
-      { label: "Join Chapter", href: "#" },
       { label: "Contact", href: "#" },
     ],
   };
@@ -58,19 +60,23 @@ export function Footer() {
             transition={{ duration: 0.6 }}
             className="lg:col-span-2"
           >
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-2xl bg-acm-blue flex items-center justify-center shadow-lg shadow-acm-blue/20">
+                <span className="text-white font-black text-sm">
                   ACM
                 </span>
               </div>
-              <span className="font-semibold text-foreground text-lg">
-                Project Archive
-              </span>
+              <div className="flex flex-col leading-none">
+                <h4 className="font-black text-white text-xl tracking-tighter uppercase italic">
+                  Digital
+                </h4>
+                <span className="text-[10px] font-bold text-acm-blue uppercase tracking-widest leading-none mt-0.5">
+                  Project Repository
+                </span>
+              </div>
             </div>
-            <p className="text-muted-foreground mb-6 max-w-sm">
-              A centralized platform for managing ACM chapter projects, members,
-              and analytics. Built for the academic community.
+            <p className="text-muted-foreground mb-8 max-w-sm text-sm leading-relaxed">
+              Accelerating innovation within the ACM chapter through a centralized, searchable repository of student and faculty projects.
             </p>
 
             {/* Social Links */}
@@ -102,13 +108,13 @@ export function Footer() {
               <ul className="space-y-3">
                 {items.map((item) => (
                   <li key={item.label}>
-                    <a
+                    <Link
                       href={item.href}
-                      className="text-muted-foreground hover:text-primary transition-colors duration-200 flex items-center gap-1 group"
+                      className="text-muted-foreground hover:text-acm-blue transition-all duration-200 flex items-center gap-2 group text-sm font-medium"
                     >
+                      {item.icon && <item.icon className="h-3.5 w-3.5 opacity-50 group-hover:opacity-100" />}
                       {item.label}
-                      <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>

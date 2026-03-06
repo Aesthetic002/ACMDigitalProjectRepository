@@ -4,18 +4,17 @@ import { createContext, useContext, useEffect, useState } from "react";
 const ThemeContext = createContext(undefined);
 
 export function ThemeProvider({ children }) {
-  const [theme, setThemeState] = useState(() => {
+  const [theme, setThemeState] = useState('light');
+
+  useEffect(() => {
     // Check localStorage first
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("acm-theme");
-      if (stored) return stored;
-      // Check system preference
-      if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-        return "dark";
-      }
+    const stored = localStorage.getItem("acm-theme");
+    if (stored) {
+      setThemeState(stored);
+    } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      setThemeState("dark");
     }
-    return "light";
-  });
+  }, []);
 
   useEffect(() => {
     const root = window.document.documentElement;
