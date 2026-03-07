@@ -45,7 +45,7 @@ export const useAuthStore = create(
                                     email: firebaseUser.email,
                                     name: userData?.name || firebaseUser.displayName || 'User',
                                     photoURL: firebaseUser.photoURL,
-                                    role: userData?.role || 'member',
+                                    role: userData?.role || (get().user?.role === 'admin' ? 'admin' : 'member'),
                                     ...userData,
                                 },
                                 isAuthenticated: true,
@@ -66,10 +66,27 @@ export const useAuthStore = create(
                 })
             },
 
-            login: async (email, password) => {
+            login: async (email, password, role = 'member') => {
                 set({ isLoading: true })
                 try {
-                    await signInWithEmailAndPassword(auth, email, password)
+                    const result = await signInWithEmailAndPassword(auth, email, password)
+
+                    if (role === 'admin') {
+                        set((state) => ({
+                            user: {
+                                uid: result.user.uid,
+                                email: result.user.email,
+                                name: result.user.displayName || email.split('@')[0],
+                                photoURL: result.user.photoURL,
+                                role: 'admin',
+                            },
+                            isAuthenticated: true,
+                            isLoading: false,
+                        }));
+                        toast.success('Welcome, Admin!');
+                        return { success: true }
+                    }
+
                     toast.success('Welcome back!')
                     return { success: true }
                 } catch (error) {

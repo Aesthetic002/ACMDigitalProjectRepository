@@ -30,7 +30,7 @@ export default function LoginPage() {
         e.preventDefault();
         if (!formData.email || !formData.password) return toast.error("Please fill in all fields");
         setIsEmailLoading(true);
-        const result = await login(formData.email, formData.password);
+        const result = await login(formData.email, formData.password, loginRole);
         setIsEmailLoading(false);
         if (result.success) {
             const destination = loginRole === "admin" ? "/admin" : (searchParams.get("from") || "/");
