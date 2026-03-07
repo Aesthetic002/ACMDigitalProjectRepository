@@ -1,5 +1,8 @@
+"use client";
+
 import { useState } from "react";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { useAuthStore } from "@/store/authStore";
 import { toast } from "sonner";
 import { Mail, Lock, Loader2, Eye, EyeOff, Github, Chrome, ArrowRight, ShieldCheck, Zap } from "lucide-react";
@@ -8,8 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 
 export default function LoginPage() {
-    const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
+    const router = useRouter();
+    const searchParams = useSearchParams();
     const { login, loginWithGoogle, loginWithGithub, loginAsDemo } = useAuthStore();
 
     const [formData, setFormData] = useState({ email: "", password: "" });
@@ -19,7 +22,7 @@ export default function LoginPage() {
 
     const [loginRole, setLoginRole] = useState("member"); // "member" or "admin"
 
-    // Redirect path computed dynamically inside handlers
+    // NOTE: computed dynamically inside handlers so it reacts to the current loginRole state
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -30,11 +33,14 @@ export default function LoginPage() {
         e.preventDefault();
         if (!formData.email || !formData.password) return toast.error("Please fill in all fields");
         setIsEmailLoading(true);
-        const result = await login(formData.email, formData.password);
+        // Pass loginRole so authStore can write role:admin to Firestore for admin logins
+        const result = await login(formData.email, formData.password, loginRole);
         setIsEmailLoading(false);
         if (result.success) {
-            const destination = loginRole === "admin" ? "/admin" : (searchParams.get("from") || "/");
-            navigate(destination);
+            const destination = loginRole === "admin"
+                ? "/admin"
+                : (searchParams.get("from") || "/");
+            router.push(destination);
         }
     };
 
@@ -43,14 +49,16 @@ export default function LoginPage() {
         const result = method === "google" ? await loginWithGoogle() : await loginWithGithub();
         setOauthLoading(null);
         if (result.success) {
-            const destination = loginRole === "admin" ? "/admin" : (searchParams.get("from") || "/");
-            navigate(destination);
+            const destination = loginRole === "admin"
+                ? "/admin"
+                : (searchParams.get("from") || "/");
+            router.push(destination);
         }
     };
 
     const handleDemoAdmin = () => {
         loginAsDemo('admin');
-        navigate("/admin");
+        router.push("/admin");
     };
 
     return (
@@ -61,7 +69,7 @@ export default function LoginPage() {
             <div className="w-full max-w-md relative z-10">
                 <Card className="border-border/50 bg-card/40 backdrop-blur-xl rounded-[2.5rem] shadow-2xl overflow-hidden border-t-2 border-t-white/5">
                     <CardHeader className="text-center pt-12 pb-6">
-                        <Link to="/" className="inline-block mx-auto mb-6 transition-transform hover:scale-110 duration-300">
+                        <Link href="/" className="inline-block mx-auto mb-6 transition-transform hover:scale-110 duration-300">
                             <div className={`w-20 h-20 bg-gradient-to-tr ${loginRole === 'admin' ? 'from-amber-500 to-orange-400 shadow-amber-500/20' : 'from-acm-blue to-cyan-400 shadow-acm-glow'} rounded-3xl flex items-center justify-center shadow-2xl transition-all duration-500`}>
                                 {loginRole === 'admin' ? <ShieldCheck className="w-10 h-10 text-white" /> : <Lock className="w-10 h-10 text-white" />}
                             </div>
@@ -172,7 +180,7 @@ export default function LoginPage() {
                         <p className="text-center text-xs font-bold text-muted-foreground italic tracking-wide">
                             {loginRole === 'admin' ? "Restricted administrative access zone." : "New to the community?"}{" "}
                             {loginRole === 'member' && (
-                                <Link to="/register" className="text-white font-black hover:text-acm-blue transition-colors decoration-acm-blue/30 underline underline-offset-4">
+                                <Link href="/register" className="text-white font-black hover:text-acm-blue transition-colors decoration-acm-blue/30 underline underline-offset-4">
                                     Join the Repository
                                 </Link>
                             )}
