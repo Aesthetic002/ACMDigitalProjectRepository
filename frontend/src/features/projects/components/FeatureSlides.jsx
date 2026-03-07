@@ -97,28 +97,7 @@ function ProjectArchiveMockup() {
     queryFn: () => projectsAPI.getAll({ limit: 4 }),
   });
 
-  const projects = projectsData?.data?.projects?.slice(0, 4) || [
-    {
-      title: "Neural Network Visualizer",
-      domain: "AI/ML",
-      status: "approved",
-    },
-    {
-      title: "Campus Navigation App",
-      domain: "Web Dev",
-      status: "approved",
-    },
-    {
-      title: "Security Audit Tool",
-      domain: "Cybersecurity",
-      status: "approved",
-    },
-    {
-      title: "Autonomous Drone Controller",
-      domain: "Robotics",
-      status: "pending",
-    },
-  ];
+  const projects = projectsData?.data?.projects?.slice(0, 4) || [];
 
   return (
     <div className="p-6">
@@ -159,6 +138,12 @@ function ProjectArchiveMockup() {
           <div className="space-y-3">
             {[1, 2, 3].map(i => <div key={i} className="h-16 rounded-xl bg-muted animate-pulse" />)}
           </div>
+        ) : projects.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-48 rounded-xl bg-muted/20 border border-dashed border-border p-6 text-center">
+            <FolderOpen className="h-8 w-8 text-muted-foreground mb-3 opacity-20" />
+            <p className="text-sm font-medium text-muted-foreground">No projects recorded yet</p>
+            <p className="text-[10px] text-muted-foreground/60 mt-1">Real-time data from repository</p>
+          </div>
         ) : projects.map((project, i) => (
           <div
             key={i}
@@ -181,8 +166,8 @@ function ProjectArchiveMockup() {
               <div className="flex items-center gap-3">
                 <span
                   className={`px-2 py-1 rounded-full text-[10px] font-medium capitalize ${project.status === "approved"
-                      ? "bg-green-500/10 text-green-500"
-                      : "bg-yellow-500/10 text-yellow-500"
+                    ? "bg-green-500/10 text-green-500"
+                    : "bg-yellow-500/10 text-yellow-500"
                     }`}
                 >
                   {project.status === "approved" ? "Active" : project.status}
@@ -203,13 +188,21 @@ function ProjectDetailMockup() {
     queryFn: () => projectsAPI.getAll({ limit: 1 }),
   });
 
-  const project = projectsData?.data?.projects?.[0] || {
-    title: "Neural Network Visualizer",
-    domain: "AI/ML",
-    status: "approved",
-    description: "An interactive visualization tool for understanding neural network architectures. Built with TensorFlow.js and D3.js for real-time model exploration.",
-    techStack: ["TensorFlow", "React", "D3.js"]
-  };
+  const project = projectsData?.data?.projects?.[0];
+
+  if (!project) {
+    return (
+      <div className="p-12 flex flex-col items-center justify-center text-center h-[400px]">
+        <div className="w-16 h-16 rounded-2xl bg-primary/5 flex items-center justify-center mb-6">
+          <FileText className="h-8 w-8 text-primary/20" />
+        </div>
+        <h4 className="text-lg font-bold text-foreground mb-2">Detailed Protocol View</h4>
+        <p className="text-sm text-muted-foreground max-w-[240px]">
+          Select a project from the archive to view its complete technical documentation and resource links.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
@@ -244,8 +237,8 @@ function ProjectDetailMockup() {
           <button
             key={tab}
             className={`flex-1 py-1.5 px-3 rounded-md text-[10px] font-medium transition-colors whitespace-nowrap ${i === 0
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
               }`}
           >
             {tab}
@@ -288,32 +281,12 @@ function ProjectDetailMockup() {
 }
 
 function MemberDashboardMockup() {
-  const members = [
-    {
-      name: "Alex Chen",
-      role: "President",
-      domain: "AI/ML",
-      contributions: 24,
-    },
-    {
-      name: "Sarah Johnson",
-      role: "Vice President",
-      domain: "Web Dev",
-      contributions: 18,
-    },
-    {
-      name: "Mike Williams",
-      role: "Member",
-      domain: "Cybersecurity",
-      contributions: 12,
-    },
-    {
-      name: "Emily Davis",
-      role: "Member",
-      domain: "Robotics",
-      contributions: 9,
-    },
-  ];
+  const { data: usersData } = useQuery({
+    queryKey: ['mock-users'],
+    queryFn: () => adminAPI.getUsers({ limit: 4 }),
+  });
+
+  const members = usersData?.data?.users || [];
 
   return (
     <div className="p-6">
@@ -353,7 +326,12 @@ function MemberDashboardMockup() {
 
       {/* Member List */}
       <div className="space-y-2">
-        {members.map((member, i) => (
+        {members.length === 0 ? (
+          <div className="py-12 border border-dashed border-border rounded-xl flex flex-col items-center">
+            <Users className="h-6 w-6 text-muted-foreground mb-2 opacity-20" />
+            <p className="text-[10px] text-muted-foreground">Directory is currently empty</p>
+          </div>
+        ) : members.map((member, i) => (
           <div
             key={i}
             className="flex items-center justify-between p-2.5 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
@@ -361,22 +339,22 @@ function MemberDashboardMockup() {
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                 <span className="text-[10px] font-medium text-primary">
-                  {member.name
+                  {(member.name || member.email)
                     .split(" ")
                     .map((n) => n[0])
                     .join("")}
                 </span>
               </div>
               <div>
-                <p className="text-xs font-medium text-foreground">{member.name}</p>
+                <p className="text-xs font-medium text-foreground">{member.name || "Anonymous Member"}</p>
                 <p className="text-[10px] text-muted-foreground">
-                  {member.role}
+                  {member.role || "Member"}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium text-foreground">
-                {member.contributions}
+                {member.points || 0}
               </span>
               <span className="text-[10px] text-muted-foreground">pts</span>
             </div>
@@ -388,26 +366,12 @@ function MemberDashboardMockup() {
 }
 
 function AdminModerationMockup() {
-  const queue = [
-    {
-      type: "Project Submission",
-      title: "Blockchain Voting System",
-      author: "John Doe",
-      time: "2 hours ago",
-    },
-    {
-      type: "Member Request",
-      title: "New member: Lisa Wang",
-      author: "System",
-      time: "5 hours ago",
-    },
-    {
-      type: "Edit Request",
-      title: "Update: ML Workshop Materials",
-      author: "Alex Chen",
-      time: "1 day ago",
-    },
-  ];
+  const { data: pendingData } = useQuery({
+    queryKey: ['mock-pending'],
+    queryFn: () => projectsAPI.getAll({ status: 'pending', limit: 3 }),
+  });
+
+  const queue = pendingData?.data?.projects || [];
 
   return (
     <div className="p-6">
@@ -429,7 +393,13 @@ function AdminModerationMockup() {
 
       {/* Queue Items */}
       <div className="space-y-3">
-        {queue.map((item, i) => (
+        {queue.length === 0 ? (
+          <div className="py-12 flex flex-col items-center justify-center border border-dashed border-border rounded-xl">
+            <CheckCircle className="h-8 w-8 text-green-500/30 mb-2" />
+            <p className="text-sm font-bold text-foreground">All Clear</p>
+            <p className="text-[10px] text-muted-foreground">No pending items in queue</p>
+          </div>
+        ) : queue.map((item, i) => (
           <div
             key={i}
             className="p-4 rounded-xl bg-muted/50 border border-border hover:border-primary/30 transition-colors"
@@ -437,18 +407,13 @@ function AdminModerationMockup() {
             <div className="flex items-start justify-between mb-3">
               <div>
                 <span
-                  className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-medium mb-1 ${item.type === "Project Submission"
-                      ? "bg-blue-500/10 text-blue-500"
-                      : item.type === "Member Request"
-                        ? "bg-green-500/10 text-green-500"
-                        : "bg-purple-500/10 text-purple-500"
-                    }`}
+                  className="inline-block px-2 py-0.5 rounded-full text-[9px] font-medium mb-1 bg-blue-500/10 text-blue-500"
                 >
-                  {item.type}
+                  Project Submission
                 </span>
                 <p className="text-sm font-medium text-foreground line-clamp-1">{item.title}</p>
                 <p className="text-[11px] text-muted-foreground">
-                  by {item.author}
+                  by {item.ownerName || "Member"}
                 </p>
               </div>
             </div>

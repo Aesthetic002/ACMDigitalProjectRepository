@@ -103,25 +103,30 @@ function ProjectsContent() {
                         <Loader2 className="h-12 w-12 animate-spin text-acm-blue" />
                         <p className="mt-4 text-muted-foreground animate-pulse">Fetching projects...</p>
                     </div>
-                ) : isError ? (
-                    <div className="flex min-h-[400px] flex-col items-center justify-center rounded-3xl border border-dashed border-red-500/20 bg-red-500/5 p-12 text-center">
-                        <div className="mb-4 rounded-full bg-red-500/10 p-3"><X className="h-8 w-8 text-red-500" /></div>
-                        <h3 className="text-xl font-bold text-foreground">Failed to load projects</h3>
-                        <p className="mt-2 text-muted-foreground">There was an error communicating with the server.</p>
-                        <Button variant="outline" onClick={() => refetch()} className="mt-6 border-red-500/20 hover:bg-red-500/10">Try Again</Button>
-                    </div>
-                ) : projects.length > 0 ? (
-                    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                        {projects.map((project) => <ProjectCard key={project.id} project={project} />)}
-                    </div>
-                ) : (
+                ) : (isError || projects.length === 0) ? (
                     <div className="flex min-h-[400px] flex-col items-center justify-center rounded-3xl border border-dashed border-border p-12 text-center">
                         <div className="mb-4 rounded-full bg-muted p-3"><FolderOpen className="h-8 w-8 text-muted-foreground" /></div>
                         <h3 className="text-xl font-bold">No projects found</h3>
                         <p className="mt-2 text-muted-foreground">
-                            {hasActiveFilters ? "Try adjusting your filters." : "The repository is empty. Be the first to contribute!"}
+                            {isError
+                                ? "The repository is currently taking a breather. Please check back shortly."
+                                : hasActiveFilters
+                                    ? "Try adjusting your filters."
+                                    : "The repository is empty. Be the first to contribute!"}
                         </p>
-                        {hasActiveFilters && <Button onClick={clearFilters} variant="outline" className="mt-6">Clear all filters</Button>}
+                        {(hasActiveFilters || isError) && (
+                            <Button
+                                onClick={isError ? () => refetch() : clearFilters}
+                                variant="outline"
+                                className="mt-6"
+                            >
+                                {isError ? "Refetch Repository" : "Clear all filters"}
+                            </Button>
+                        )}
+                    </div>
+                ) : (
+                    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                        {projects.map((project) => <ProjectCard key={project.id} project={project} />)}
                     </div>
                 )}
 

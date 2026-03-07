@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
 import { toast } from "sonner";
-import { Mail, Lock, User, Loader2, Eye, EyeOff, Github, Chrome, CheckCircle, ArrowRight, Sparkles } from "lucide-react";
+import { motion } from "framer-motion";
+import { Mail, Lock, User, Loader2, Eye, EyeOff, Github, Chrome, CheckCircle, ArrowRight, Sparkles, Shield, Key } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -11,14 +12,14 @@ export default function RegisterPage() {
     const navigate = useNavigate();
     const { register, loginWithGoogle, loginWithGithub } = useAuthStore();
 
-    const [formData, setFormData] = useState({ name: "", email: "", password: "", confirmPassword: "" });
+    const [formData, setFormData] = useState({ name: "", email: "", password: "", confirmPassword: "", isAdmin: false, secretCode: "" });
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [oauthLoading, setOauthLoading] = useState(null);
 
     const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData((prev) => ({ ...prev, [name]: value }));
+        const { name, value, type, checked } = e.target;
+        setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
     };
 
     const passwordRequirements = [
@@ -34,8 +35,15 @@ export default function RegisterPage() {
         if (!formData.name || !formData.email || !formData.password) return toast.error("Please fill in all fields");
         if (!isPasswordValid) return toast.error("Password does not meet security requirements");
         if (formData.password !== formData.confirmPassword) return toast.error("Passwords do not match");
+
+        if (formData.isAdmin) {
+            if (formData.secretCode !== "ACM_SECRET_2024") {
+                return toast.error("Invalid secret console code for administrative access");
+            }
+        }
+
         setIsLoading(true);
-        const result = await register(formData.email, formData.password, formData.name);
+        const result = await register(formData.email, formData.password, formData.name, formData.isAdmin ? "admin" : "member");
         setIsLoading(false);
         if (result.success) navigate("/");
     };
@@ -102,6 +110,46 @@ export default function RegisterPage() {
                                 <Input name="confirmPassword" type={showPassword ? "text" : "password"} value={formData.confirmPassword} onChange={handleChange}
                                     placeholder="Verify Security Key"
                                     className={`h-12 rounded-xl border-border/50 bg-muted/20 pl-12 focus-visible:ring-acm-blue ${formData.confirmPassword && formData.password !== formData.confirmPassword ? "border-red-500/50" : ""}`} />
+                            </div>
+
+                            {/* Admin Registration Toggle */}
+                            <div className="space-y-4 pt-2">
+                                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-border/50">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-lg bg-acm-blue/10 flex items-center justify-center">
+                                            <Shield className="h-5 w-5 text-acm-blue" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-white uppercase italic">Admin Account</p>
+                                            <p className="text-[10px] text-slate-400">Request administrative privileges</p>
+                                        </div>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        name="isAdmin"
+                                        checked={formData.isAdmin}
+                                        onChange={handleChange}
+                                        className="w-5 h-5 rounded border-border/50 bg-muted/20 text-acm-blue focus:ring-acm-blue"
+                                    />
+                                </div>
+
+                                {formData.isAdmin && (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: "auto" }}
+                                        className="relative group"
+                                    >
+                                        <Key className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-acm-blue transition-colors" />
+                                        <Input
+                                            name="secretCode"
+                                            value={formData.secretCode}
+                                            onChange={handleChange}
+                                            placeholder="Secret Console Code"
+                                            className="h-12 rounded-xl border-border/50 bg-muted/20 pl-12 focus-visible:ring-acm-blue"
+                                            required
+                                        />
+                                    </motion.div>
+                                )}
                             </div>
                             <Button type="submit" disabled={isLoading}
                                 className="w-full h-14 rounded-2xl bg-acm-blue hover:bg-acm-blue-dark shadow-acm-glow text-lg font-black tracking-widest mt-6 transition-all">

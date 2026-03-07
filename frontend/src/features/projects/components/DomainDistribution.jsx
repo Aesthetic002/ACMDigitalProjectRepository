@@ -114,8 +114,8 @@ export function DomainDistribution() {
       title: "AI / Machine Learning",
       description:
         "Deep learning, computer vision, NLP, and intelligent systems projects pushing the boundaries of AI.",
-      projectCount: domainStats["AI / Machine Learning"]?.count || 42,
-      memberCount: domainStats["AI / Machine Learning"]?.members || 89,
+      projectCount: domainStats["AI / Machine Learning"]?.count || 0,
+      memberCount: domainStats["AI / Machine Learning"]?.members || 0,
       color: "#8B5CF6",
     },
     {
@@ -124,8 +124,8 @@ export function DomainDistribution() {
       title: "Web Development",
       description:
         "Full-stack applications, progressive web apps, and modern web technologies for real-world solutions.",
-      projectCount: domainStats["Web Development"]?.count || 56,
-      memberCount: domainStats["Web Development"]?.members || 124,
+      projectCount: domainStats["Web Development"]?.count || 0,
+      memberCount: domainStats["Web Development"]?.members || 0,
       color: "#3B82F6",
     },
     {
@@ -134,8 +134,8 @@ export function DomainDistribution() {
       title: "Cybersecurity",
       description:
         "Security audits, penetration testing, cryptography, and defensive security implementations.",
-      projectCount: domainStats["Cybersecurity"]?.count || 28,
-      memberCount: domainStats["Cybersecurity"]?.members || 67,
+      projectCount: domainStats["Cybersecurity"]?.count || 0,
+      memberCount: domainStats["Cybersecurity"]?.members || 0,
       color: "#10B981",
     },
     {
@@ -144,8 +144,8 @@ export function DomainDistribution() {
       title: "Robotics",
       description:
         "Autonomous systems, robotic control, sensor integration, and hardware-software interfaces.",
-      projectCount: domainStats["Robotics"]?.count || 19,
-      memberCount: domainStats["Robotics"]?.members || 45,
+      projectCount: domainStats["Robotics"]?.count || 0,
+      memberCount: domainStats["Robotics"]?.members || 0,
       color: "#F59E0B",
     },
     {
@@ -154,8 +154,8 @@ export function DomainDistribution() {
       title: "Competitive Programming",
       description:
         "Algorithm optimization, data structures, and competitive coding challenge solutions.",
-      projectCount: domainStats["Competitive Programming"]?.count || 35,
-      memberCount: domainStats["Competitive Programming"]?.members || 78,
+      projectCount: domainStats["Competitive Programming"]?.count || 0,
+      memberCount: domainStats["Competitive Programming"]?.members || 0,
       color: "#EF4444",
     },
   ];

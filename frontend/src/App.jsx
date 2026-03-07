@@ -15,6 +15,14 @@ import AdminPage from '@/pages/AdminPage';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
 import CreateEventPage from '@/pages/CreateEventPage';
+import MembersPage from '@/pages/MembersPage';
+import DomainsPage from '@/pages/DomainsPage';
+import AdminModerationPage from '@/pages/AdminModerationPage';
+import AdminPreAddPage from '@/pages/AdminPreAddPage';
+import AdminMembersPage from '@/pages/AdminMembersPage';
+import AdminProjectsPage from '@/pages/AdminProjectsPage';
+import AdminDomainsPage from '@/pages/AdminDomainsPage';
+import AdminLayout from '@/components/AdminLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
 
 const queryClient = new QueryClient({
@@ -37,9 +45,21 @@ export default function App() {
                     <BrowserRouter>
                         <Routes>
                             <Route path="/" element={<HomePage />} />
-                            <Route path="/projects" element={<ProjectsPage />} />
-                            <Route path="/projects/:id" element={<ProjectDetailPage />} />
-                            <Route path="/search" element={<SearchPage />} />
+                            <Route path="/projects" element={
+                                <ProtectedRoute><ProjectsPage /></ProtectedRoute>
+                            } />
+                            <Route path="/projects/:id" element={
+                                <ProtectedRoute><ProjectDetailPage /></ProtectedRoute>
+                            } />
+                            <Route path="/members" element={
+                                <ProtectedRoute><MembersPage /></ProtectedRoute>
+                            } />
+                            <Route path="/domains" element={
+                                <ProtectedRoute><DomainsPage /></ProtectedRoute>
+                            } />
+                            <Route path="/search" element={
+                                <ProtectedRoute><SearchPage /></ProtectedRoute>
+                            } />
                             <Route path="/login" element={<LoginPage />} />
                             <Route path="/register" element={<RegisterPage />} />
                             <Route path="/submit" element={
@@ -48,12 +68,20 @@ export default function App() {
                             <Route path="/profile" element={
                                 <ProtectedRoute><ProfilePage /></ProtectedRoute>
                             } />
+                            {/* Admin Protected Routes */}
                             <Route path="/admin" element={
-                                <ProtectedRoute adminOnly><AdminPage /></ProtectedRoute>
-                            } />
-                            <Route path="/admin/events/new" element={
-                                <ProtectedRoute adminOnly><CreateEventPage /></ProtectedRoute>
-                            } />
+                                <ProtectedRoute adminOnly>
+                                    <AdminLayout />
+                                </ProtectedRoute>
+                            }>
+                                <Route index element={<AdminPage />} />
+                                <Route path="members" element={<AdminMembersPage />} />
+                                <Route path="projects" element={<AdminProjectsPage />} />
+                                <Route path="moderation" element={<AdminModerationPage />} />
+                                <Route path="pre-add" element={<AdminPreAddPage />} />
+                                <Route path="events/new" element={<CreateEventPage />} />
+                                <Route path="domains" element={<AdminDomainsPage />} />
+                            </Route>
                             <Route path="*" element={<Navigate to="/" replace />} />
                         </Routes>
                     </BrowserRouter>

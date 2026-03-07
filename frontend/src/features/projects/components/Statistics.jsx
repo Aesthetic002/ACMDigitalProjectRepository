@@ -28,13 +28,13 @@ function StatCard({ icon, value, label, suffix = "", delay }) {
             <div className="text-primary">{icon}</div>
           </div>
 
-          {/* Value */}
           <div
-            ref={ref}
             className="text-4xl sm:text-5xl font-bold text-foreground mb-2"
           >
-            {count}
-            <span className="text-primary">{suffix}</span>
+            <span ref={ref}>
+              {count}
+              <span className="text-primary">{suffix}</span>
+            </span>
           </div>
 
           {/* Label */}
@@ -57,8 +57,26 @@ export function Statistics() {
 
   const stats = [
     {
+      icon: <FolderGit2 className="h-6 w-6" />,
+      value: analyticsData?.data?.summary?.totalProjects || 0,
+      label: "Total Projects",
+      suffix: "+",
+    },
+    {
+      icon: <Users className="h-6 w-6" />,
+      value: analyticsData?.data?.summary?.totalUsers || 0,
+      label: "Total Members",
+      suffix: "",
+    },
+    {
+      icon: <Layers className="h-6 w-6" />,
+      value: analyticsData?.data?.summary?.activeDomains || 0,
+      label: "Active Domains",
+      suffix: "",
+    },
+    {
       icon: <Calendar className="h-6 w-6" />,
-      value: analyticsData?.data?.summary?.totalEvents || 48,
+      value: analyticsData?.data?.summary?.totalEvents || 0,
       label: "Total Events",
       suffix: "",
     },
@@ -99,19 +117,17 @@ export function Statistics() {
         </motion.div>
 
         {/* Stats Grid */}
-        <div className="flex justify-center">
-          <div className="w-full max-w-sm">
-            {stats.map((stat, index) => (
-              <StatCard
-                key={stat.label}
-                icon={stat.icon}
-                value={stat.value}
-                label={stat.label}
-                suffix={stat.suffix}
-                delay={index * 0.1}
-              />
-            ))}
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {stats.map((stat, index) => (
+            <StatCard
+              key={stat.label}
+              icon={stat.icon}
+              value={stat.value}
+              label={stat.label}
+              suffix={stat.suffix}
+              delay={index * 0.1}
+            />
+          ))}
         </div>
       </div>
     </section>

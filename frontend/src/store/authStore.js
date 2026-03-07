@@ -69,7 +69,7 @@ export const useAuthStore = create(
                 }
             },
 
-            register: async (email, password, name) => {
+            register: async (email, password, name, role = 'member') => {
                 set({ isLoading: true })
                 try {
                     const result = await createUserWithEmailAndPassword(auth, email, password)
