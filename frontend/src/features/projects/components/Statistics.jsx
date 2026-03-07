@@ -57,27 +57,9 @@ export function Statistics() {
 
   const stats = [
     {
-      icon: <FolderGit2 className="h-6 w-6" />,
-      value: analyticsData?.data?.summary?.totalProjects || 156,
-      label: "Total Projects",
-      suffix: "+",
-    },
-    {
-      icon: <Users className="h-6 w-6" />,
-      value: analyticsData?.data?.summary?.totalUsers || 423,
-      label: "Total Members",
-      suffix: "",
-    },
-    {
-      icon: <Layers className="h-6 w-6" />,
-      value: analyticsData?.data?.summary?.activeDomains || 8,
-      label: "Active Domains",
-      suffix: "",
-    },
-    {
       icon: <Calendar className="h-6 w-6" />,
       value: analyticsData?.data?.summary?.totalEvents || 48,
-      label: "Events Conducted",
+      label: "Total Events",
       suffix: "",
     },
   ];
@@ -117,17 +99,19 @@ export function Statistics() {
         </motion.div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {stats.map((stat, index) => (
-            <StatCard
-              key={stat.label}
-              icon={stat.icon}
-              value={stat.value}
-              label={stat.label}
-              suffix={stat.suffix}
-              delay={index * 0.1}
-            />
-          ))}
+        <div className="flex justify-center">
+          <div className="w-full max-w-sm">
+            {stats.map((stat, index) => (
+              <StatCard
+                key={stat.label}
+                icon={stat.icon}
+                value={stat.value}
+                label={stat.label}
+                suffix={stat.suffix}
+                delay={index * 0.1}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </section>
