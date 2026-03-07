@@ -1,259 +1,179 @@
-import { useState } from 'react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, GithubAuthProvider } from 'firebase/auth'
-import { auth } from '../config/firebase'
-import { useAuthStore } from '../store/authStore'
-import toast from 'react-hot-toast'
-import { Mail, Lock, Loader2, Eye, EyeOff, Github, Chrome } from 'lucide-react'
+import { useState } from "react";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useAuthStore } from "@/store/authStore";
+import { toast } from "sonner";
+import { Mail, Lock, Loader2, Eye, EyeOff, Github, Chrome, ArrowRight, ShieldCheck, Zap } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 
 export default function LoginPage() {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const { setUser, setToken } = useAuthStore()
+    const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const { login, loginWithGoogle, loginWithGithub, loginAsDemo } = useAuthStore();
 
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  })
-  const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [oauthLoading, setOauthLoading] = useState(null)
+    const [formData, setFormData] = useState({ email: "", password: "" });
+    const [showPassword, setShowPassword] = useState(false);
+    const [isEmailLoading, setIsEmailLoading] = useState(false);
+    const [oauthLoading, setOauthLoading] = useState(null);
 
-  const from = location.state?.from?.pathname || '/'
+    const [loginRole, setLoginRole] = useState("member"); // "member" or "admin"
 
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
+    const from = searchParams.get("from") || (loginRole === "admin" ? "/admin" : "/");
 
-  const handleEmailLogin = async (e) => {
-    e.preventDefault()
-    
-    if (!formData.email || !formData.password) {
-      toast.error('Please fill in all fields')
-      return
-    }
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData((prev) => ({ ...prev, [name]: value }));
+    };
 
-    setIsLoading(true)
+    const handleEmailLogin = async (e) => {
+        e.preventDefault();
+        if (!formData.email || !formData.password) return toast.error("Please fill in all fields");
+        setIsEmailLoading(true);
+        const result = await login(formData.email, formData.password);
+        setIsEmailLoading(false);
+        if (result.success) navigate(from);
+    };
 
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password)
-      const user = userCredential.user
-      const token = await user.getIdToken()
+    const handleOAuth = async (method) => {
+        setOauthLoading(method);
+        const result = method === "google" ? await loginWithGoogle() : await loginWithGithub();
+        setOauthLoading(null);
+        if (result.success) navigate(from);
+    };
 
-      setUser({
-        uid: user.uid,
-        email: user.email,
-        displayName: user.displayName,
-        photoURL: user.photoURL,
-      })
-      setToken(token)
+    const handleDemoAdmin = () => {
+        loginAsDemo('admin');
+        navigate("/admin");
+    };
 
-      toast.success('Welcome back!')
-      navigate(from, { replace: true })
-    } catch (error) {
-      console.error('Login error:', error)
-      let message = 'Login failed. Please try again.'
-      
-      if (error.code === 'auth/user-not-found') {
-        message = 'No account found with this email.'
-      } else if (error.code === 'auth/wrong-password') {
-        message = 'Incorrect password.'
-      } else if (error.code === 'auth/invalid-email') {
-        message = 'Invalid email address.'
-      } else if (error.code === 'auth/too-many-requests') {
-        message = 'Too many failed attempts. Please try again later.'
-      }
-      
-      toast.error(message)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+    return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 px-4 py-12 relative overflow-hidden text-white">
+            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-acm-blue/10 rounded-full blur-[120px] pointer-events-none" />
+            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
 
-  const handleOAuthLogin = async (providerType) => {
-    setOauthLoading(providerType)
+            <div className="w-full max-w-md relative z-10">
+                <Card className="border-border/50 bg-card/40 backdrop-blur-xl rounded-[2.5rem] shadow-2xl overflow-hidden border-t-2 border-t-white/5">
+                    <CardHeader className="text-center pt-12 pb-6">
+                        <Link to="/" className="inline-block mx-auto mb-6 transition-transform hover:scale-110 duration-300">
+                            <div className={`w-20 h-20 bg-gradient-to-tr ${loginRole === 'admin' ? 'from-amber-500 to-orange-400 shadow-amber-500/20' : 'from-acm-blue to-cyan-400 shadow-acm-glow'} rounded-3xl flex items-center justify-center shadow-2xl transition-all duration-500`}>
+                                {loginRole === 'admin' ? <ShieldCheck className="w-10 h-10 text-white" /> : <Lock className="w-10 h-10 text-white" />}
+                            </div>
+                        </Link>
 
-    try {
-      const provider = providerType === 'google' 
-        ? new GoogleAuthProvider() 
-        : new GithubAuthProvider()
+                        <div className="flex bg-white/5 p-1 rounded-2xl w-fit mx-auto mb-6 border border-white/10 backdrop-blur-md">
+                            <button
+                                onClick={() => setLoginRole("member")}
+                                className={`px-6 py-2 rounded-xl text-xs font-black tracking-widest uppercase italic transition-all duration-300 ${loginRole === "member" ? "bg-white text-slate-950 shadow-lg" : "text-white/40 hover:text-white"}`}
+                            >
+                                Member
+                            </button>
+                            <button
+                                onClick={() => setLoginRole("admin")}
+                                className={`px-6 py-2 rounded-xl text-xs font-black tracking-widest uppercase italic transition-all duration-300 ${loginRole === "admin" ? "bg-white text-slate-950 shadow-lg" : "text-white/40 hover:text-white"}`}
+                            >
+                                Admin
+                            </button>
+                        </div>
 
-      const userCredential = await signInWithPopup(auth, provider)
-      const user = userCredential.user
-      const token = await user.getIdToken()
+                        <CardTitle className="text-3xl font-black tracking-tight text-white uppercase italic">
+                            {loginRole === 'admin' ? "Console Access" : "Welcome Back"}
+                        </CardTitle>
+                        <CardDescription className="text-slate-400 text-sm mt-2 font-medium">
+                            {loginRole === 'admin' ? "Administrative credentials required" : "Access your member repository profile"}
+                        </CardDescription>
+                    </CardHeader>
 
-      setUser({
-        uid: user.uid,
-        email: user.email,
-        displayName: user.displayName,
-        photoURL: user.photoURL,
-      })
-      setToken(token)
+                    <CardContent className="px-8 sm:px-10 space-y-6">
+                        {/* Demo Admin Access — shown when admin tab is selected */}
+                        {loginRole === 'admin' && (
+                            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5 space-y-3">
+                                <div className="flex items-center gap-2 text-amber-400 mb-1">
+                                    <Zap className="h-4 w-4 fill-amber-400" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest">Demo Access Available</span>
+                                </div>
+                                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                    Backend is offline. Click below to instantly access the Admin Console with full CRUD capabilities using pre-loaded demo data.
+                                </p>
+                                <Button onClick={handleDemoAdmin}
+                                    className="w-full h-12 bg-amber-500 hover:bg-amber-600 text-white font-black tracking-widest uppercase italic rounded-xl shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.02] gap-2">
+                                    <ShieldCheck className="h-4 w-4" />
+                                    ENTER DEMO ADMIN CONSOLE
+                                </Button>
+                            </div>
+                        )}
 
-      toast.success('Welcome!')
-      navigate(from, { replace: true })
-    } catch (error) {
-      console.error('OAuth login error:', error)
-      let message = 'Authentication failed. Please try again.'
-      
-      if (error.code === 'auth/popup-closed-by-user') {
-        message = 'Login cancelled.'
-      } else if (error.code === 'auth/account-exists-with-different-credential') {
-        message = 'An account already exists with this email using a different sign-in method.'
-      }
-      
-      toast.error(message)
-    } finally {
-      setOauthLoading(null)
-    }
-  }
+                        {loginRole === 'member' && (
+                            <>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <Button variant="outline" onClick={() => handleOAuth("google")} disabled={!!oauthLoading}
+                                        className="h-14 rounded-2xl border-border/50 bg-white/5 hover:bg-white/10 text-white gap-3 transition-all">
+                                        {oauthLoading === "google" ? <Loader2 className="h-5 w-5 animate-spin" /> : <Chrome className="h-5 w-5" />}
+                                        <span className="font-bold">Google</span>
+                                    </Button>
+                                    <Button variant="outline" onClick={() => handleOAuth("github")} disabled={!!oauthLoading}
+                                        className="h-14 rounded-2xl border-border/50 bg-white/5 hover:bg-white/10 text-white gap-3 transition-all">
+                                        {oauthLoading === "github" ? <Loader2 className="h-5 w-5 animate-spin" /> : <Github className="h-5 w-5" />}
+                                        <span className="font-bold">GitHub</span>
+                                    </Button>
+                                </div>
 
-  return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12 animate-fade-in">
-      <div className="w-full max-w-md">
-        {/* Logo/Brand */}
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-block">
-            <div className="w-16 h-16 bg-gradient-to-tr from-primary-500 to-cyan-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl font-bold text-white">ACM</span>
+                                <div className="relative">
+                                    <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border/30" /></div>
+                                    <div className="relative flex justify-center text-[10px] uppercase font-black tracking-widest leading-none">
+                                        <span className="bg-[#0f172a] px-4 text-muted-foreground/60 italic">OR USE CREDENTIALS</span>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {/* Divider for admin email form */}
+                        {loginRole === 'admin' && (
+                            <div className="relative">
+                                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border/30" /></div>
+                                <div className="relative flex justify-center text-[10px] uppercase font-black tracking-widest leading-none">
+                                    <span className="bg-[#0f172a] px-4 text-muted-foreground/60 italic">OR USE REAL CREDENTIALS</span>
+                                </div>
+                            </div>
+                        )}
+
+                        <form onSubmit={handleEmailLogin} className="space-y-5">
+                            <div className="relative group">
+                                <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors ${loginRole === 'admin' ? 'group-focus-within:text-amber-500' : 'group-focus-within:text-acm-blue'}`} />
+                                <Input name="email" type="email" value={formData.email} onChange={handleChange}
+                                    placeholder={loginRole === 'admin' ? "Admin Identifier" : "Member Email"}
+                                    className={`h-14 rounded-2xl border-border/50 bg-muted/20 pl-12 transition-all ${loginRole === 'admin' ? 'focus-visible:ring-amber-500' : 'focus-visible:ring-acm-blue'}`} />
+                            </div>
+                            <div className="relative group">
+                                <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors ${loginRole === 'admin' ? 'group-focus-within:text-amber-500' : 'group-focus-within:text-acm-blue'}`} />
+                                <Input name="password" type={showPassword ? "text" : "password"} value={formData.password} onChange={handleChange}
+                                    placeholder="Security Key" className={`h-14 rounded-2xl border-border/50 bg-muted/20 pl-12 pr-12 transition-all ${loginRole === 'admin' ? 'focus-visible:ring-amber-500' : 'focus-visible:ring-acm-blue'}`} />
+                                <button type="button" onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white transition-colors">
+                                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                </button>
+                            </div>
+                            <Button type="submit" disabled={isEmailLoading}
+                                className={`w-full h-14 rounded-2xl shadow-acm-glow text-lg font-black tracking-[0.2em] transition-all uppercase italic ${loginRole === 'admin' ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20' : 'bg-acm-blue hover:bg-acm-blue-dark'}`}>
+                                {isEmailLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : (
+                                    <div className="flex items-center gap-2 tracking-widest">{loginRole === 'admin' ? "INITIALIZE CONSOLE" : "SIGN IN"} <ArrowRight className="h-5 w-5" /></div>
+                                )}
+                            </Button>
+                        </form>
+                    </CardContent>
+
+                    <CardFooter className="flex flex-col gap-6 px-8 sm:px-10 pb-12 pt-6">
+                        <p className="text-center text-xs font-bold text-muted-foreground italic tracking-wide">
+                            {loginRole === 'admin' ? "Restricted administrative access zone." : "New to the community?"}{" "}
+                            {loginRole === 'member' && (
+                                <Link to="/register" className="text-white font-black hover:text-acm-blue transition-colors decoration-acm-blue/30 underline underline-offset-4">
+                                    Join the Repository
+                                </Link>
+                            )}
+                        </p>
+                    </CardFooter>
+                </Card>
             </div>
-          </Link>
-          <h1 className="text-2xl font-bold text-white">Welcome back</h1>
-          <p className="text-slate-400 mt-1">Sign in to your account to continue</p>
         </div>
-
-        {/* OAuth Buttons */}
-        <div className="space-y-3 mb-6">
-          <button
-            type="button"
-            onClick={() => handleOAuthLogin('google')}
-            disabled={oauthLoading}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white text-slate-900 rounded-xl font-medium hover:bg-slate-100 transition-colors disabled:opacity-50"
-          >
-            {oauthLoading === 'google' ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <>
-                <Chrome className="w-5 h-5" />
-                <span>Continue with Google</span>
-              </>
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleOAuthLogin('github')}
-            disabled={oauthLoading}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-slate-800 text-white border border-slate-700 rounded-xl font-medium hover:bg-slate-700 transition-colors disabled:opacity-50"
-          >
-            {oauthLoading === 'github' ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <>
-                <Github className="w-5 h-5" />
-                <span>Continue with GitHub</span>
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Divider */}
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-slate-700"></div>
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-4 bg-slate-900 text-slate-500">or sign in with email</span>
-          </div>
-        </div>
-
-        {/* Email/Password Form */}
-        <form onSubmit={handleEmailLogin} className="space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
-              Email
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <Mail className="w-5 h-5 text-slate-500" />
-              </div>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="you@example.com"
-                className="w-full pl-12 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">
-              Password
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <Lock className="w-5 h-5 text-slate-500" />
-              </div>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="••••••••"
-                className="w-full pl-12 pr-12 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-500 hover:text-slate-300"
-              >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between text-sm">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-primary-500 focus:ring-primary-500"
-              />
-              <span className="text-slate-400">Remember me</span>
-            </label>
-            <a href="#" className="text-primary-400 hover:text-primary-300">
-              Forgot password?
-            </a>
-          </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full btn-primary py-3 flex items-center justify-center gap-2"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Signing in...</span>
-              </>
-            ) : (
-              <span>Sign in</span>
-            )}
-          </button>
-        </form>
-
-        {/* Sign Up Link */}
-        <p className="text-center text-slate-400 mt-6">
-          Don't have an account?{' '}
-          <Link to="/register" className="text-primary-400 hover:text-primary-300 font-medium">
-            Sign up
-          </Link>
-        </p>
-      </div>
-    </div>
-  )
+    );
 }

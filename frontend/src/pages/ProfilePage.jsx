@@ -1,305 +1,236 @@
-import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { usersAPI, projectsAPI } from '../services/api'
-import { useAuthStore } from '../store/authStore'
-import { updateProfile } from 'firebase/auth'
-import { auth } from '../config/firebase'
-import toast from 'react-hot-toast'
-import { Link } from 'react-router-dom'
-import { 
-  User, 
-  Mail, 
-  Calendar, 
-  Edit3, 
-  Save, 
-  X, 
-  Loader2, 
-  ExternalLink,
-  FolderOpen,
-  CheckCircle,
-  Clock,
-  XCircle
-} from 'lucide-react'
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { usersAPI, projectsAPI } from "@/services/api";
+import { useAuthStore } from "@/store/authStore";
+import { updateProfile } from "firebase/auth";
+import { auth } from "@/config/firebase";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import {
+    User, Mail, Calendar, Edit3, Save, X, Loader2, ExternalLink,
+    FolderOpen, CheckCircle, Clock, XCircle, BarChart3, LogOut, Plus
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import Layout from "@/components/Layout";
+
+function ProfileContent() {
+    const { user, setUser, logout } = useAuthStore();
+    const navigate = useNavigate();
+    const queryClient = useQueryClient();
+    const [isEditing, setIsEditing] = useState(false);
+    const [displayName, setDisplayName] = useState(user?.name || "");
+
+    const { data: profileData, isLoading: profileLoading } = useQuery({
+        queryKey: ["profile"],
+        queryFn: () => usersAPI.getById(user?.uid),
+        enabled: !!user?.uid,
+    });
+
+    const { data: projectsData, isLoading: projectsLoading } = useQuery({
+        queryKey: ["my-projects", user?.uid],
+        queryFn: () => projectsAPI.getAll({ ownerId: user?.uid, limit: 50 }),
+        enabled: !!user?.uid,
+    });
+
+    const profile = profileData?.data?.user || user;
+    const projects = projectsData?.data?.projects || [];
+
+    const updateMutation = useMutation({
+        mutationFn: async (newName) => {
+            if (auth.currentUser) await updateProfile(auth.currentUser, { displayName: newName });
+            return usersAPI.update(user.uid, { name: newName });
+        },
+        onSuccess: () => {
+            setUser({ ...user, name: displayName, displayName });
+            queryClient.invalidateQueries({ queryKey: ["profile"] });
+            toast.success("Identity protocols updated");
+            setIsEditing(false);
+        },
+        onError: (error) => toast.error(error.response?.data?.message || "Update failed"),
+    });
+
+    const handleSave = () => {
+        if (!displayName.trim()) return toast.error("Name cannot be null");
+        updateMutation.mutate(displayName);
+    };
+
+    const getStatusConfig = (status) => {
+        switch (status) {
+            case "approved": return { icon: CheckCircle, color: "text-emerald-500", bg: "bg-emerald-500/10", label: "Verified" };
+            case "pending": return { icon: Clock, color: "text-amber-500", bg: "bg-amber-500/10", label: "Processing" };
+            case "rejected": return { icon: XCircle, color: "text-red-500", bg: "bg-red-500/10", label: "Rejected" };
+            default: return { icon: Clock, color: "text-muted-foreground", bg: "bg-muted", label: status };
+        }
+    };
+
+    const stats = {
+        total: projects.length,
+        approved: projects.filter(p => p.status === "approved").length,
+        pending: projects.filter(p => p.status === "pending").length,
+    };
+
+    const handleLogout = async () => { await logout(); navigate("/"); };
+
+    if (profileLoading) return <div className="flex min-h-[400px] items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-acm-blue" /></div>;
+
+    return (
+        <div className="pb-20">
+            <section className="relative overflow-hidden bg-slate-950/50 py-20 border-b border-border/50 rounded-[3rem] mb-12">
+                <div className="absolute inset-0 bg-acm-blue/5 [mask-image:radial-gradient(circle_at_center,white,transparent)]" />
+                <div className="container relative mx-auto px-4">
+                    <div className="flex flex-col md:flex-row items-center gap-8 md:items-end">
+                        <Avatar className="h-32 w-32 rounded-[2.5rem] border-4 border-background shadow-2xl">
+                            <AvatarImage src={user?.photoURL} />
+                            <AvatarFallback className="bg-acm-blue text-white text-4xl font-black rounded-[2.5rem]">{displayName?.charAt(0) || "U"}</AvatarFallback>
+                        </Avatar>
+
+                        <div className="flex-1 text-center md:text-left space-y-4">
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-3 justify-center md:justify-start">
+                                    {isEditing ? (
+                                        <div className="flex items-center gap-2">
+                                            <input value={displayName} onChange={(e) => setDisplayName(e.target.value)}
+                                                className="bg-muted px-4 py-2 rounded-xl border border-acm-blue font-bold text-2xl focus:outline-none focus:ring-2 focus:ring-acm-blue/20" autoFocus />
+                                            <Button size="icon" onClick={handleSave} className="rounded-xl h-10 w-10 bg-emerald-500 hover:bg-emerald-600">
+                                                {updateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                            </Button>
+                                            <Button size="icon" variant="destructive" onClick={() => setIsEditing(false)} className="rounded-xl h-10 w-10">
+                                                <X className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white">{displayName || "Community Member"}</h1>
+                                            <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)} className="h-10 w-10 rounded-xl hover:bg-white/10">
+                                                <Edit3 className="h-4 w-4 text-acm-blue" />
+                                            </Button>
+                                        </>
+                                    )}
+                                </div>
+                                <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-slate-400 text-sm font-medium">
+                                    <span className="flex items-center gap-2"><Mail className="h-4 w-4 text-acm-blue/50" />{user?.email}</span>
+                                    <span className="flex items-center gap-2">
+                                        <Calendar className="h-4 w-4 text-acm-blue/50" />
+                                        {profile?.createdAt ? `Member since ${format(new Date(profile.createdAt._seconds ? profile.createdAt._seconds * 1000 : profile.createdAt), "MMM yyyy")}` : "Active Member"}
+                                    </span>
+                                    <Badge variant="outline" className="border-acm-blue/30 text-acm-blue bg-acm-blue/5 h-6 font-bold uppercase tracking-widest text-[10px]">
+                                        {user?.role || "MEMBER"}
+                                    </Badge>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <Button variant="outline" onClick={handleLogout} className="rounded-2xl border-red-500/20 text-red-500 hover:bg-red-500/10 font-bold h-12 px-6">
+                                <LogOut className="mr-2 h-4 w-4" /> SIGN OUT
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                <div className="space-y-6">
+                    <Card className="rounded-[2.5rem] border-border/50 bg-card/30 backdrop-blur-xl overflow-hidden shadow-xl">
+                        <CardHeader className="p-6 pb-2">
+                            <CardTitle className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
+                                <BarChart3 className="h-3 w-3 text-acm-blue" /> Contribution Metrics
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-6 space-y-6">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <p className="text-2xl font-black text-white">{stats.total}</p>
+                                    <p className="text-[10px] uppercase font-bold text-muted-foreground leading-none">Total</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-2xl font-black text-emerald-500">{stats.approved}</p>
+                                    <p className="text-[10px] uppercase font-bold text-muted-foreground leading-none">Live</p>
+                                </div>
+                            </div>
+                            <Separator className="bg-border/30" />
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-medium text-muted-foreground">Pending Review</span>
+                                <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 border-none font-bold">{stats.pending}</Badge>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Button asChild className="w-full h-14 rounded-2xl bg-acm-blue hover:bg-acm-blue-dark shadow-acm-glow font-black tracking-widest transition-all hover:scale-[1.02]">
+                        <Link to="/submit"><Plus className="mr-2 h-5 w-5" /> NEW SUBMISSION</Link>
+                    </Button>
+                </div>
+
+                <div className="lg:col-span-3">
+                    <h2 className="text-2xl font-black tracking-tighter mb-8 flex items-center gap-3 italic">
+                        <FolderOpen className="h-6 w-6 text-acm-blue" /> MY PROJECTS
+                    </h2>
+
+                    {projectsLoading ? (
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            {[1, 2].map(i => <div key={i} className="h-48 rounded-3xl bg-muted animate-pulse" />)}
+                        </div>
+                    ) : projects.length === 0 ? (
+                        <Card className="rounded-[3rem] border-dashed border-2 border-border/50 bg-muted/5 p-20 text-center">
+                            <div className="mb-6 rounded-full bg-muted p-4 inline-flex"><FolderOpen className="h-12 w-12 text-muted-foreground" /></div>
+                            <h3 className="text-xl font-bold mb-2">No active projects found.</h3>
+                            <p className="text-muted-foreground mb-8 max-w-xs mx-auto text-sm">You haven't submitted any projects yet.</p>
+                            <Button asChild className="rounded-2xl h-12 px-8 bg-acm-blue hover:bg-acm-blue-dark">
+                                <Link to="/submit">Start your first contribution</Link>
+                            </Button>
+                        </Card>
+                    ) : (
+                        <div className="grid gap-6 sm:grid-cols-2">
+                            {projects.map((project) => {
+                                const status = getStatusConfig(project.status);
+                                const StatusIcon = status.icon;
+                                return (
+                                    <Card key={project.id} className="group rounded-[2rem] border-border/50 bg-card/40 backdrop-blur-sm transition-all hover:border-acm-blue/50 hover:shadow-acm-glow overflow-hidden">
+                                        <CardContent className="p-6">
+                                            <div className="flex items-start justify-between gap-4 mb-4">
+                                                <Badge variant="outline" className={`${status.bg} ${status.color} border-none font-bold text-[10px] tracking-widest px-2.5`}>
+                                                    <StatusIcon className="mr-1 h-3 w-3" /> {status.label.toUpperCase()}
+                                                </Badge>
+                                                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <Button variant="ghost" size="icon" asChild className="h-8 w-8 rounded-lg hover:bg-acm-blue/10">
+                                                        <Link to={`/projects/${project.id}`}><ExternalLink className="h-4 w-4 text-acm-blue" /></Link>
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                            <h4 className="text-lg font-bold truncate group-hover:text-acm-blue transition-colors mb-2 uppercase tracking-tight">{project.title}</h4>
+                                            <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed h-8">{project.description}</p>
+                                            <Separator className="my-4 bg-border/30" />
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {project.techStack?.slice(0, 3).map(t => (
+                                                        <Badge key={t} variant="secondary" className="text-[9px] h-4 leading-none bg-muted/50 border-none font-medium">{t}</Badge>
+                                                    ))}
+                                                </div>
+                                                <span className="text-[10px] font-black text-muted-foreground/50">{format(new Date(project.createdAt), "MMM d")}</span>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
 
 export default function ProfilePage() {
-  const { user, setUser } = useAuthStore()
-  const queryClient = useQueryClient()
-  const [isEditing, setIsEditing] = useState(false)
-  const [displayName, setDisplayName] = useState(user?.displayName || '')
-
-  // Fetch user profile
-  const { data: profileData, isLoading: profileLoading } = useQuery({
-    queryKey: ['profile'],
-    queryFn: () => usersAPI.getProfile(),
-  })
-
-  // Fetch user's projects
-  const { data: projectsData, isLoading: projectsLoading } = useQuery({
-    queryKey: ['my-projects'],
-    queryFn: () => projectsAPI.getAll({ ownerId: user?.uid, limit: 50 }),
-    enabled: !!user?.uid,
-  })
-
-  const profile = profileData?.data?.user
-  const projects = projectsData?.data?.projects || []
-
-  // Update profile mutation
-  const updateMutation = useMutation({
-    mutationFn: async (newDisplayName) => {
-      // Update Firebase profile
-      if (auth.currentUser) {
-        await updateProfile(auth.currentUser, { displayName: newDisplayName })
-      }
-      // Update backend
-      return usersAPI.updateProfile({ displayName: newDisplayName })
-    },
-    onSuccess: () => {
-      setUser({ ...user, displayName })
-      queryClient.invalidateQueries({ queryKey: ['profile'] })
-      toast.success('Profile updated successfully!')
-      setIsEditing(false)
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.message || 'Failed to update profile')
-    },
-  })
-
-  const handleSave = () => {
-    if (!displayName.trim()) {
-      toast.error('Display name cannot be empty')
-      return
-    }
-    updateMutation.mutate(displayName)
-  }
-
-  const handleCancel = () => {
-    setDisplayName(user?.displayName || '')
-    setIsEditing(false)
-  }
-
-  const getStatusConfig = (status) => {
-    switch (status) {
-      case 'approved':
-        return { icon: CheckCircle, color: 'text-green-400', bg: 'bg-green-500/10', label: 'Approved' }
-      case 'pending':
-        return { icon: Clock, color: 'text-yellow-400', bg: 'bg-yellow-500/10', label: 'Pending' }
-      case 'rejected':
-        return { icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10', label: 'Rejected' }
-      default:
-        return { icon: Clock, color: 'text-slate-400', bg: 'bg-slate-500/10', label: status }
-    }
-  }
-
-  const projectStats = {
-    total: projects.length,
-    approved: projects.filter(p => p.status === 'approved').length,
-    pending: projects.filter(p => p.status === 'pending').length,
-    rejected: projects.filter(p => p.status === 'rejected').length,
-  }
-
-  if (profileLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-10 h-10 text-primary-500 animate-spin" />
-      </div>
-    )
-  }
-
-  return (
-    <div className="min-h-screen animate-fade-in pb-20">
-      {/* Header */}
-      <div className="bg-gradient-to-b from-slate-800/50 to-transparent py-16">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row items-center gap-6">
-            {/* Avatar */}
-            <div className="relative">
-              {user?.photoURL ? (
-                <img
-                  src={user.photoURL}
-                  alt={user.displayName}
-                  className="w-24 h-24 rounded-2xl object-cover border-4 border-slate-700"
-                />
-              ) : (
-                <div className="w-24 h-24 bg-gradient-to-tr from-primary-500 to-cyan-400 rounded-2xl flex items-center justify-center text-3xl font-bold text-white border-4 border-slate-700">
-                  {(user?.displayName || user?.email || 'U').charAt(0).toUpperCase()}
-                </div>
-              )}
+        <Layout>
+            <div className="container mx-auto px-4 py-8">
+                <ProfileContent />
             </div>
-
-            {/* User Info */}
-            <div className="flex-1 text-center sm:text-left">
-              {isEditing ? (
-                <div className="flex items-center gap-2 justify-center sm:justify-start">
-                  <input
-                    type="text"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-xl font-semibold focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    autoFocus
-                  />
-                  <button
-                    onClick={handleSave}
-                    disabled={updateMutation.isPending}
-                    className="p-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors"
-                  >
-                    {updateMutation.isPending ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <Save className="w-5 h-5" />
-                    )}
-                  </button>
-                  <button
-                    onClick={handleCancel}
-                    className="p-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 justify-center sm:justify-start">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-white">
-                    {user?.displayName || 'Anonymous User'}
-                  </h1>
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="p-2 text-slate-400 hover:text-white transition-colors"
-                  >
-                    <Edit3 className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-              
-              <div className="flex flex-wrap items-center gap-4 mt-2 justify-center sm:justify-start text-slate-400">
-                <span className="flex items-center gap-1.5">
-                  <Mail className="w-4 h-4" />
-                  {user?.email}
-                </span>
-                {profile?.createdAt && (
-                  <span className="flex items-center gap-1.5">
-                    <Calendar className="w-4 h-4" />
-                    Joined {new Date(profile.createdAt._seconds * 1000).toLocaleDateString()}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-          <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 text-center">
-            <p className="text-3xl font-bold text-white">{projectStats.total}</p>
-            <p className="text-sm text-slate-400">Total Projects</p>
-          </div>
-          <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 text-center">
-            <p className="text-3xl font-bold text-green-400">{projectStats.approved}</p>
-            <p className="text-sm text-slate-400">Approved</p>
-          </div>
-          <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 text-center">
-            <p className="text-3xl font-bold text-yellow-400">{projectStats.pending}</p>
-            <p className="text-sm text-slate-400">Pending</p>
-          </div>
-          <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 text-center">
-            <p className="text-3xl font-bold text-red-400">{projectStats.rejected}</p>
-            <p className="text-sm text-slate-400">Rejected</p>
-          </div>
-        </div>
-
-        {/* Projects Section */}
-        <div className="bg-slate-800/50 border border-slate-700 rounded-2xl overflow-hidden">
-          <div className="flex items-center justify-between p-6 border-b border-slate-700">
-            <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-              <FolderOpen className="w-5 h-5 text-primary-400" />
-              My Projects
-            </h2>
-            <Link to="/projects/new" className="btn-primary text-sm">
-              New Project
-            </Link>
-          </div>
-
-          {projectsLoading ? (
-            <div className="p-12 text-center">
-              <Loader2 className="w-8 h-8 text-primary-500 animate-spin mx-auto" />
-            </div>
-          ) : projects.length === 0 ? (
-            <div className="p-12 text-center">
-              <FolderOpen className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-white mb-2">No projects yet</h3>
-              <p className="text-slate-400 mb-4">
-                Start sharing your work with the community
-              </p>
-              <Link to="/projects/new" className="btn-primary">
-                Create Your First Project
-              </Link>
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-700">
-              {projects.map((project) => {
-                const statusConfig = getStatusConfig(project.status)
-                const StatusIcon = statusConfig.icon
-                
-                return (
-                  <div
-                    key={project.id}
-                    className="p-4 hover:bg-slate-700/30 transition-colors"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <Link
-                            to={`/projects/${project.id}`}
-                            className="text-white font-medium hover:text-primary-400 transition-colors truncate"
-                          >
-                            {project.title}
-                          </Link>
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 ${statusConfig.bg} ${statusConfig.color} rounded-full text-xs`}>
-                            <StatusIcon className="w-3 h-3" />
-                            {statusConfig.label}
-                          </span>
-                        </div>
-                        <p className="text-slate-400 text-sm mt-1 line-clamp-1">
-                          {project.description}
-                        </p>
-                        <div className="flex items-center gap-2 mt-2">
-                          {project.techStack?.slice(0, 3).map((tech, index) => (
-                            <span
-                              key={index}
-                              className="px-2 py-0.5 bg-slate-700 text-slate-300 rounded text-xs"
-                            >
-                              {tech}
-                            </span>
-                          ))}
-                          {project.techStack?.length > 3 && (
-                            <span className="text-xs text-slate-500">
-                              +{project.techStack.length - 3} more
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Link
-                          to={`/projects/${project.id}/edit`}
-                          className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </Link>
-                        <Link
-                          to={`/projects/${project.id}`}
-                          className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
+        </Layout>
+    );
 }
