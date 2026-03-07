@@ -17,8 +17,8 @@ import {
 import { toast } from "sonner";
 
 export default function AdminDomainsPage() {
-    const [tags, setTags] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [tags, setTags] = useState(MOCK_TAGS);   // show immediately
+    const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const [newTagName, setNewTagName] = useState("");
     const [editingId, setEditingId] = useState(null);
@@ -28,11 +28,9 @@ export default function AdminDomainsPage() {
         const load = async () => {
             try {
                 const data = await fsDomains.getAll();
-                setTags(data.length > 0 ? data : MOCK_TAGS);
+                if (data.length > 0) setTags(data);
             } catch {
-                setTags(MOCK_TAGS);
-            } finally {
-                setLoading(false);
+                // mock data already showing
             }
         };
         load();

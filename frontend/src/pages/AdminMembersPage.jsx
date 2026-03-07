@@ -21,21 +21,18 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 
 export default function AdminMembersPage() {
-    const [members, setMembers] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [members, setMembers] = useState(MOCK_USERS);   // show immediately
+    const [loading, setLoading] = useState(false);         // no spinner needed
     const [searchTerm, setSearchTerm] = useState("");
 
-    // Load from Firestore, fallback to mock on error
+    // Background Firestore sync — updates when data arrives
     useEffect(() => {
         const load = async () => {
             try {
                 const users = await fsUsers.getAll();
-                setMembers(users.length > 0 ? users : MOCK_USERS);
-            } catch (err) {
-                console.warn("Firestore unavailable, using mock data");
-                setMembers(MOCK_USERS);
-            } finally {
-                setLoading(false);
+                if (users.length > 0) setMembers(users);
+            } catch {
+                // mock data already showing, no-op
             }
         };
         load();

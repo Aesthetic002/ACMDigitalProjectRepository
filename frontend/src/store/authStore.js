@@ -21,52 +21,61 @@ export const useAuthStore = create(
             isAuthenticated: false,
 
             initAuth: () => {
-                // If already authenticated via demo mode, don't reset
+                // If already authenticated (from persisted state), resolve immediately — no need to hit Firebase
                 const currentState = get();
-                if (currentState.isAuthenticated && currentState.user?.isDemoUser) {
+                if (currentState.isAuthenticated && currentState.user) {
                     set({ isLoading: false });
                     return;
                 }
-                onAuthStateChanged(auth, async (firebaseUser) => {
-                    if (firebaseUser) {
-                        try {
-                            // Read role directly from Firestore
-                            let role = 'member';
-                            let firestoreData = {};
-                            try {
-                                const userSnap = await getDoc(doc(db, 'users', firebaseUser.uid));
-                                if (userSnap.exists()) {
-                                    firestoreData = userSnap.data();
-                                    role = firestoreData.role || 'member';
-                                }
-                            } catch (e) {
-                                console.log('Firestore read failed, defaulting to member role', e.message);
-                            }
-                            set({
-                                user: {
-                                    uid: firebaseUser.uid,
-                                    email: firebaseUser.email,
-                                    name: firestoreData.name || firebaseUser.displayName || 'User',
-                                    photoURL: firebaseUser.photoURL,
-                                    role,
-                                    ...firestoreData,
-                                },
-                                isAuthenticated: true,
-                                isLoading: false,
-                            })
-                        } catch (error) {
-                            console.error('Auth error:', error)
-                            set({ user: null, isAuthenticated: false, isLoading: false })
-                        }
-                    } else {
-                        // Only reset if not in demo mode
-                        if (!get().user?.isDemoUser) {
-                            set({ user: null, token: null, isAuthenticated: false, isLoading: false })
-                        } else {
-                            set({ isLoading: false });
-                        }
+
+                // Safety net: if Firebase doesn't respond in 2s (e.g. no .env config), unblock the app
+                const failsafeTimer = setTimeout(() => {
+                    if (get().isLoading) {
+                        console.warn('Firebase auth timeout — no config or offline. Proceeding as guest.');
+                        set({ isLoading: false });
                     }
-                })
+                }, 2000);
+
+                try {
+                    onAuthStateChanged(auth, async (firebaseUser) => {
+                        clearTimeout(failsafeTimer);
+                        if (firebaseUser) {
+                            try {
+                                let role = 'member';
+                                let firestoreData = {};
+                                try {
+                                    const userSnap = await getDoc(doc(db, 'users', firebaseUser.uid));
+                                    if (userSnap.exists()) {
+                                        firestoreData = userSnap.data();
+                                        role = firestoreData.role || 'member';
+                                    }
+                                } catch { /* Firestore offline — keep default role */ }
+                                set({
+                                    user: {
+                                        uid: firebaseUser.uid,
+                                        email: firebaseUser.email,
+                                        name: firestoreData.name || firebaseUser.displayName || 'User',
+                                        photoURL: firebaseUser.photoURL,
+                                        role,
+                                        ...firestoreData,
+                                    },
+                                    isAuthenticated: true,
+                                    isLoading: false,
+                                });
+                            } catch (error) {
+                                console.error('Auth error:', error);
+                                set({ user: null, isAuthenticated: false, isLoading: false });
+                            }
+                        } else {
+                            set({ user: null, token: null, isAuthenticated: false, isLoading: false });
+                        }
+                    });
+                } catch (err) {
+                    // Firebase completely unavailable (bad/missing config)
+                    clearTimeout(failsafeTimer);
+                    console.error('Firebase init failed:', err.message);
+                    set({ isLoading: false });
+                }
             },
 
             login: async (email, password) => {
@@ -137,7 +146,11 @@ export const useAuthStore = create(
 
             logout: async () => {
                 try {
-                    await signOut(auth)
+                    // Only call Firebase signOut for real accounts
+                    const { user } = get();
+                    if (!user?.isDemoUser) {
+                        await signOut(auth)
+                    }
                     set({ user: null, token: null, isAuthenticated: false })
                     toast.success('Logged out successfully')
                 } catch {
@@ -149,23 +162,15 @@ export const useAuthStore = create(
                 const { user } = get()
                 if (!user) return
                 try {
-                    const response = await usersAPI.update(user.uid, data)
-                    set({ user: { ...user, ...response.data.user } })
+                    // Update Firestore directly
+                    await setDoc(doc(db, 'users', user.uid), { ...data, updatedAt: serverTimestamp() }, { merge: true });
+                    set({ user: { ...user, ...data } })
                     toast.success('Profile updated successfully')
                     return { success: true }
                 } catch {
                     toast.error('Failed to update profile')
                     return { success: false }
                 }
-            },
-
-            refreshToken: async () => {
-                if (auth.currentUser) {
-                    const token = await auth.currentUser.getIdToken(true)
-                    set({ token })
-                    return token
-                }
-                return null
             },
 
             setUser: (user) => set({ user }),
@@ -193,7 +198,12 @@ export const useAuthStore = create(
         }),
         {
             name: 'auth-storage',
-            partialize: (state) => ({ token: state.token }),
+            // Persist the full session so page reloads keep the user logged in
+            partialize: (state) => ({
+                token: state.token,
+                user: state.user,
+                isAuthenticated: state.isAuthenticated,
+            }),
         }
     )
 )

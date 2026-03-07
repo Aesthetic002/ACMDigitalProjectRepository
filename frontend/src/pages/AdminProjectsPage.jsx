@@ -31,8 +31,8 @@ const STATUS_CONFIG = {
 };
 
 export default function AdminProjectsPage() {
-    const [projects, setProjects] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [projects, setProjects] = useState(MOCK_PROJECTS);  // show immediately
+    const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
 
@@ -40,11 +40,9 @@ export default function AdminProjectsPage() {
         const load = async () => {
             try {
                 const data = await fsProjects.getAll();
-                setProjects(data.length > 0 ? data : MOCK_PROJECTS);
+                if (data.length > 0) setProjects(data);
             } catch {
-                setProjects(MOCK_PROJECTS);
-            } finally {
-                setLoading(false);
+                // mock data already showing
             }
         };
         load();
