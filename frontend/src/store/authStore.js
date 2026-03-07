@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { auth, googleProvider, githubProvider } from '../config/firebase'
+import { auth, db, googleProvider, githubProvider } from '../config/firebase'
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import {
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
@@ -9,7 +10,6 @@ import {
     onAuthStateChanged,
     updateProfile
 } from 'firebase/auth'
-import { usersAPI } from '../services/api'
 import { toast } from 'sonner'
 
 export const useAuthStore = create(
@@ -30,30 +30,33 @@ export const useAuthStore = create(
                 onAuthStateChanged(auth, async (firebaseUser) => {
                     if (firebaseUser) {
                         try {
-                            const token = await firebaseUser.getIdToken()
-                            set({ token })
-                            let userData = null
+                            // Read role directly from Firestore
+                            let role = 'member';
+                            let firestoreData = {};
                             try {
-                                const response = await usersAPI.getById(firebaseUser.uid)
-                                userData = response.data.user
-                            } catch {
-                                console.log('User not found in backend, using Firebase data')
+                                const userSnap = await getDoc(doc(db, 'users', firebaseUser.uid));
+                                if (userSnap.exists()) {
+                                    firestoreData = userSnap.data();
+                                    role = firestoreData.role || 'member';
+                                }
+                            } catch (e) {
+                                console.log('Firestore read failed, defaulting to member role', e.message);
                             }
                             set({
                                 user: {
                                     uid: firebaseUser.uid,
                                     email: firebaseUser.email,
-                                    name: userData?.name || firebaseUser.displayName || 'User',
+                                    name: firestoreData.name || firebaseUser.displayName || 'User',
                                     photoURL: firebaseUser.photoURL,
-                                    role: userData?.role || 'member',
-                                    ...userData,
+                                    role,
+                                    ...firestoreData,
                                 },
                                 isAuthenticated: true,
                                 isLoading: false,
                             })
                         } catch (error) {
                             console.error('Auth error:', error)
-                            set({ user: null, token: null, isAuthenticated: false, isLoading: false })
+                            set({ user: null, isAuthenticated: false, isLoading: false })
                         }
                     } else {
                         // Only reset if not in demo mode
@@ -85,6 +88,15 @@ export const useAuthStore = create(
                 try {
                     const result = await createUserWithEmailAndPassword(auth, email, password)
                     await updateProfile(result.user, { displayName: name })
+                    // Write user document to Firestore with role
+                    await setDoc(doc(db, 'users', result.user.uid), {
+                        uid: result.user.uid,
+                        email,
+                        name,
+                        role,
+                        createdAt: serverTimestamp(),
+                        updatedAt: serverTimestamp(),
+                    });
                     toast.success('Account created successfully!')
                     return { success: true }
                 } catch (error) {
