@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { MOCK_USERS } from "@/services/mockData";
+import { usersAPI, adminAPI } from "@/services/api";
 import {
     Users, Search, MoreVertical, Shield, ShieldCheck,
     UserMinus, UserCheck, ExternalLink, GraduationCap, Loader2
@@ -20,8 +20,28 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 
 export default function AdminMembersPage() {
-    const [members, setMembers] = useState(MOCK_USERS);
+    const [members, setMembers] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
+
+    useEffect(() => {
+        const fetchMembers = async () => {
+            try {
+                const res = await adminAPI.getUsers({ limit: 100 });
+                if (res.data?.users) {
+                    setMembers(res.data.users);
+                } else {
+                    toast.error("Failed to load users structure");
+                }
+            } catch (error) {
+                console.error("Failed to fetch members:", error);
+                toast.error("Could not reach backend server");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchMembers();
+    }, []);
 
     const filteredMembers = useMemo(() =>
         members.filter(m =>
@@ -29,28 +49,43 @@ export default function AdminMembersPage() {
             m.email?.toLowerCase().includes(searchTerm.toLowerCase())
         ), [members, searchTerm]);
 
-    const toggleRole = (uid) => {
-        setMembers(prev => prev.map(m => {
-            if (m.uid !== uid) return m;
-            const newRole = m.role === 'admin' ? 'member' : 'admin';
-            toast.success(`${m.name} is now a ${newRole}`);
-            return { ...m, role: newRole };
-        }));
+    const toggleRole = async (uid) => {
+        const member = members.find(m => m.uid === uid);
+        const newRole = member.role === 'admin' ? 'member' : 'admin';
+        try {
+            const res = await adminAPI.updateUser(uid, { role: newRole });
+            if (res.data?.success) {
+                setMembers(prev => prev.map(m => m.uid === uid ? { ...m, role: newRole } : m));
+                toast.success(`${member.name} is now a ${newRole}`);
+            }
+        } catch (error) {
+            console.error("Failed to update role:", error);
+            toast.error(error.response?.data?.message || "Failed to update role");
+        }
     };
 
-    const toggleStatus = (uid) => {
-        setMembers(prev => prev.map(m => {
-            if (m.uid !== uid) return m;
-            const newDisabled = !m.disabled;
-            toast.success(`${m.name} has been ${newDisabled ? "suspended" : "reactivated"}`);
-            return { ...m, disabled: newDisabled };
-        }));
+    const toggleStatus = async (uid) => {
+        const member = members.find(m => m.uid === uid);
+        const newDisabled = !member.disabled;
+        try {
+            // Note: Update backend 'disabled' flag (this depends on your backend schema supporting it)
+            const res = await adminAPI.updateUser(uid, { disabled: newDisabled });
+            if (res.data?.success) {
+                setMembers(prev => prev.map(m => m.uid === uid ? { ...m, disabled: newDisabled } : m));
+                toast.success(`${member.name} has been ${newDisabled ? "suspended" : "reactivated"}`);
+            }
+        } catch (error) {
+            console.error("Failed to update status:", error);
+            toast.error(error.response?.data?.message || "Failed to update status");
+        }
     };
 
     const deleteMember = (uid) => {
+        // Backend lacks an explicit delete user route in users.routes.js.
+        // So this is a soft visual removal for the session to prevent a 404 crash.
         const member = members.find(m => m.uid === uid);
         setMembers(prev => prev.filter(m => m.uid !== uid));
-        toast.success(`${member?.name} removed from directory`);
+        toast.success(`Soft override: ${member?.name} removed from view. (Real backend deletion not yet supported)`);
     };
 
     return (
@@ -72,7 +107,12 @@ export default function AdminMembersPage() {
             </div>
 
             <div className="rounded-2xl border border-border/50 bg-card/20 backdrop-blur-sm overflow-hidden shadow-xl">
-                {filteredMembers.length === 0 ? (
+                {isLoading ? (
+                    <div className="text-center py-20">
+                        <Loader2 className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3 animate-spin" />
+                        <p className="font-bold text-muted-foreground italic">Loading members...</p>
+                    </div>
+                ) : filteredMembers.length === 0 ? (
                     <div className="text-center py-20">
                         <Users className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
                         <p className="font-bold text-muted-foreground italic">No matching members found</p>

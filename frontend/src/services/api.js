@@ -78,26 +78,17 @@ export const usersAPI = {
 
 // ── Admin ─────────────────────────────────────────────────
 export const adminAPI = {
-    getAnalytics: async () => {
-        try {
-            return await api.get('/admin/analytics');
-        } catch (err) {
-            return { data: { stats: { users: 154, projects: 42, domains: 12, events: 5 } } };
-        }
-    },
-    getUsers: async (params) => {
-        try {
-            const res = await api.get('/admin/users', { params });
-            return res;
-        } catch (err) {
-            console.warn("Using MOCK_USERS due to API error");
-            await delay(500);
-            return { data: { users: MOCK_USERS } };
-        }
-    },
-    updateUser: (uid, data) => api.put(`/admin/users/${uid}`, data),
-    approveProject: (id) => api.put(`/admin/projects/${id}/approve`),
-    rejectProject: (id) => api.put(`/admin/projects/${id}/reject`),
+    getAnalytics: () => api.get('/admin/analytics'),
+    // Backend doesn't have a dedicated /admin/users endpoint; use /users with role filter if needed
+    getUsers: (params) => api.get('/users', { params }),
+
+    // Note: Users can only update themselves unless they are admin, so this uses the standard users PUT route
+    updateUser: (uid, data) => api.put(`/users/${uid}`, data),
+
+    // Backend expects POST to /admin/projects/:id/review with an action string
+    approveProject: (id) => api.post(`/admin/projects/${id}/review`, { action: 'approve' }),
+    rejectProject: (id) => api.post(`/admin/projects/${id}/review`, { action: 'reject' }),
+    resetProject: (id) => api.post(`/admin/projects/${id}/review`, { action: 'pending' }),
 };
 
 // ── Search ────────────────────────────────────────────────
@@ -107,14 +98,9 @@ export const searchAPI = {
 
 // ── Tags ──────────────────────────────────────────────────
 export const tagsAPI = {
-    getAll: async () => {
-        try {
-            return await api.get('/tags');
-        } catch (err) {
-            return { data: { tags: MOCK_TAGS } };
-        }
-    },
+    getAll: () => api.get('/tags'),
     create: (data) => api.post('/tags', data),
+    delete: (id) => api.delete(`/tags/${id}`),
 };
 
 // ── Assets ────────────────────────────────────────────────

@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
-import { MOCK_TAGS } from "@/services/mockData";
+import { useState, useMemo, useEffect } from "react";
+import { tagsAPI } from "@/services/api";
 import {
-    Plus, Trash2, Edit3, Search, Hash, Layers, Check, X
+    Plus, Trash2, Search, Hash, Layers, Loader2
 } from "lucide-react";
 import {
     Table, TableBody, TableCell, TableHead,
@@ -17,51 +17,79 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
-let nextId = 100;
-
 export default function AdminDomainsPage() {
-    const [tags, setTags] = useState(MOCK_TAGS);
+    const [tags, setTags] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [newTagName, setNewTagName] = useState("");
-    const [editingId, setEditingId] = useState(null);
-    const [editValue, setEditValue] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+        const fetchTags = async () => {
+            try {
+                const res = await tagsAPI.getAll();
+                if (res.data?.tags) {
+                    setTags(res.data.tags);
+                } else {
+                    toast.error("Failed to load domains structure");
+                }
+            } catch (error) {
+                console.error("Failed to fetch tags:", error);
+                toast.error("Could not reach backend server");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchTags();
+    }, []);
 
     const filteredTags = useMemo(() =>
         tags.filter(t => t.name?.toLowerCase().includes(searchTerm.toLowerCase())),
         [tags, searchTerm]);
 
-    const addTag = (e) => {
+    const generateSlug = (name) => {
+        return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+    };
+
+    const addTag = async (e) => {
         e.preventDefault();
         const name = newTagName.trim();
         if (!name) return;
+
         if (tags.some(t => t.name.toLowerCase() === name.toLowerCase())) {
             toast.error("Domain already exists");
             return;
         }
-        setTags(prev => [...prev, { id: `tag${nextId++}`, name, projectCount: 0 }]);
-        setNewTagName("");
-        toast.success(`Domain "${name}" registered`);
+
+        setIsSubmitting(true);
+        try {
+            const slug = generateSlug(name);
+            const res = await tagsAPI.create({ name, slug });
+            if (res.data?.success && res.data.tag) {
+                setTags(prev => [res.data.tag, ...prev]);
+                setNewTagName("");
+                toast.success(`Domain "${name}" registered`);
+            }
+        } catch (error) {
+            console.error("Failed to create tag:", error);
+            toast.error(error.response?.data?.message || "Failed to create domain");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
-    const startEdit = (tag) => {
-        setEditingId(tag.id);
-        setEditValue(tag.name);
-    };
-
-    const saveEdit = (id) => {
-        const name = editValue.trim();
-        if (!name) return;
-        setTags(prev => prev.map(t => t.id === id ? { ...t, name } : t));
-        setEditingId(null);
-        toast.success("Domain updated");
-    };
-
-    const cancelEdit = () => setEditingId(null);
-
-    const deleteTag = (id) => {
+    const deleteTag = async (id) => {
         const tag = tags.find(t => t.id === id);
-        setTags(prev => prev.filter(t => t.id !== id));
-        toast.success(`Domain "${tag?.name}" removed`);
+        try {
+            const res = await tagsAPI.delete(id);
+            if (res.data?.success) {
+                setTags(prev => prev.filter(t => t.id !== id));
+                toast.success(`Domain "${tag?.name}" removed`);
+            }
+        } catch (error) {
+            console.error("Failed to delete tag:", error);
+            toast.error(error.response?.data?.message || "Failed to remove domain");
+        }
     };
 
     return (
@@ -85,15 +113,16 @@ export default function AdminDomainsPage() {
                                     placeholder="e.g. Artificial Intelligence"
                                     value={newTagName}
                                     onChange={(e) => setNewTagName(e.target.value)}
+                                    disabled={isSubmitting}
                                     className="rounded-xl border-border/50 bg-black/20 focus-visible:ring-amber-500"
                                 />
                             </div>
                             <Button
                                 type="submit"
-                                disabled={!newTagName.trim()}
+                                disabled={!newTagName.trim() || isSubmitting}
                                 className="w-full bg-amber-500 hover:bg-amber-600 rounded-xl font-black tracking-widest uppercase transition-all shadow-lg shadow-amber-500/20 h-11 text-white"
                             >
-                                ADD DOMAIN
+                                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "ADD DOMAIN"}
                             </Button>
                         </form>
                     </div>
@@ -123,7 +152,12 @@ export default function AdminDomainsPage() {
                     </div>
 
                     <div className="rounded-2xl border border-border/50 bg-card/20 backdrop-blur-sm overflow-hidden shadow-xl">
-                        {filteredTags.length === 0 ? (
+                        {isLoading ? (
+                            <div className="text-center py-16">
+                                <Loader2 className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3 animate-spin" />
+                                <p className="font-bold text-muted-foreground italic text-sm">Loading domains...</p>
+                            </div>
+                        ) : filteredTags.length === 0 ? (
                             <div className="text-center py-16">
                                 <Hash className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
                                 <p className="font-bold text-muted-foreground italic text-sm">No domains found</p>
@@ -141,73 +175,42 @@ export default function AdminDomainsPage() {
                                     {filteredTags.map((tag) => (
                                         <TableRow key={tag.id} className="hover:bg-white/5 border-border/50 transition-colors group">
                                             <TableCell>
-                                                {editingId === tag.id ? (
-                                                    <div className="flex items-center gap-2">
-                                                        <Input
-                                                            value={editValue}
-                                                            onChange={(e) => setEditValue(e.target.value)}
-                                                            className="h-8 rounded-lg border-amber-500/50 bg-black/30 text-sm focus-visible:ring-amber-500"
-                                                            autoFocus
-                                                            onKeyDown={(e) => {
-                                                                if (e.key === 'Enter') saveEdit(tag.id);
-                                                                if (e.key === 'Escape') cancelEdit();
-                                                            }}
-                                                        />
-                                                        <Button size="icon" variant="ghost" onClick={() => saveEdit(tag.id)} className="h-7 w-7 text-emerald-500 hover:bg-emerald-500/10 rounded-lg">
-                                                            <Check className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button size="icon" variant="ghost" onClick={cancelEdit} className="h-7 w-7 text-red-500 hover:bg-red-500/10 rounded-lg">
-                                                            <X className="h-4 w-4" />
-                                                        </Button>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-lg bg-acm-blue/10 flex items-center justify-center">
+                                                        <Hash className="h-4 w-4 text-acm-blue" />
                                                     </div>
-                                                ) : (
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-lg bg-acm-blue/10 flex items-center justify-center">
-                                                            <Hash className="h-4 w-4 text-acm-blue" />
-                                                        </div>
-                                                        <span className="font-bold text-white group-hover:text-acm-blue transition-colors">{tag.name}</span>
-                                                    </div>
-                                                )}
+                                                    <span className="font-bold text-white group-hover:text-acm-blue transition-colors">{tag.name}</span>
+                                                </div>
                                             </TableCell>
                                             <TableCell>
                                                 <Badge variant="outline" className="border-border/50 rounded-lg bg-black/20 font-black text-[10px] py-0.5">
-                                                    {tag.projectCount} Projects
+                                                    {tag.count ?? tag.projectCount ?? 0} Projects
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                {editingId !== tag.id && (
-                                                    <div className="flex items-center justify-end gap-1.5">
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
                                                         <Button size="icon" variant="ghost"
-                                                            onClick={() => startEdit(tag)}
-                                                            className="h-8 w-8 text-slate-500 hover:bg-amber-500/10 hover:text-amber-500 rounded-lg"
-                                                            title="Edit domain name">
-                                                            <Edit3 className="h-4 w-4" />
+                                                            className="h-8 w-8 text-slate-500 hover:bg-red-500/10 hover:text-red-500 rounded-lg"
+                                                            title="Delete domain">
+                                                            <Trash2 className="h-4 w-4" />
                                                         </Button>
-                                                        <AlertDialog>
-                                                            <AlertDialogTrigger asChild>
-                                                                <Button size="icon" variant="ghost"
-                                                                    className="h-8 w-8 text-slate-500 hover:bg-red-500/10 hover:text-red-500 rounded-lg"
-                                                                    title="Delete domain">
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                </Button>
-                                                            </AlertDialogTrigger>
-                                                            <AlertDialogContent className="rounded-2xl bg-card/95 border-border/50 backdrop-blur">
-                                                                <AlertDialogHeader>
-                                                                    <AlertDialogTitle className="font-black uppercase italic">Remove Domain</AlertDialogTitle>
-                                                                    <AlertDialogDescription>
-                                                                        Remove domain <strong>"{tag.name}"</strong>? Projects using this tag won't be affected.
-                                                                    </AlertDialogDescription>
-                                                                </AlertDialogHeader>
-                                                                <AlertDialogFooter>
-                                                                    <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
-                                                                    <AlertDialogAction onClick={() => deleteTag(tag.id)} className="bg-red-500 hover:bg-red-600 rounded-xl font-bold">
-                                                                        Remove
-                                                                    </AlertDialogAction>
-                                                                </AlertDialogFooter>
-                                                            </AlertDialogContent>
-                                                        </AlertDialog>
-                                                    </div>
-                                                )}
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent className="rounded-2xl bg-card/95 border-border/50 backdrop-blur">
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle className="font-black uppercase italic">Remove Domain</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                Remove domain <strong>"{tag.name}"</strong>? Projects using this tag won't be affected.
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => deleteTag(tag.id)} className="bg-red-500 hover:bg-red-600 rounded-xl font-bold">
+                                                                Remove
+                                                            </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -220,3 +223,4 @@ export default function AdminDomainsPage() {
         </div>
     );
 }
+

@@ -1,10 +1,10 @@
-import { useState, useMemo } from "react";
-import { MOCK_PROJECTS } from "@/services/mockData";
+import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { projectsAPI, adminAPI } from "@/services/api";
 import {
     FolderPlus, Search, ExternalLink, Trash2,
     CheckCircle2, XCircle, Clock, FolderGit2,
-    RotateCcw, Filter
+    RotateCcw, Filter, Loader2
 } from "lucide-react";
 import {
     Table, TableBody, TableCell, TableHead,
@@ -31,32 +31,71 @@ const STATUS_CONFIG = {
 };
 
 export default function AdminProjectsPage() {
-    const [projects, setProjects] = useState(MOCK_PROJECTS);
+    const [projects, setProjects] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
+
+    useEffect(() => {
+        const fetchProjects = async () => {
+            try {
+                // Notice: the API returns { success: true, projects: [...] }
+                const res = await projectsAPI.getAll({ limit: 100 });
+                if (res.data?.projects) {
+                    setProjects(res.data.projects);
+                } else {
+                    toast.error("Failed to load projects structure");
+                }
+            } catch (error) {
+                console.error("Failed to fetch projects:", error);
+                toast.error("Could not reach backend server");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchProjects();
+    }, []);
 
     const filteredProjects = useMemo(() => {
         return projects.filter(p => {
             const matchesSearch = !searchTerm ||
                 p.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                p.author?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+                p.ownerId?.toLowerCase().includes(searchTerm.toLowerCase()); // Backend uses ownerId, not author object by default in list
             const matchesStatus = statusFilter === "all" || p.status === statusFilter;
             return matchesSearch && matchesStatus;
         });
     }, [projects, searchTerm, statusFilter]);
 
-    const updateStatus = (id, newStatus) => {
-        setProjects(prev => prev.map(p => {
-            if (p.id !== id) return p;
-            toast.success(`Project ${newStatus}`);
-            return { ...p, status: newStatus };
-        }));
+    const updateStatus = async (id, newStatus) => {
+        try {
+            let res;
+            if (newStatus === 'approved') res = await adminAPI.approveProject(id);
+            else if (newStatus === 'rejected') res = await adminAPI.rejectProject(id);
+            else res = await adminAPI.resetProject(id);
+
+            if (res.data?.success) {
+                setProjects(prev => prev.map(p => p.id === id ? { ...p, status: newStatus } : p));
+                toast.success(`Project ${newStatus}`);
+            }
+        } catch (error) {
+            console.error("Failed to update status:", error);
+            toast.error(error.response?.data?.message || "Failed to update project status");
+        }
     };
 
-    const deleteProject = (id) => {
+    const deleteProject = async (id) => {
+        // Find project beforehand for toast message if needed
         const project = projects.find(p => p.id === id);
-        setProjects(prev => prev.filter(p => p.id !== id));
-        toast.success(`"${project?.title}" permanently removed`);
+        try {
+            const res = await projectsAPI.delete(id);
+            if (res.data?.success) {
+                setProjects(prev => prev.filter(p => p.id !== id));
+                toast.success(`"${project?.title || id}" archived`);
+            }
+        } catch (error) {
+            console.error("Failed to delete product:", error);
+            toast.error(error.response?.data?.message || "Failed to archive project");
+        }
     };
 
     return (
@@ -116,7 +155,12 @@ export default function AdminProjectsPage() {
 
             {/* Table */}
             <div className="rounded-2xl border border-border/50 bg-card/20 backdrop-blur-sm overflow-hidden overflow-x-auto shadow-xl">
-                {filteredProjects.length === 0 ? (
+                {isLoading ? (
+                    <div className="text-center py-20">
+                        <Loader2 className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3 animate-spin" />
+                        <p className="font-bold text-muted-foreground italic">Loading projects...</p>
+                    </div>
+                ) : filteredProjects.length === 0 ? (
                     <div className="text-center py-20">
                         <FolderGit2 className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
                         <p className="font-bold text-muted-foreground italic">No projects match your filter</p>
