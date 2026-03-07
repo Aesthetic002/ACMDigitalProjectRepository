@@ -16,7 +16,6 @@ export default function ProjectDetailPage() {
   const queryClient = useQueryClient()
   const { user, isAuthenticated } = useAuthStore()
 
-  // Fetch project
   const { data, isLoading, isError } = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => projectsAPI.getById(projectId),
@@ -25,7 +24,6 @@ export default function ProjectDetailPage() {
 
   const project = data?.data?.project
 
-  // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: () => projectsAPI.delete(projectId),
     onSuccess: () => {
@@ -54,9 +52,9 @@ export default function ProjectDetailPage() {
   }
 
   const statusConfig = {
-    pending: { icon: Clock, color: 'text-amber-400', bg: 'bg-amber-500/20', label: 'Pending Review' },
-    approved: { icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/20', label: 'Approved' },
-    rejected: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/20', label: 'Rejected' },
+    pending: { icon: Clock, color: 'text-amber-400', bg: 'bg-amber-500/15', border: 'border-amber-500/20', label: 'Pending Review' },
+    approved: { icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/15', border: 'border-emerald-500/20', label: 'Approved' },
+    rejected: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/15', border: 'border-red-500/20', label: 'Rejected' },
   }
 
   if (isLoading) {
@@ -73,7 +71,7 @@ export default function ProjectDetailPage() {
         <div className="text-center">
           <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-white mb-2">Project Not Found</h1>
-          <p className="text-slate-400 mb-6">The project you're looking for doesn't exist or has been removed.</p>
+          <p className="text-zinc-400 mb-6">The project you're looking for doesn't exist or has been removed.</p>
           <Link to="/projects" className="btn-primary">
             Browse Projects
           </Link>
@@ -86,15 +84,20 @@ export default function ProjectDetailPage() {
 
   return (
     <div className="min-h-screen animate-fade-in">
-      {/* Back Button */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <Link
-          to="/projects"
-          className="inline-flex items-center space-x-2 text-slate-400 hover:text-white transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Projects</span>
-        </Link>
+      {/* Header with gradient */}
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-primary-500/5 via-transparent to-transparent" />
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-primary-500/5 rounded-full blur-[100px]" />
+
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <Link
+            to="/projects"
+            className="inline-flex items-center space-x-2 text-zinc-400 hover:text-white transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Projects</span>
+          </Link>
+        </div>
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
@@ -104,12 +107,12 @@ export default function ProjectDetailPage() {
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-3">
                 {project.isFeatured && (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-500 text-amber-950 rounded-full text-xs font-semibold">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-500 text-amber-950 rounded-full text-xs font-semibold shadow-lg shadow-amber-500/20">
                     <Star className="w-3 h-3" />
                     Featured
                   </span>
                 )}
-                <span className={`inline-flex items-center gap-1 px-3 py-1 ${statusConfig[project.status]?.bg} ${statusConfig[project.status]?.color} rounded-full text-sm`}>
+                <span className={`inline-flex items-center gap-1 px-3 py-1 ${statusConfig[project.status]?.bg} ${statusConfig[project.status]?.color} ${statusConfig[project.status]?.border} border rounded-full text-sm`}>
                   <StatusIcon className="w-3.5 h-3.5" />
                   {statusConfig[project.status]?.label}
                 </span>
@@ -122,7 +125,7 @@ export default function ProjectDetailPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={handleShare}
-                className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                className="p-2 rounded-lg bg-zinc-800/80 text-zinc-400 hover:text-white hover:bg-zinc-700/80 transition-all border border-zinc-700/50"
               >
                 <Share2 className="w-5 h-5" />
               </button>
@@ -130,7 +133,7 @@ export default function ProjectDetailPage() {
                 <>
                   <Link
                     to={`/projects/${projectId}/edit`}
-                    className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                    className="p-2 rounded-lg bg-zinc-800/80 text-zinc-400 hover:text-white hover:bg-zinc-700/80 transition-all border border-zinc-700/50"
                   >
                     <Edit className="w-5 h-5" />
                   </Link>
@@ -138,7 +141,7 @@ export default function ProjectDetailPage() {
                     <button
                       onClick={handleDelete}
                       disabled={deleteMutation.isPending}
-                      className="p-2 rounded-lg bg-slate-800 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                      className="p-2 rounded-lg bg-zinc-800/80 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all border border-zinc-700/50"
                     >
                       {deleteMutation.isPending ? (
                         <Loader2 className="w-5 h-5 animate-spin" />
@@ -152,8 +155,7 @@ export default function ProjectDetailPage() {
             </div>
           </div>
 
-          {/* Meta Info */}
-          <div className="flex flex-wrap items-center gap-4 text-sm text-slate-400">
+          <div className="flex flex-wrap items-center gap-4 text-sm text-zinc-400">
             <span className="flex items-center gap-1">
               <Calendar className="w-4 h-4" />
               Created {project.createdAt ? format(new Date(project.createdAt), 'MMM d, yyyy') : 'Recently'}
@@ -171,17 +173,15 @@ export default function ProjectDetailPage() {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Description */}
-            <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 p-6">
+            <div className="glass-premium rounded-2xl p-6">
               <h2 className="text-xl font-semibold text-white mb-4">About This Project</h2>
-              <p className="text-slate-300 whitespace-pre-wrap leading-relaxed">
+              <p className="text-zinc-300 whitespace-pre-wrap leading-relaxed">
                 {project.description}
               </p>
             </div>
 
-            {/* Assets/Screenshots */}
             {project.assets?.length > 0 && (
-              <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 p-6">
+              <div className="glass-premium rounded-2xl p-6">
                 <h2 className="text-xl font-semibold text-white mb-4">Screenshots & Files</h2>
                 <div className="grid grid-cols-2 gap-4">
                   {project.assets.map((asset) => (
@@ -190,7 +190,7 @@ export default function ProjectDetailPage() {
                       href={asset.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block rounded-lg overflow-hidden bg-slate-900 group relative hover:ring-2 hover:ring-primary-500 transition-all"
+                      className="block rounded-lg overflow-hidden bg-zinc-900 group relative hover:ring-2 hover:ring-primary-500/50 transition-all"
                     >
                       {asset.contentType?.startsWith('image/') ? (
                         <>
@@ -200,7 +200,7 @@ export default function ProjectDetailPage() {
                           </div>
                         </>
                       ) : (
-                        <div className="h-40 flex flex-col items-center justify-center text-slate-400 group-hover:text-white transition-colors p-4 text-center">
+                        <div className="h-40 flex flex-col items-center justify-center text-zinc-400 group-hover:text-white transition-colors p-4 text-center">
                           <ExternalLink className="w-8 h-8 mb-2 opacity-50 group-hover:opacity-100" />
                           <span className="text-sm font-medium truncate w-full px-2">{asset.filename}</span>
                         </div>
@@ -214,9 +214,8 @@ export default function ProjectDetailPage() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Tech Stack */}
             {project.techStack?.length > 0 && (
-              <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 p-6">
+              <div className="glass-premium rounded-2xl p-6">
                 <h3 className="text-lg font-semibold text-white mb-4">Tech Stack</h3>
                 <div className="flex flex-wrap gap-2">
                   {project.techStack.map((tech, index) => (
@@ -231,8 +230,7 @@ export default function ProjectDetailPage() {
               </div>
             )}
 
-            {/* Links */}
-            <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 p-6">
+            <div className="glass-premium rounded-2xl p-6">
               <h3 className="text-lg font-semibold text-white mb-4">Links</h3>
               <div className="space-y-3">
                 {(project.githubUrl || project.repoUrl) && (
@@ -240,11 +238,11 @@ export default function ProjectDetailPage() {
                     href={project.githubUrl || project.repoUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-3 rounded-lg bg-slate-900 hover:bg-slate-800 transition-colors"
+                    className="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 transition-all border border-zinc-700/40 hover:border-zinc-600/60"
                   >
-                    <Github className="w-5 h-5 text-slate-400" />
-                    <span className="text-slate-300">View Source Code</span>
-                    <ExternalLink className="w-4 h-4 text-slate-500 ml-auto" />
+                    <Github className="w-5 h-5 text-zinc-400" />
+                    <span className="text-zinc-300">View Source Code</span>
+                    <ExternalLink className="w-4 h-4 text-zinc-500 ml-auto" />
                   </a>
                 )}
                 {project.demoUrl && (
@@ -252,30 +250,29 @@ export default function ProjectDetailPage() {
                     href={project.demoUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-3 rounded-lg bg-slate-900 hover:bg-slate-800 transition-colors"
+                    className="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 transition-all border border-zinc-700/40 hover:border-zinc-600/60"
                   >
-                    <ExternalLink className="w-5 h-5 text-slate-400" />
-                    <span className="text-slate-300">Live Demo</span>
-                    <ExternalLink className="w-4 h-4 text-slate-500 ml-auto" />
+                    <ExternalLink className="w-5 h-5 text-zinc-400" />
+                    <span className="text-zinc-300">Live Demo</span>
+                    <ExternalLink className="w-4 h-4 text-zinc-500 ml-auto" />
                   </a>
                 )}
                 {!project.githubUrl && !project.demoUrl && (
-                  <p className="text-slate-500 text-sm">No external links available</p>
+                  <p className="text-zinc-500 text-sm">No external links available</p>
                 )}
               </div>
             </div>
 
-            {/* Project Info */}
-            <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 p-6">
+            <div className="glass-premium rounded-2xl p-6">
               <h3 className="text-lg font-semibold text-white mb-4">Project Info</h3>
               <dl className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <dt className="text-slate-400">Status</dt>
+                  <dt className="text-zinc-400">Status</dt>
                   <dd className={statusConfig[project.status]?.color}>{project.status}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-slate-400">Created</dt>
-                  <dd className="text-slate-300">
+                  <dt className="text-zinc-400">Created</dt>
+                  <dd className="text-zinc-300">
                     {project.createdAt
                       ? formatDistanceToNow(new Date(project.createdAt), { addSuffix: true })
                       : 'Unknown'}
@@ -283,15 +280,15 @@ export default function ProjectDetailPage() {
                 </div>
                 {project.updatedAt && (
                   <div className="flex justify-between">
-                    <dt className="text-slate-400">Updated</dt>
-                    <dd className="text-slate-300">
+                    <dt className="text-zinc-400">Updated</dt>
+                    <dd className="text-zinc-300">
                       {formatDistanceToNow(new Date(project.updatedAt), { addSuffix: true })}
                     </dd>
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <dt className="text-slate-400">Project ID</dt>
-                  <dd className="text-slate-500 font-mono text-xs">{project.id}</dd>
+                  <dt className="text-zinc-400">Project ID</dt>
+                  <dd className="text-zinc-500 font-mono text-xs">{project.id}</dd>
                 </div>
               </dl>
             </div>
