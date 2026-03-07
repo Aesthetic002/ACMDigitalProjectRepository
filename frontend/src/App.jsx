@@ -14,6 +14,7 @@ import ProfilePage from '@/pages/ProfilePage';
 import AdminPage from '@/pages/AdminPage';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
+import CreateEventPage from '@/pages/CreateEventPage';
 import ProtectedRoute from '@/components/ProtectedRoute';
 
 const queryClient = new QueryClient({
@@ -49,6 +50,9 @@ export default function App() {
                             } />
                             <Route path="/admin" element={
                                 <ProtectedRoute adminOnly><AdminPage /></ProtectedRoute>
+                            } />
+                            <Route path="/admin/events/new" element={
+                                <ProtectedRoute adminOnly><CreateEventPage /></ProtectedRoute>
                             } />
                             <Route path="*" element={<Navigate to="/" replace />} />
                         </Routes>

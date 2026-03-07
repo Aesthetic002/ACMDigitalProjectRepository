@@ -130,11 +130,10 @@ export function AdminAnalytics() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
           {/* Stats Row */}
-          <div className="lg:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-4">
-            <StatCard icon={<Users className="h-5 w-5" />} label="Total Users" value={summary.totalUsers} trend="live" delay={0} />
-            <StatCard icon={<FolderGit2 className="h-5 w-5" />} label="Total Projects" value={summary.totalProjects} trend="live" delay={0.1} />
-            <StatCard icon={<Activity className="h-5 w-5" />} label="Active Domains" value={summary.activeDomains || 0} trend="live" delay={0.2} />
-            <StatCard icon={<Clock className="h-5 w-5" />} label="Pending Reviews" value={summary.pendingApprovals} trend="live" delay={0.3} />
+          <div className="lg:col-span-3 flex justify-center">
+            <div className="w-full max-w-sm">
+              <StatCard icon={<Clock className="h-5 w-5" />} label="Pending Reviews" value={summary.pendingApprovals} trend="live" delay={0.1} />
+            </div>
           </div>
 
           {/* User Management — Real Data */}
