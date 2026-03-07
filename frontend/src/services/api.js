@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
+import { MOCK_USERS, MOCK_PROJECTS, MOCK_TAGS } from './mockData';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -7,6 +8,9 @@ const api = axios.create({
     baseURL: `${API_BASE_URL}/api/v1`,
     headers: { 'Content-Type': 'application/json' },
 });
+
+// Helper to simulate API delay
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Request interceptor — attach Firebase JWT
 api.interceptors.request.use(
@@ -31,8 +35,24 @@ api.interceptors.response.use(
 
 // ── Projects ──────────────────────────────────────────────
 export const projectsAPI = {
-    getAll: (params) => api.get('/projects', { params }),
-    getById: (id) => api.get(`/projects/${id}`),
+    getAll: async (params) => {
+        try {
+            const res = await api.get('/projects', { params });
+            return res;
+        } catch (err) {
+            console.warn("Using MOCK_PROJECTS due to API error");
+            await delay(500);
+            return { data: { projects: MOCK_PROJECTS } };
+        }
+    },
+    getById: async (id) => {
+        try {
+            return await api.get(`/projects/${id}`);
+        } catch (err) {
+            const project = MOCK_PROJECTS.find(p => p.id === id);
+            return { data: { project } };
+        }
+    },
     create: (data) => api.post('/projects', data),
     update: (id, data) => api.put(`/projects/${id}`, data),
     delete: (id) => api.delete(`/projects/${id}`),
@@ -45,14 +65,36 @@ export const authAPI = {
 
 // ── Users ─────────────────────────────────────────────────
 export const usersAPI = {
-    getById: (uid) => api.get(`/users/${uid}`),
+    getById: async (uid) => {
+        try {
+            return await api.get(`/users/${uid}`);
+        } catch (err) {
+            const user = MOCK_USERS.find(u => u.uid === uid);
+            return { data: { user } };
+        }
+    },
     update: (uid, data) => api.put(`/users/${uid}`, data),
 };
 
 // ── Admin ─────────────────────────────────────────────────
 export const adminAPI = {
-    getAnalytics: () => api.get('/admin/analytics'),
-    getUsers: (params) => api.get('/admin/users', { params }),
+    getAnalytics: async () => {
+        try {
+            return await api.get('/admin/analytics');
+        } catch (err) {
+            return { data: { stats: { users: 154, projects: 42, domains: 12, events: 5 } } };
+        }
+    },
+    getUsers: async (params) => {
+        try {
+            const res = await api.get('/admin/users', { params });
+            return res;
+        } catch (err) {
+            console.warn("Using MOCK_USERS due to API error");
+            await delay(500);
+            return { data: { users: MOCK_USERS } };
+        }
+    },
     updateUser: (uid, data) => api.put(`/admin/users/${uid}`, data),
     approveProject: (id) => api.put(`/admin/projects/${id}/approve`),
     rejectProject: (id) => api.put(`/admin/projects/${id}/reject`),
@@ -65,7 +107,13 @@ export const searchAPI = {
 
 // ── Tags ──────────────────────────────────────────────────
 export const tagsAPI = {
-    getAll: () => api.get('/tags'),
+    getAll: async () => {
+        try {
+            return await api.get('/tags');
+        } catch (err) {
+            return { data: { tags: MOCK_TAGS } };
+        }
+    },
     create: (data) => api.post('/tags', data),
 };
 

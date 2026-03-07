@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminAPI } from "@/services/api";
+import { Link } from "react-router-dom";
 import {
     Users,
     Search,
@@ -11,7 +12,8 @@ import {
     Edit,
     Loader2,
     Calendar,
-    GraduationCap
+    GraduationCap,
+    ExternalLink
 } from "lucide-react";
 import {
     Table,
@@ -102,18 +104,18 @@ export default function AdminMembersPage() {
                             {filteredMembers.map((member) => (
                                 <TableRow key={member.uid} className="hover:bg-white/5 border-border/50 transition-colors">
                                     <TableCell>
-                                        <div className="flex items-center gap-3">
-                                            <Avatar className="h-9 w-9 rounded-lg border border-border/50">
+                                        <Link to={`/admin/members/${member.uid}`} className="flex items-center gap-3 group/member hover:opacity-80 transition-opacity">
+                                            <Avatar className="h-9 w-9 rounded-lg border border-border/50 group-hover/member:border-acm-blue/50 transition-colors">
                                                 <AvatarImage src={member.photoURL} />
                                                 <AvatarFallback className="bg-acm-blue/10 text-acm-blue font-bold text-xs uppercase italic">
                                                     {(member.name || member.email || "?").charAt(0)}
                                                 </AvatarFallback>
                                             </Avatar>
                                             <div className="flex flex-col min-w-0">
-                                                <span className="font-bold text-sm truncate">{member.name || "Unknown"}</span>
+                                                <span className="font-bold text-sm truncate group-hover/member:text-acm-blue transition-colors">{member.name || "Unknown"}</span>
                                                 <span className="text-[10px] text-muted-foreground truncate">{member.email}</span>
                                             </div>
-                                        </div>
+                                        </Link>
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-2 text-xs font-medium">
@@ -123,8 +125,8 @@ export default function AdminMembersPage() {
                                     </TableCell>
                                     <TableCell>
                                         <Badge variant="outline" className={`font-bold tracking-widest text-[9px] uppercase italic ${member.role === 'admin'
-                                                ? "border-amber-500/30 text-amber-500 bg-amber-500/5"
-                                                : "border-acm-blue/30 text-acm-blue bg-acm-blue/5"
+                                            ? "border-amber-500/30 text-amber-500 bg-amber-500/5"
+                                            : "border-acm-blue/30 text-acm-blue bg-acm-blue/5"
                                             }`}>
                                             {member.role || 'member'}
                                         </Badge>
@@ -146,8 +148,10 @@ export default function AdminMembersPage() {
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end" className="w-48 rounded-xl border-border/50 bg-card/80 backdrop-blur-xl">
                                                 <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Management</DropdownMenuLabel>
-                                                <DropdownMenuItem className="gap-2 focus:bg-acm-blue/10 focus:text-acm-blue cursor-pointer font-bold text-xs py-2.5">
-                                                    <Edit className="h-3.5 w-3.5" /> Edit Profile
+                                                <DropdownMenuItem asChild className="gap-2 focus:bg-acm-blue/10 focus:text-acm-blue cursor-pointer font-bold text-xs py-2.5">
+                                                    <Link to={`/admin/members/${member.uid}`} className="flex items-center">
+                                                        <ExternalLink className="h-3.5 w-3.5 mr-2" /> View Full Profile
+                                                    </Link>
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem
                                                     onClick={() => handlePromote(member)}

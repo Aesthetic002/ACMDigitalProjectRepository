@@ -20,6 +20,7 @@ import DomainsPage from '@/pages/DomainsPage';
 import AdminModerationPage from '@/pages/AdminModerationPage';
 import AdminPreAddPage from '@/pages/AdminPreAddPage';
 import AdminMembersPage from '@/pages/AdminMembersPage';
+import AdminMemberProfilePage from '@/pages/AdminMemberProfilePage';
 import AdminProjectsPage from '@/pages/AdminProjectsPage';
 import AdminDomainsPage from '@/pages/AdminDomainsPage';
 import AdminLayout from '@/components/AdminLayout';
@@ -76,6 +77,7 @@ export default function App() {
                             }>
                                 <Route index element={<AdminPage />} />
                                 <Route path="members" element={<AdminMembersPage />} />
+                                <Route path="members/:uid" element={<AdminMemberProfilePage />} />
                                 <Route path="projects" element={<AdminProjectsPage />} />
                                 <Route path="moderation" element={<AdminModerationPage />} />
                                 <Route path="pre-add" element={<AdminPreAddPage />} />
