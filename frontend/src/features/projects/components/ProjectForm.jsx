@@ -1,10 +1,8 @@
-'use client';
-
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { projectsAPI, tagsAPI, assetsAPI } from '@/api/projects.api';
+import { projectsAPI, tagsAPI, assetsAPI } from '@/services/api';
 import { toast } from 'sonner';
 import { Plus, X, Loader2, Save, Upload, Info, CheckCircle2, Edit } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -16,7 +14,7 @@ import { Progress } from '@/components/ui/progress';
 
 export default function ProjectForm({ initialData = null, projectId = null }) {
     const isEditing = !!projectId;
-    const router = useRouter();
+    const navigate = useNavigate();
     const queryClient = useQueryClient();
 
     const [formData, setFormData] = useState({
@@ -151,7 +149,7 @@ export default function ProjectForm({ initialData = null, projectId = null }) {
                 }
             }
 
-            router.push(`/projects/${targetProjectId}`);
+            navigate(`/projects/${targetProjectId}`);
         } catch (error) {
             // Handled by mutation
         }

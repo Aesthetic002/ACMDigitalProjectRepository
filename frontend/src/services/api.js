@@ -1,101 +1,82 @@
-import axios from 'axios'
-import { useAuthStore } from '../store/authStore'
+import axios from 'axios';
+import { useAuthStore } from '@/store/authStore';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-// Create axios instance
 const api = axios.create({
-  baseURL: `${API_BASE_URL}/api/v1`,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-})
+    baseURL: `${API_BASE_URL}/api/v1`,
+    headers: { 'Content-Type': 'application/json' },
+});
 
-// Request interceptor to add auth token
+// Request interceptor — attach Firebase JWT
 api.interceptors.request.use(
-  async (config) => {
-    const token = useAuthStore.getState().token
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
-    return config
-  },
-  (error) => {
-    return Promise.reject(error)
-  }
-)
+    async (config) => {
+        const token = useAuthStore.getState().token;
+        if (token) config.headers.Authorization = `Bearer ${token}`;
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
 
-// Response interceptor for error handling
+// Response interceptor — handle 401
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid
-      useAuthStore.getState().logout()
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            useAuthStore.getState().logout();
+        }
+        return Promise.reject(error);
     }
-    return Promise.reject(error)
-  }
-)
+);
 
-// ============ Auth API ============
-export const authAPI = {
-  verify: () => api.post('/auth/verify'),
-  register: (data) => api.post('/auth/verify', data),
-}
-
-// ============ Users API ============
-export const usersAPI = {
-  getAll: (params = {}) => api.get('/users', { params }),
-  getById: (userId) => api.get(`/users/${userId}`),
-  update: (userId, data) => api.put(`/users/${userId}`, data),
-}
-
-// ============ Projects API ============
+// ── Projects ──────────────────────────────────────────────
 export const projectsAPI = {
-  // READ
-  getAll: (params = {}) => api.get('/projects', { params }),
-  getById: (projectId) => api.get(`/projects/${projectId}`),
+    getAll: (params) => api.get('/projects', { params }),
+    getById: (id) => api.get(`/projects/${id}`),
+    create: (data) => api.post('/projects', data),
+    update: (id, data) => api.put(`/projects/${id}`, data),
+    delete: (id) => api.delete(`/projects/${id}`),
+};
 
-  // WRITE
-  create: (data) => api.post('/projects', data),
-  update: (projectId, data) => api.put(`/projects/${projectId}`, data),
-  delete: (projectId) => api.delete(`/projects/${projectId}`),
-}
+// ── Auth ──────────────────────────────────────────────────
+export const authAPI = {
+    syncUser: (data) => api.post('/auth/sync', data),
+};
 
-// ============ Search API ============
-export const searchAPI = {
-  search: (params) => api.get('/search', { params }),
-}
+// ── Users ─────────────────────────────────────────────────
+export const usersAPI = {
+    getById: (uid) => api.get(`/users/${uid}`),
+    update: (uid, data) => api.put(`/users/${uid}`, data),
+};
 
-// ============ Tags API ============
-export const tagsAPI = {
-  getAll: () => api.get('/tags'),
-  create: (data) => api.post('/tags', data),
-  update: (tagId, data) => api.put(`/tags/${tagId}`, data),
-  delete: (tagId) => api.delete(`/tags/${tagId}`),
-}
-
-// ============ Admin API ============
-// ============ Admin API ============
+// ── Admin ─────────────────────────────────────────────────
 export const adminAPI = {
-  getStats: () => api.get('/admin/analytics'),
-  getPendingProjects: () => api.get('/projects', { params: { status: 'pending' } }),
-  getAnalytics: () => api.get('/admin/analytics'),
+    getAnalytics: () => api.get('/admin/analytics'),
+    getUsers: (params) => api.get('/admin/users', { params }),
+    updateUser: (uid, data) => api.put(`/admin/users/${uid}`, data),
+    approveProject: (id) => api.put(`/admin/projects/${id}/approve`),
+    rejectProject: (id) => api.put(`/admin/projects/${id}/reject`),
+};
 
-  // Review actions
-  approveProject: (projectId) => api.post(`/admin/projects/${projectId}/review`, { action: 'approve' }),
-  rejectProject: (projectId, reason) => api.post(`/admin/projects/${projectId}/review`, { action: 'reject', notes: reason }),
-  reviewProject: (projectId, data) => api.post(`/admin/projects/${projectId}/review`, data),
+// ── Search ────────────────────────────────────────────────
+export const searchAPI = {
+    search: (params) => api.get('/search', { params }),
+};
 
-  // Feature action - wrap boolean in object
-  featureProject: (projectId, featured) => api.post(`/admin/projects/${projectId}/feature`, { featured }),
-}
+// ── Tags ──────────────────────────────────────────────────
+export const tagsAPI = {
+    getAll: () => api.get('/tags'),
+    create: (data) => api.post('/tags', data),
+};
 
-// ============ Assets API ============
+// ── Assets ────────────────────────────────────────────────
 export const assetsAPI = {
-  getUploadUrl: (data) => api.post('/assets/upload-url', data),
-  listProjectAssets: (projectId) => api.get(`/projects/${projectId}/assets`),
-  delete: (assetId) => api.delete(`/assets/${assetId}`),
-}
+    upload: (projectId, formData) =>
+        api.post(`/projects/${projectId}/assets`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        }),
+    delete: (projectId, assetId) =>
+        api.delete(`/projects/${projectId}/assets/${assetId}`),
+};
 
-export default api
+export default api;
