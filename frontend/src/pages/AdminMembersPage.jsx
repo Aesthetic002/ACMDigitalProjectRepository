@@ -1,35 +1,17 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { adminAPI } from "@/services/api";
+import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { MOCK_USERS } from "@/services/mockData";
 import {
-    Users,
-    Search,
-    MoreVertical,
-    Shield,
-    ShieldCheck,
-    UserMinus,
-    Edit,
-    Loader2,
-    Calendar,
-    GraduationCap,
-    ExternalLink
+    Users, Search, MoreVertical, Shield, ShieldCheck,
+    UserMinus, UserCheck, ExternalLink, GraduationCap, Loader2
 } from "lucide-react";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+    Table, TableBody, TableCell, TableHead,
+    TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
+    DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+    DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,32 +20,37 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 
 export default function AdminMembersPage() {
-    const queryClient = useQueryClient();
+    const [members, setMembers] = useState(MOCK_USERS);
     const [searchTerm, setSearchTerm] = useState("");
 
-    const { data: usersData, isLoading } = useQuery({
-        queryKey: ["admin-users"],
-        queryFn: () => adminAPI.getUsers({ limit: 100 }),
-    });
+    const filteredMembers = useMemo(() =>
+        members.filter(m =>
+            m.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            m.email?.toLowerCase().includes(searchTerm.toLowerCase())
+        ), [members, searchTerm]);
 
-    const updateUserMutation = useMutation({
-        mutationFn: ({ uid, data }) => adminAPI.updateUser(uid, data),
-        onSuccess: () => {
-            queryClient.invalidateQueries(["admin-users"]);
-            toast.success("Member updated successfully");
-        },
-        onError: () => toast.error("Failed to update member"),
-    });
+    const toggleRole = (uid) => {
+        setMembers(prev => prev.map(m => {
+            if (m.uid !== uid) return m;
+            const newRole = m.role === 'admin' ? 'member' : 'admin';
+            toast.success(`${m.name} is now a ${newRole}`);
+            return { ...m, role: newRole };
+        }));
+    };
 
-    const members = usersData?.data?.users || [];
-    const filteredMembers = members.filter(m =>
-        m.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        m.email?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const toggleStatus = (uid) => {
+        setMembers(prev => prev.map(m => {
+            if (m.uid !== uid) return m;
+            const newDisabled = !m.disabled;
+            toast.success(`${m.name} has been ${newDisabled ? "suspended" : "reactivated"}`);
+            return { ...m, disabled: newDisabled };
+        }));
+    };
 
-    const handlePromote = (member) => {
-        const newRole = member.role === 'admin' ? 'member' : 'admin';
-        updateUserMutation.mutate({ uid: member.uid, data: { role: newRole } });
+    const deleteMember = (uid) => {
+        const member = members.find(m => m.uid === uid);
+        setMembers(prev => prev.filter(m => m.uid !== uid));
+        toast.success(`${member?.name} removed from directory`);
     };
 
     return (
@@ -71,7 +58,7 @@ export default function AdminMembersPage() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-black tracking-tight uppercase italic">Member Directory</h1>
-                    <p className="text-muted-foreground">Manage chapter members, their roles, and graduation years.</p>
+                    <p className="text-muted-foreground">Manage chapter members, their roles, and access levels.</p>
                 </div>
                 <div className="relative w-full md:w-80">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -85,16 +72,17 @@ export default function AdminMembersPage() {
             </div>
 
             <div className="rounded-2xl border border-border/50 bg-card/20 backdrop-blur-sm overflow-hidden shadow-xl">
-                {isLoading ? (
-                    <div className="flex h-64 items-center justify-center">
-                        <Loader2 className="h-8 w-8 animate-spin text-acm-blue" />
+                {filteredMembers.length === 0 ? (
+                    <div className="text-center py-20">
+                        <Users className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                        <p className="font-bold text-muted-foreground italic">No matching members found</p>
                     </div>
                 ) : (
                     <Table>
                         <TableHeader className="bg-muted/30">
                             <TableRow className="hover:bg-transparent border-border/50">
-                                <TableHead className="w-[300px] font-bold uppercase tracking-wider text-[10px]">Member</TableHead>
-                                <TableHead className="font-bold uppercase tracking-wider text-[10px]">Graduation/Year</TableHead>
+                                <TableHead className="w-[260px] font-bold uppercase tracking-wider text-[10px]">Member</TableHead>
+                                <TableHead className="font-bold uppercase tracking-wider text-[10px]">Class / Year</TableHead>
                                 <TableHead className="font-bold uppercase tracking-wider text-[10px]">Role</TableHead>
                                 <TableHead className="font-bold uppercase tracking-wider text-[10px]">Status</TableHead>
                                 <TableHead className="text-right font-bold uppercase tracking-wider text-[10px]">Actions</TableHead>
@@ -104,11 +92,11 @@ export default function AdminMembersPage() {
                             {filteredMembers.map((member) => (
                                 <TableRow key={member.uid} className="hover:bg-white/5 border-border/50 transition-colors">
                                     <TableCell>
-                                        <Link to={`/admin/members/${member.uid}`} className="flex items-center gap-3 group/member hover:opacity-80 transition-opacity">
-                                            <Avatar className="h-9 w-9 rounded-lg border border-border/50 group-hover/member:border-acm-blue/50 transition-colors">
+                                        <Link to={`/admin/members/${member.uid}`} className="flex items-center gap-3 group/member">
+                                            <Avatar className="h-9 w-9 rounded-lg border border-border/50 group-hover/member:border-amber-500/50 transition-colors">
                                                 <AvatarImage src={member.photoURL} />
-                                                <AvatarFallback className="bg-acm-blue/10 text-acm-blue font-bold text-xs uppercase italic">
-                                                    {(member.name || member.email || "?").charAt(0)}
+                                                <AvatarFallback className={`${member.role === 'admin' ? 'bg-amber-500/20 text-amber-500' : 'bg-acm-blue/10 text-acm-blue'} font-bold text-xs uppercase italic`}>
+                                                    {(member.name || "?").charAt(0)}
                                                 </AvatarFallback>
                                             </Avatar>
                                             <div className="flex flex-col min-w-0">
@@ -120,7 +108,7 @@ export default function AdminMembersPage() {
                                     <TableCell>
                                         <div className="flex items-center gap-2 text-xs font-medium">
                                             <GraduationCap className="h-3.5 w-3.5 text-muted-foreground" />
-                                            <span>{member.graduationYear || member.year || "Not Set"}</span>
+                                            <span>{member.graduationYear || "Not Set"}</span>
                                         </div>
                                     </TableCell>
                                     <TableCell>
@@ -128,6 +116,7 @@ export default function AdminMembersPage() {
                                             ? "border-amber-500/30 text-amber-500 bg-amber-500/5"
                                             : "border-acm-blue/30 text-acm-blue bg-acm-blue/5"
                                             }`}>
+                                            {member.role === 'admin' ? <ShieldCheck className="h-2.5 w-2.5 mr-1" /> : null}
                                             {member.role || 'member'}
                                         </Badge>
                                     </TableCell>
@@ -146,23 +135,33 @@ export default function AdminMembersPage() {
                                                     <MoreVertical className="h-4 w-4" />
                                                 </Button>
                                             </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="w-48 rounded-xl border-border/50 bg-card/80 backdrop-blur-xl">
+                                            <DropdownMenuContent align="end" className="w-52 rounded-xl border-border/50 bg-card/90 backdrop-blur-xl">
                                                 <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Management</DropdownMenuLabel>
                                                 <DropdownMenuItem asChild className="gap-2 focus:bg-acm-blue/10 focus:text-acm-blue cursor-pointer font-bold text-xs py-2.5">
-                                                    <Link to={`/admin/members/${member.uid}`} className="flex items-center">
+                                                    <Link to={`/admin/members/${member.uid}`}>
                                                         <ExternalLink className="h-3.5 w-3.5 mr-2" /> View Full Profile
                                                     </Link>
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem
-                                                    onClick={() => handlePromote(member)}
+                                                    onClick={() => toggleRole(member.uid)}
                                                     className="gap-2 focus:bg-amber-500/10 focus:text-amber-500 cursor-pointer font-bold text-xs py-2.5"
                                                 >
                                                     {member.role === 'admin' ? <Shield className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />}
                                                     {member.role === 'admin' ? "Demote to Member" : "Promote to Admin"}
                                                 </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={() => toggleStatus(member.uid)}
+                                                    className={`gap-2 cursor-pointer font-bold text-xs py-2.5 ${member.disabled ? 'focus:bg-emerald-500/10 focus:text-emerald-500' : 'focus:bg-orange-500/10 focus:text-orange-500'}`}
+                                                >
+                                                    {member.disabled ? <UserCheck className="h-3.5 w-3.5" /> : <UserMinus className="h-3.5 w-3.5" />}
+                                                    {member.disabled ? "Reactivate Member" : "Suspend Member"}
+                                                </DropdownMenuItem>
                                                 <DropdownMenuSeparator className="bg-border/50" />
-                                                <DropdownMenuItem className="gap-2 focus:bg-red-500/10 focus:text-red-500 cursor-pointer text-red-500 font-bold text-xs py-2.5">
-                                                    <UserMinus className="h-3.5 w-3.5" /> {member.disabled ? "Activate" : "Suspend"} Member
+                                                <DropdownMenuItem
+                                                    onClick={() => deleteMember(member.uid)}
+                                                    className="gap-2 focus:bg-red-500/10 focus:text-red-500 cursor-pointer text-red-500 font-bold text-xs py-2.5"
+                                                >
+                                                    <UserMinus className="h-3.5 w-3.5" /> Remove from Directory
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
