@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
 import { toast } from "sonner";
-import { Mail, Lock, Loader2, Eye, EyeOff, Github, Chrome, ArrowRight, ShieldCheck } from "lucide-react";
+import { Mail, Lock, Loader2, Eye, EyeOff, Github, Chrome, ArrowRight, ShieldCheck, Zap } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 export default function LoginPage() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const { login, loginWithGoogle, loginWithGithub } = useAuthStore();
+    const { login, loginWithGoogle, loginWithGithub, loginAsDemo } = useAuthStore();
 
     const [formData, setFormData] = useState({ email: "", password: "" });
     const [showPassword, setShowPassword] = useState(false);
@@ -40,6 +40,11 @@ export default function LoginPage() {
         const result = method === "google" ? await loginWithGoogle() : await loginWithGithub();
         setOauthLoading(null);
         if (result.success) navigate(from);
+    };
+
+    const handleDemoAdmin = () => {
+        loginAsDemo('admin');
+        navigate("/admin");
     };
 
     return (
@@ -79,7 +84,25 @@ export default function LoginPage() {
                         </CardDescription>
                     </CardHeader>
 
-                    <CardContent className="px-8 sm:px-10 space-y-8">
+                    <CardContent className="px-8 sm:px-10 space-y-6">
+                        {/* Demo Admin Access — shown when admin tab is selected */}
+                        {loginRole === 'admin' && (
+                            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5 space-y-3">
+                                <div className="flex items-center gap-2 text-amber-400 mb-1">
+                                    <Zap className="h-4 w-4 fill-amber-400" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest">Demo Access Available</span>
+                                </div>
+                                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                    Backend is offline. Click below to instantly access the Admin Console with full CRUD capabilities using pre-loaded demo data.
+                                </p>
+                                <Button onClick={handleDemoAdmin}
+                                    className="w-full h-12 bg-amber-500 hover:bg-amber-600 text-white font-black tracking-widest uppercase italic rounded-xl shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.02] gap-2">
+                                    <ShieldCheck className="h-4 w-4" />
+                                    ENTER DEMO ADMIN CONSOLE
+                                </Button>
+                            </div>
+                        )}
+
                         {loginRole === 'member' && (
                             <>
                                 <div className="grid grid-cols-2 gap-4">
@@ -102,6 +125,16 @@ export default function LoginPage() {
                                     </div>
                                 </div>
                             </>
+                        )}
+
+                        {/* Divider for admin email form */}
+                        {loginRole === 'admin' && (
+                            <div className="relative">
+                                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border/30" /></div>
+                                <div className="relative flex justify-center text-[10px] uppercase font-black tracking-widest leading-none">
+                                    <span className="bg-[#0f172a] px-4 text-muted-foreground/60 italic">OR USE REAL CREDENTIALS</span>
+                                </div>
+                            </div>
                         )}
 
                         <form onSubmit={handleEmailLogin} className="space-y-5">

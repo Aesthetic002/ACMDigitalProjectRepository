@@ -21,6 +21,12 @@ export const useAuthStore = create(
             isAuthenticated: false,
 
             initAuth: () => {
+                // If already authenticated via demo mode, don't reset
+                const currentState = get();
+                if (currentState.isAuthenticated && currentState.user?.isDemoUser) {
+                    set({ isLoading: false });
+                    return;
+                }
                 onAuthStateChanged(auth, async (firebaseUser) => {
                     if (firebaseUser) {
                         try {
@@ -50,7 +56,12 @@ export const useAuthStore = create(
                             set({ user: null, token: null, isAuthenticated: false, isLoading: false })
                         }
                     } else {
-                        set({ user: null, token: null, isAuthenticated: false, isLoading: false })
+                        // Only reset if not in demo mode
+                        if (!get().user?.isDemoUser) {
+                            set({ user: null, token: null, isAuthenticated: false, isLoading: false })
+                        } else {
+                            set({ isLoading: false });
+                        }
                     }
                 })
             },
@@ -147,6 +158,26 @@ export const useAuthStore = create(
 
             setUser: (user) => set({ user }),
             setToken: (token) => set({ token }),
+
+            loginAsDemo: (role = 'admin') => {
+                const demoUser = {
+                    uid: role === 'admin' ? 'demo-admin-001' : 'demo-member-001',
+                    email: role === 'admin' ? 'admin@acm-demo.local' : 'member@acm-demo.local',
+                    name: role === 'admin' ? 'Demo Admin' : 'Demo Member',
+                    photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${role}Demo`,
+                    role,
+                    isDemoUser: true,
+                    year: '4th Year',
+                    graduationYear: '2025',
+                };
+                set({
+                    user: demoUser,
+                    token: 'demo-token',
+                    isAuthenticated: true,
+                    isLoading: false,
+                });
+                toast.success(`Demo ${role} session started!`);
+            },
         }),
         {
             name: 'auth-storage',
