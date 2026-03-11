@@ -7,6 +7,7 @@
 
 const express = require("express");
 const cors = require("cors");
+require('dotenv').config();
 
 // Initialize Express app
 const app = express();

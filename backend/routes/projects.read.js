@@ -181,12 +181,17 @@ router.get("/:projectId", async (req, res) => {
       const assetsSnapshot = await projectRef.collection("assets").get();
       assets = await Promise.all(assetsSnapshot.docs.map(async (doc) => {
         const data = doc.data();
-        let url = '';
-        try {
-          url = await storageService.generateSignedDownloadUrl(data.storagePath);
-        } catch (e) {
-          console.error(`Failed to generate signed URL for asset ${doc.id}:`, e.message);
+        let url = data.url; // Use Cloudinary URL if it exists
+
+        // If there's no direct URL (legacy Firebase), generate a signed URL
+        if (!url) {
+          try {
+            url = await storageService.generateSignedDownloadUrl(data.storagePath);
+          } catch (e) {
+            console.error(`Failed to generate signed URL for asset ${doc.id}:`, e.message);
+          }
         }
+
         return {
           id: doc.id,
           ...data,

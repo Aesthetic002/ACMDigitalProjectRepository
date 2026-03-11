@@ -136,18 +136,13 @@ export default function CreateProjectPage() {
 
         for (const file of files) {
           try {
-            const { data } = await assetsAPI.getUploadUrl({
-              projectId: targetProjectId,
-              filename: file.name,
-              contentType: file.type
-            })
+            const formData = new FormData()
+            formData.append('projectId', targetProjectId)
+            formData.append('file', file)
 
-            await axios.put(data.uploadUrl, file, {
-              headers: { 'Content-Type': file.type },
-              onUploadProgress: (progressEvent) => {
-                const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
-                setUploadProgress(prev => ({ ...prev, [file.name]: percentCompleted }))
-              }
+            await assetsAPI.uploadAsset(formData, (progressEvent) => {
+              const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+              setUploadProgress(prev => ({ ...prev, [file.name]: percentCompleted }))
             })
 
           } catch (uploadError) {

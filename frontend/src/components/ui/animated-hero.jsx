@@ -125,12 +125,12 @@ export function AnimatedHero() {
 
                 {/* Stepped pillars silhouette */}
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-[54vh]">
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#09090b] via-[#09090b]/90 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0f3d2e] via-[#0f3d2e]/90 to-transparent" />
                     <div className="absolute inset-x-0 bottom-0 flex h-full items-end gap-px px-[2px]">
                         {pillars.map((h, i) => (
                             <div
                                 key={i}
-                                className="flex-1 bg-[#09090b] transition-height duration-1000 ease-in-out"
+                                className="flex-1 bg-[#0f3d2e] transition-height duration-1000 ease-in-out"
                                 style={{
                                     height: isMounted ? `${h}%` : '0%',
                                     transitionDelay: `${Math.abs(i - Math.floor(pillars.length / 2)) * 60}ms`
