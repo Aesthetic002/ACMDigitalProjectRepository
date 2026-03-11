@@ -93,7 +93,12 @@ export const adminAPI = {
 
 // ============ Assets API ============
 export const assetsAPI = {
-  getUploadUrl: (data) => api.post('/assets/upload-url', data),
+  uploadAsset: (formData, onUploadProgress) => api.post('/assets/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+    onUploadProgress,
+  }),
   listProjectAssets: (projectId) => api.get(`/projects/${projectId}/assets`),
   delete: (assetId) => api.delete(`/assets/${assetId}`),
 }
