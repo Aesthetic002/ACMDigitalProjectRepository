@@ -271,6 +271,8 @@ router.post("/upload", async (req, res, next) => {
         folder: `projects/${projectId}`,
         resource_type: resourceType,
         use_filename: true,
+        unique_filename: false, // Don't add random characters to the end
+        format: req.file.originalname.split('.').pop(), // Force original extension
       },
       async (error, result) => {
         if (error) {
@@ -355,13 +357,34 @@ router.get("/projects/:projectId/assets", async (req, res) => {
         try {
           if (asset.url) {
             // Already has a direct URL (Cloudinary)
+            let signedUrl = asset.url;
+            if (asset.storagePath) {
+               const isImageOrVideo = asset.contentType && (asset.contentType.startsWith('image/') || asset.contentType.startsWith('video/'));
+               const rType = isImageOrVideo ? (asset.contentType.startsWith('video/') ? 'video' : 'image') : 'raw';
+               
+               let publicIdForUrl = asset.storagePath;
+               if (rType === "raw" && asset.filename && !publicIdForUrl.endsWith('.' + asset.filename.split('.').pop())) {
+                   publicIdForUrl += '.' + asset.filename.split('.').pop();
+               }
+
+               try {
+                  signedUrl = cloudinary.url(publicIdForUrl, {
+                     resource_type: rType,
+                     sign_url: true,
+                     secure: true
+                  });
+               } catch(e) {
+                  console.error("Failed to sign Cloudinary URL:", e);
+               }
+            }
+
             return {
               id: asset.id,
               filename: asset.filename,
               contentType: asset.contentType,
               uploadedBy: asset.uploadedBy,
               createdAt: asset.createdAt,
-              url: asset.url,
+              url: signedUrl,
             };
           }
 
