@@ -8,10 +8,10 @@
 
 const express = require("express");
 const router = express.Router();
-const { verifyToken } = require("../middleware/auth");
-const { db } = require("../firebase");
-const storageService = require("../services/storage.service");
-const cloudinary = require("../utils/cloudinary");
+const { verifyToken } = require("../../shared/middleware/auth");
+const { db } = require("../../shared/firebase");
+const storageService = require("../../shared/services/storage.service");
+const cloudinary = require("../../shared/utils/cloudinary");
 
 /**
  * GET /api/v1/projects

@@ -132,34 +132,6 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
-/**
- * Optional: Middleware to check if user has admin role
- * Requires verifyToken to be run first
- */
-const requireAdmin = async (req, res, next) => {
-  try {
-    if (!req.user || !req.user.uid) {
-      return res.status(401).json({
-        success: false,
-        error: "Unauthorized",
-        message: "Authentication required",
-      });
-    }
-
-    // This would typically check user role from database
-    // For now, just a placeholder
-    next();
-  } catch (error) {
-    console.error("Admin verification error:", error.message);
-    return res.status(403).json({
-      success: false,
-      error: "Forbidden",
-      message: "Admin access required",
-    });
-  }
-};
-
 module.exports = {
   verifyToken,
-  requireAdmin,
 };

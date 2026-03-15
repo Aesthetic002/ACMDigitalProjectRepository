@@ -1,6 +1,6 @@
 /**
  * Token Generator Utility
- * 
+ *
  * Generates Firebase-compatible JWT tokens for testing.
  * Development only!
  */
@@ -34,7 +34,7 @@ function generateTestIdToken(uid, email) {
   // Sign with a test key (this won't be verified against actual Firebase key)
   // In production, the auth middleware will verify against Firebase's public keys
   const token = jwt.sign(payload, 'test-secret-key', { algorithm: 'HS256' });
-  
+
   return token;
 }
 

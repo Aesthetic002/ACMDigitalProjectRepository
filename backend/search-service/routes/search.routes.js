@@ -7,7 +7,7 @@
 
 const express = require("express");
 const router = express.Router();
-const { db } = require("../firebase");
+const { db } = require("../../shared/firebase");
 
 /**
  * GET /api/v1/search

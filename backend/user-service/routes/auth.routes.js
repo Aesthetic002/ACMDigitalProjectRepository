@@ -7,8 +7,8 @@
 
 const express = require('express');
 const router = express.Router();
-const { verifyToken } = require('../middleware/auth');
-const { db } = require('../firebase');
+const { verifyToken } = require('../../shared/middleware/auth');
+const { db } = require('../../shared/firebase');
 
 /**
  * POST /api/v1/auth/verify

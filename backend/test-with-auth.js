@@ -7,7 +7,7 @@
 
 const http = require("http");
 const path = require("path");
-const { generateTestIdToken } = require("./utils/tokenGenerator");
+const { generateTestIdToken } = require("./shared/utils/tokenGenerator");
 
 // Generate test tokens for different users
 const testMemberUid = "ZW8r9UQyNtTUtaF8vTaS0jUXLFv1"; // test@acm.com (member)

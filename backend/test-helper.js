@@ -5,7 +5,7 @@
  * for testing your API with Postman.
  */
 
-const { auth } = require('./firebase');
+const { auth } = require('./shared/firebase');
 
 async function createTestToken() {
   try {

@@ -9,11 +9,11 @@
 
 const express = require("express");
 const router = express.Router();
-const { verifyToken } = require("../middleware/auth");
-const { db } = require("../firebase");
-const storageService = require("../services/storage.service");
+const { verifyToken } = require("../../shared/middleware/auth");
+const { db } = require("../../shared/firebase");
+const storageService = require("../../shared/services/storage.service");
 const upload = require("../middleware/upload");
-const cloudinary = require("../utils/cloudinary");
+const cloudinary = require("../../shared/utils/cloudinary");
 
 /**
  * POST /api/v1/assets/upload-url

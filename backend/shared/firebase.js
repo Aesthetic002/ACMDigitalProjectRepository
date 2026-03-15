@@ -15,7 +15,7 @@ const initializeFirebase = () => {
   if (!firebaseInitialized) {
     try {
       // Try to load service account from file
-      const serviceAccountPath = path.join(__dirname, "serviceAccountKey.json");
+      const serviceAccountPath = path.join(__dirname, "..", "serviceAccountKey.json");
       const serviceAccount = require(serviceAccountPath);
 
       admin.initializeApp({

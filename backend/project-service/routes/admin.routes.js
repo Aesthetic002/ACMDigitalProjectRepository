@@ -9,9 +9,9 @@
 
 const express = require("express");
 const router = express.Router();
-const { verifyToken } = require("../middleware/auth");
-const { requireAdmin } = require("../middleware/admin");
-const { db } = require("../firebase");
+const { verifyToken } = require("../../shared/middleware/auth");
+const { requireAdmin } = require("../../shared/middleware/admin");
+const { db } = require("../../shared/firebase");
 
 /**
  * POST /api/v1/admin/projects/:projectId/review

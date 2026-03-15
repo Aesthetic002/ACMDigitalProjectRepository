@@ -8,8 +8,9 @@
 
 const express = require("express");
 const router = express.Router();
-const { verifyToken, requireAdmin } = require("../middleware/auth");
-const { db } = require("../firebase");
+const { verifyToken } = require("../../shared/middleware/auth");
+const { requireAdmin } = require("../../shared/middleware/admin");
+const { db } = require("../../shared/firebase");
 
 /**
  * GET /api/v1/tags
