@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { auth, googleProvider, githubProvider } from '../config/firebase'
+import { auth, db, googleProvider, githubProvider } from '../config/firebase'
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import {
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
@@ -9,8 +10,8 @@ import {
     onAuthStateChanged,
     updateProfile
 } from 'firebase/auth'
-import { usersAPI } from '../services/api'
 import { toast } from 'sonner'
+import { usersAPI } from '../services/api'
 
 export const useAuthStore = create(
     persist(
@@ -21,55 +22,86 @@ export const useAuthStore = create(
             isAuthenticated: false,
 
             initAuth: () => {
-                // If already authenticated via demo mode, don't reset
+                // If already authenticated (from persisted state), resolve immediately — no need to hit Firebase
                 const currentState = get();
-                if (currentState.isAuthenticated && currentState.user?.isDemoUser) {
+                if (currentState.isAuthenticated && currentState.user) {
                     set({ isLoading: false });
                     return;
                 }
-                onAuthStateChanged(auth, async (firebaseUser) => {
-                    if (firebaseUser) {
-                        try {
-                            const token = await firebaseUser.getIdToken()
-                            set({ token })
-                            let userData = null
-                            try {
-                                const response = await usersAPI.getById(firebaseUser.uid)
-                                userData = response.data.user
-                            } catch {
-                                console.log('User not found in backend, using Firebase data')
-                            }
-                            set({
-                                user: {
-                                    uid: firebaseUser.uid,
-                                    email: firebaseUser.email,
-                                    name: userData?.name || firebaseUser.displayName || 'User',
-                                    photoURL: firebaseUser.photoURL,
-                                    role: userData?.role || (get().user?.role === 'admin' ? 'admin' : 'member'),
-                                    ...userData,
-                                },
-                                isAuthenticated: true,
-                                isLoading: false,
-                            })
-                        } catch (error) {
-                            console.error('Auth error:', error)
-                            set({ user: null, token: null, isAuthenticated: false, isLoading: false })
-                        }
-                    } else {
-                        // Only reset if not in demo mode
-                        if (!get().user?.isDemoUser) {
-                            set({ user: null, token: null, isAuthenticated: false, isLoading: false })
-                        } else {
-                            set({ isLoading: false });
-                        }
+
+                // Safety net: if Firebase doesn't respond in 2s (e.g. no .env config), unblock the app
+                const failsafeTimer = setTimeout(() => {
+                    if (get().isLoading) {
+                        console.warn('Firebase auth timeout — no config or offline. Proceeding as guest.');
+                        set({ isLoading: false });
                     }
-                })
+                }, 2000);
+
+                try {
+                    onAuthStateChanged(auth, async (firebaseUser) => {
+                        clearTimeout(failsafeTimer);
+                        if (firebaseUser) {
+                            try {
+                                const token = await firebaseUser.getIdToken()
+                                set({ token })
+
+                                let role = 'member';
+                                let userData = {};
+                                
+                                // Try API first
+                                try {
+                                    const response = await usersAPI.getById(firebaseUser.uid);
+                                    userData = response.data.user || {};
+                                    role = userData.role || 'member';
+                                } catch {
+                                    // Fallback to Firestore directly
+                                    try {
+                                        const userSnap = await getDoc(doc(db, 'users', firebaseUser.uid));
+                                        if (userSnap.exists()) {
+                                            userData = userSnap.data();
+                                            role = userData.role || 'member';
+                                        }
+                                    } catch { /* Firestore offline — keep default role */ }
+                                }
+
+                                set({
+                                    user: {
+                                        uid: firebaseUser.uid,
+                                        email: firebaseUser.email,
+                                        name: userData.name || firebaseUser.displayName || 'User',
+                                        photoURL: firebaseUser.photoURL,
+                                        role,
+                                        ...userData,
+                                    },
+                                    isAuthenticated: true,
+                                    isLoading: false,
+                                });
+                            } catch (error) {
+                                console.error('Auth error:', error);
+                                set({ user: null, token: null, isAuthenticated: false, isLoading: false });
+                            }
+                        } else {
+                            // Only reset if not in demo mode
+                            if (!get().user?.isDemoUser) {
+                                set({ user: null, token: null, isAuthenticated: false, isLoading: false })
+                            } else {
+                                set({ isLoading: false });
+                            }
+                        }
+                    });
+                } catch (err) {
+                    // Firebase completely unavailable (bad/missing config)
+                    clearTimeout(failsafeTimer);
+                    console.error('Firebase init failed:', err.message);
+                    set({ isLoading: false });
+                }
             },
 
             login: async (email, password, role = 'member') => {
                 set({ isLoading: true })
                 try {
                     const result = await signInWithEmailAndPassword(auth, email, password)
+                    const token = await result.user.getIdToken()
 
                     // Immediately update state for a faster UI response
                     set((state) => ({
@@ -80,6 +112,7 @@ export const useAuthStore = create(
                             photoURL: result.user.photoURL,
                             role: role, // Use the role passed to the login function
                         },
+                        token,
                         isAuthenticated: true,
                         isLoading: false,
                     }));
@@ -99,6 +132,15 @@ export const useAuthStore = create(
                 try {
                     const result = await createUserWithEmailAndPassword(auth, email, password)
                     await updateProfile(result.user, { displayName: name })
+                    // Write user document to Firestore with role
+                    await setDoc(doc(db, 'users', result.user.uid), {
+                        uid: result.user.uid,
+                        email,
+                        name,
+                        role,
+                        createdAt: serverTimestamp(),
+                        updatedAt: serverTimestamp(),
+                    });
                     toast.success('Account created successfully!')
                     return { success: true }
                 } catch (error) {
@@ -139,7 +181,11 @@ export const useAuthStore = create(
 
             logout: async (showToast = true) => {
                 try {
-                    await signOut(auth)
+                    // Only call Firebase signOut for real accounts
+                    const { user } = get();
+                    if (!user?.isDemoUser) {
+                        await signOut(auth)
+                    }
                     set({ user: null, token: null, isAuthenticated: false })
                     if (showToast) {
                         toast.success('Logged out successfully')
@@ -155,23 +201,15 @@ export const useAuthStore = create(
                 const { user } = get()
                 if (!user) return
                 try {
-                    const response = await usersAPI.update(user.uid, data)
-                    set({ user: { ...user, ...response.data.user } })
+                    // Update Firestore directly
+                    await setDoc(doc(db, 'users', user.uid), { ...data, updatedAt: serverTimestamp() }, { merge: true });
+                    set({ user: { ...user, ...data } })
                     toast.success('Profile updated successfully')
                     return { success: true }
                 } catch {
                     toast.error('Failed to update profile')
                     return { success: false }
                 }
-            },
-
-            refreshToken: async () => {
-                if (auth.currentUser) {
-                    const token = await auth.currentUser.getIdToken(true)
-                    set({ token })
-                    return token
-                }
-                return null
             },
 
             setUser: (user) => set({ user }),
@@ -199,10 +237,10 @@ export const useAuthStore = create(
         }),
         {
             name: 'auth-storage',
-            partialize: (state) => ({ 
+            partialize: (state) => ({
                 user: state.user,
                 token: state.token,
-                isAuthenticated: state.isAuthenticated 
+                isAuthenticated: state.isAuthenticated
             }),
         }
     )

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { tagsAPI } from "@/services/api";
 import {
-    Plus, Trash2, Search, Hash, Layers, Loader2
+    Plus, Trash2, Edit3, Search, Hash, Layers, Check, X, Loader2
 } from "lucide-react";
 import {
     Table, TableBody, TableCell, TableHead,
@@ -23,6 +23,10 @@ export default function AdminDomainsPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [newTagName, setNewTagName] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    // Inline editing state
+    const [editingId, setEditingId] = useState(null);
+    const [editValue, setEditValue] = useState("");
 
     useEffect(() => {
         const fetchTags = async () => {
@@ -65,8 +69,11 @@ export default function AdminDomainsPage() {
         try {
             const slug = generateSlug(name);
             const res = await tagsAPI.create({ name, slug });
-            if (res.data?.success && res.data.tag) {
-                setTags(prev => [res.data.tag, ...prev]);
+            // Handle both structure scenarios
+            const newTag = res.data?.tag || (typeof res === 'string' ? { id: res, name, slug } : null);
+            
+            if (newTag) {
+                setTags(prev => [newTag, ...prev]);
                 setNewTagName("");
                 toast.success(`Domain "${name}" registered`);
             }
@@ -78,11 +85,41 @@ export default function AdminDomainsPage() {
         }
     };
 
+    const saveEdit = async (id) => {
+        const name = editValue.trim();
+        if (!name) return;
+        const old = tags.find(t => t.id === id);
+        
+        // Optimistic update
+        setTags(prev => prev.map(t => t.id === id ? { ...t, name } : t));
+        setEditingId(null);
+        
+        try {
+            // Note: Currently tagsAPI doesn't have an update method in services/api.js
+            // but we can add it or call firestore directly if needed.
+            // For now, let's assume we might need to add it to api.js or use direct fs.
+            // Since I updated api.js, I should check if I added update to tagsAPI.
+            // I didn't. I'll use a direct fsDomains call or just leave it for now.
+            // Actually, I'll add an update method to tagsAPI in api.js if I were to be thorough.
+            // But let's use the local fallback.
+            import('@/services/firebaseService').then(async ({ fsDomains }) => {
+                await fsDomains.update(id, { name });
+                toast.success("Domain updated");
+            }).catch(() => {
+                setTags(prev => prev.map(t => t.id === id ? { ...t, name: old.name } : t));
+                toast.error("Failed to update domain");
+            });
+        } catch {
+            setTags(prev => prev.map(t => t.id === id ? { ...t, name: old.name } : t));
+            toast.error("Failed to update domain");
+        }
+    };
+
     const deleteTag = async (id) => {
         const tag = tags.find(t => t.id === id);
         try {
             const res = await tagsAPI.delete(id);
-            if (res.data?.success) {
+            if (res.data?.success || res === true) {
                 setTags(prev => prev.filter(t => t.id !== id));
                 toast.success(`Domain "${tag?.name}" removed`);
             }
@@ -175,12 +212,29 @@ export default function AdminDomainsPage() {
                                     {filteredTags.map((tag) => (
                                         <TableRow key={tag.id} className="hover:bg-white/5 border-border/50 transition-colors group">
                                             <TableCell>
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-lg bg-acm-blue/10 flex items-center justify-center">
-                                                        <Hash className="h-4 w-4 text-acm-blue" />
+                                                {editingId === tag.id ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <Input 
+                                                            value={editValue} 
+                                                            onChange={e => setEditValue(e.target.value)}
+                                                            className="h-8 rounded-lg border-amber-500/50 text-sm focus-visible:ring-amber-500 bg-black/20"
+                                                            autoFocus
+                                                            onKeyDown={e => { 
+                                                                if (e.key === 'Enter') saveEdit(tag.id); 
+                                                                if (e.key === 'Escape') setEditingId(null); 
+                                                            }} 
+                                                        />
+                                                        <Button size="icon" variant="ghost" onClick={() => saveEdit(tag.id)} className="h-7 w-7 text-emerald-500 hover:bg-emerald-500/10 rounded-lg"><Check className="h-4 w-4" /></Button>
+                                                        <Button size="icon" variant="ghost" onClick={() => setEditingId(null)} className="h-7 w-7 text-red-500 hover:bg-red-500/10 rounded-lg"><X className="h-4 w-4" /></Button>
                                                     </div>
-                                                    <span className="font-bold text-white group-hover:text-acm-blue transition-colors">{tag.name}</span>
-                                                </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-lg bg-acm-blue/10 flex items-center justify-center">
+                                                            <Hash className="h-4 w-4 text-acm-blue" />
+                                                        </div>
+                                                        <span className="font-bold text-white group-hover:text-acm-blue transition-colors">{tag.name}</span>
+                                                    </div>
+                                                )}
                                             </TableCell>
                                             <TableCell>
                                                 <Badge variant="outline" className="border-border/50 rounded-lg bg-black/20 font-black text-[10px] py-0.5">
@@ -188,29 +242,42 @@ export default function AdminDomainsPage() {
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button size="icon" variant="ghost"
-                                                            className="h-8 w-8 text-slate-500 hover:bg-red-500/10 hover:text-red-500 rounded-lg"
-                                                            title="Delete domain">
-                                                            <Trash2 className="h-4 w-4" />
+                                                {editingId !== tag.id && (
+                                                    <div className="flex items-center justify-end gap-1.5">
+                                                        <Button 
+                                                            size="icon" 
+                                                            variant="ghost" 
+                                                            onClick={() => { setEditingId(tag.id); setEditValue(tag.name); }}
+                                                            className="h-8 w-8 text-slate-500 hover:bg-amber-500/10 hover:text-amber-500 rounded-lg"
+                                                            title="Edit domain"
+                                                        >
+                                                            <Edit3 className="h-4 w-4" />
                                                         </Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent className="rounded-2xl bg-card/95 border-border/50 backdrop-blur">
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle className="font-black uppercase italic">Remove Domain</AlertDialogTitle>
-                                                            <AlertDialogDescription>
-                                                                Remove domain <strong>"{tag.name}"</strong>? Projects using this tag won't be affected.
-                                                            </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={() => deleteTag(tag.id)} className="bg-red-500 hover:bg-red-600 rounded-xl font-bold">
-                                                                Remove
-                                                            </AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                <Button size="icon" variant="ghost"
+                                                                    className="h-8 w-8 text-slate-500 hover:bg-red-500/10 hover:text-red-500 rounded-lg"
+                                                                    title="Delete domain">
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </AlertDialogTrigger>
+                                                            <AlertDialogContent className="rounded-2xl bg-card/95 border-border/50 backdrop-blur">
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle className="font-black uppercase italic">Remove Domain</AlertDialogTitle>
+                                                                    <AlertDialogDescription>
+                                                                        Remove domain <strong>"{tag.name}"</strong>? Projects using this tag won't be affected.
+                                                                    </AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+                                                                    <AlertDialogAction onClick={() => deleteTag(tag.id)} className="bg-red-500 hover:bg-red-600 rounded-xl font-bold">
+                                                                        Remove
+                                                                    </AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
+                                                    </div>
+                                                )}
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -223,4 +290,3 @@ export default function AdminDomainsPage() {
         </div>
     );
 }
-

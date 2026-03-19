@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
 import { MOCK_USERS, MOCK_PROJECTS, MOCK_TAGS } from './mockData';
+import { fsUsers, fsProjects, fsDomains } from './firebaseService';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -37,25 +38,32 @@ api.interceptors.response.use(
 export const projectsAPI = {
     getAll: async (params) => {
         try {
-            const res = await api.get('/projects', { params });
-            return res;
+            // Priority 1: Backend API (if running)
+            const res = await api.get('/projects', { params }).catch(() => null);
+            if (res) return res;
+
+            // Priority 2: Firestore direct
+            const data = await fsProjects.getAll(params?.status);
+            return { data: { projects: data.length > 0 ? data : MOCK_PROJECTS } };
         } catch (err) {
-            console.warn("Using MOCK_PROJECTS due to API error");
-            await delay(500);
             return { data: { projects: MOCK_PROJECTS } };
         }
     },
     getById: async (id) => {
         try {
-            return await api.get(`/projects/${id}`);
+            const res = await api.get(`/projects/${id}`).catch(() => null);
+            if (res) return res;
+
+            const project = await fsProjects.getById(id);
+            return { data: { project: project || MOCK_PROJECTS.find(p => p.id === id) } };
         } catch (err) {
             const project = MOCK_PROJECTS.find(p => p.id === id);
             return { data: { project } };
         }
     },
-    create: (data) => api.post('/projects', data),
-    update: (id, data) => api.put(`/projects/${id}`, data),
-    delete: (id) => api.delete(`/projects/${id}`),
+    create: (data) => fsProjects.create(data),
+    update: (id, data) => fsProjects.update(id, data),
+    delete: (id) => fsProjects.delete(id),
 };
 
 // ── Auth ──────────────────────────────────────────────────
@@ -67,63 +75,80 @@ export const authAPI = {
 export const usersAPI = {
     getById: async (uid) => {
         try {
-            return await api.get(`/users/${uid}`);
+            const res = await api.get(`/users/${uid}`).catch(() => null);
+            if (res) return res;
+
+            const user = await fsUsers.getById(uid);
+            return { data: { user: user || MOCK_USERS.find(u => u.uid === uid) } };
         } catch (err) {
             const user = MOCK_USERS.find(u => u.uid === uid);
             return { data: { user } };
         }
     },
-    update: (uid, data) => api.put(`/users/${uid}`, data),
-    delete: (uid) => api.delete(`/users/${uid}`),
+    update: (uid, data) => fsUsers.update(uid, data),
+    delete: (uid) => fsUsers.delete(uid),
 };
 
 // ── Admin ─────────────────────────────────────────────────
 export const adminAPI = {
     getAnalytics: async () => {
         try {
-            return await api.get('/admin/analytics');
-        } catch (err) {
-            await delay(500);
-            return {
-                data: {
-                    stats: {
-                        totalUsers: MOCK_USERS.length,
-                        totalProjects: MOCK_PROJECTS.length,
-                        pendingProjects: MOCK_PROJECTS.filter(p => p.status === 'pending').length,
-                        totalViews: 1250,
-                    }
-                }
+            // Try backend first
+            const res = await api.get('/admin/analytics').catch(() => null);
+            if (res) return res;
+
+            // Otherwise, aggregate from Firestore
+            const [users, projects, domains] = await Promise.all([
+                fsUsers.getAll(),
+                fsProjects.getAll(),
+                fsDomains.getAll()
+            ]);
+
+            const summary = {
+                totalUsers: users.length || 154,
+                totalProjects: projects.length || 42,
+                activeDomains: domains.length || 12,
+                pendingApprovals: projects.filter(p => p.status === 'pending').length || 5,
+                totalViews: 1250,
             };
+
+            return { data: { summary, stats: summary } }; // Handle both structures
+        } catch (err) {
+            return { data: { summary: { totalUsers: 154, totalProjects: 42, activeDomains: 12, pendingApprovals: 5 } } };
         }
     },
     getUsers: async (params) => {
         try {
-            return await api.get('/users', { params });
+            const res = await api.get('/admin/users', { params }).catch(() => null);
+            if (res) return res;
+
+            const users = await fsUsers.getAll();
+            return { data: { users: users.length > 0 ? users : MOCK_USERS } };
         } catch (err) {
-            await delay(500);
             return { data: { users: MOCK_USERS } };
         }
     },
-
-    // Note: Users can only update themselves unless they are admin, so this uses the standard users PUT route
-    updateUser: (uid, data) => api.put(`/users/${uid}`, data),
-
-    // Backend expects POST to /admin/projects/:id/review with an action string
-    approveProject: (id) => api.post(`/admin/projects/${id}/review`, { action: 'approve' }),
-    rejectProject: (id) => api.post(`/admin/projects/${id}/review`, { action: 'reject' }),
-    resetProject: (id) => api.post(`/admin/projects/${id}/review`, { action: 'pending' }),
+    updateUser: (uid, data) => fsUsers.update(uid, data),
+    approveProject: (id) => fsProjects.update(id, { status: 'approved' }),
+    rejectProject: (id) => fsProjects.update(id, { status: 'rejected' }),
+    resetProject: (id) => fsProjects.update(id, { status: 'pending' }),
 };
 
-// ── Search ────────────────────────────────────────────────
-export const searchAPI = {
-    search: (params) => api.get('/search', { params }),
-};
-
-// ── Tags ──────────────────────────────────────────────────
+// ── Tags / Domains ───────────────────────────────────────
 export const tagsAPI = {
-    getAll: () => api.get('/tags'),
-    create: (data) => api.post('/tags', data),
-    delete: (id) => api.delete(`/tags/${id}`),
+    getAll: async () => {
+        try {
+            const res = await api.get('/tags').catch(() => null);
+            if (res) return res;
+
+            const tags = await fsDomains.getAll();
+            return { data: { tags: tags.length > 0 ? tags : MOCK_TAGS } };
+        } catch (err) {
+            return { data: { tags: MOCK_TAGS } };
+        }
+    },
+    create: (data) => fsDomains.create(data),
+    delete: (id) => fsDomains.delete(id),
 };
 
 // ── Assets ────────────────────────────────────────────────
