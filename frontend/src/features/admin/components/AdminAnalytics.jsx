@@ -1,5 +1,7 @@
+import { useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
+import { animate, stagger, createDrawable } from "animejs";
 import { useScrollAnimation, useCountUp } from "@/hooks/useScrollAnimation";
 import {
   TrendingUp,
@@ -18,26 +20,37 @@ import { format } from "date-fns";
 import { useAuthStore } from "@/store/authStore";
 
 // ── Stat Card ───────────────────────────────────────────────
-function StatCard({ icon, label, value, trend, delay }) {
+function StatCard({ icon, label, value, delay, index = 0 }) {
   const { count, ref } = useCountUp(value, 2000);
   const { ref: animRef, isInView } = useScrollAnimation({ threshold: 0.3 });
+  const iconRef = useRef(null);
+  
+  // Alternate left/right based on index
+  const xOffset = index % 2 === 0 ? -50 : 50;
+
+  useEffect(() => {
+    if (iconRef.current) {
+      animate(iconRef.current, {
+        rotate: '1turn',
+        duration: 10000,
+        ease: 'linear',
+        loop: true
+      });
+    }
+  }, []);
 
   return (
     <motion.div
       ref={animRef}
-      initial={{ opacity: 0, y: 20 }}
-      animate={isInView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.5, delay }}
-      className="p-5 rounded-xl bg-card border border-border hover:border-primary/30 transition-all duration-300"
+      initial={{ opacity: 0, x: xOffset, y: 20 }}
+      animate={isInView ? { opacity: 1, x: 0, y: 0 } : {}}
+      transition={{ duration: 0.6, delay, type: "spring", stiffness: 50 }}
+      className="p-5 rounded-xl bg-card border border-border hover:border-primary/30 transition-all duration-300 transform-gpu"
     >
       <div className="flex items-start justify-between mb-3">
-        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+        <div ref={iconRef} className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
           <div className="text-primary">{icon}</div>
         </div>
-        <span className="flex items-center gap-1 text-xs font-medium text-green-500">
-          <TrendingUp className="h-3 w-3" />
-          {trend}
-        </span>
       </div>
       <div ref={ref}>
         <p className="text-2xl font-bold text-foreground">{count}</p>
@@ -109,11 +122,36 @@ export function AdminAnalytics() {
   const users = usersData?.data?.users || [];
   const pendingProjects = pendingData?.data?.projects || [];
 
+  useEffect(() => {
+    const paths = document.querySelectorAll('path.dashboard-draw-path');
+    if(paths.length > 0) {
+      animate(createDrawable(paths), {
+        draw: ['0 0', '0 1', '1 1'],
+        ease: 'easeInOutSine',
+        duration: 2000,
+        delay: stagger(40),
+        direction: 'alternate',
+        loop: true,
+      });
+    }
+  }, []);
+
   return (
-    <section id="admin-preview" className="relative py-24 sm:py-32">
+    <section id="admin-preview" className="relative py-24 sm:py-32 overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-muted/50 via-background to-background" />
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Decorative SVG Drawing Background */}
+      <div className="absolute inset-0 pointer-events-none opacity-10 flex justify-center z-0">
+         <svg width="100%" height="100%" viewBox="0 0 1000 2000" preserveAspectRatio="none">
+            <path className="dashboard-draw-path" d="M 100 0 L 100 2000" stroke="currentColor" strokeWidth="2" fill="none" />
+            <path className="dashboard-draw-path" d="M 300 0 L 300 2000" stroke="currentColor" strokeWidth="2" fill="none" />
+            <path className="dashboard-draw-path" d="M 500 0 L 500 2000" stroke="currentColor" strokeWidth="2" fill="none" />
+            <path className="dashboard-draw-path" d="M 700 0 L 700 2000" stroke="currentColor" strokeWidth="2" fill="none" />
+            <path className="dashboard-draw-path" d="M 900 0 L 900 2000" stroke="currentColor" strokeWidth="2" fill="none" />
+         </svg>
+      </div>
+
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
         {/* Section Header */}
         <motion.div
           ref={sectionRef}
@@ -136,17 +174,17 @@ export function AdminAnalytics() {
         {/* Dashboard Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          <StatCard icon={<Users className="h-5 w-5" />} label="Total Users" value={summary.totalUsers} trend="+12%" delay={0.1} />
-          <StatCard icon={<FolderGit2 className="h-5 w-5" />} label="Total Projects" value={summary.totalProjects} trend="+5%" delay={0.2} />
-          <StatCard icon={<Activity className="h-5 w-5" />} label="Active Domains" value={summary.activeDomains} trend="stable" delay={0.3} />
-          <StatCard icon={<Clock className="h-5 w-5" />} label="Pending Reviews" value={summary.pendingApprovals} trend="live" delay={0.4} />
+          <StatCard icon={<Users className="h-5 w-5" />} label="Total Users" value={summary.totalUsers} delay={0.1} index={0} />
+          <StatCard icon={<FolderGit2 className="h-5 w-5" />} label="Total Projects" value={summary.totalProjects} delay={0.2} index={1} />
+          <StatCard icon={<Activity className="h-5 w-5" />} label="Active Domains" value={summary.activeDomains} delay={0.3} index={2} />
+          <StatCard icon={<Clock className="h-5 w-5" />} label="Pending Reviews" value={summary.pendingApprovals} delay={0.4} index={3} />
 
           {/* User Management — Real Data */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="lg:col-span-2 p-6 rounded-2xl bg-card border border-border"
+            initial={{ opacity: 0, x: -50, y: 20 }}
+            animate={isInView ? { opacity: 1, x: 0, y: 0 } : {}}
+            transition={{ duration: 0.6, delay: 0.4, type: "spring" }}
+            className="lg:col-span-2 p-6 rounded-2xl bg-card border border-border shadow-xl transform-gpu"
           >
             <div className="flex items-center justify-between mb-6">
               <div>
@@ -214,10 +252,10 @@ export function AdminAnalytics() {
 
           {/* Pending Projects Queue — Real Data */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.6, delay: 0.5 }}
-            className="p-6 rounded-2xl bg-card border border-border"
+            initial={{ opacity: 0, x: 50, y: 20 }}
+            animate={isInView ? { opacity: 1, x: 0, y: 0 } : {}}
+            transition={{ duration: 0.6, delay: 0.5, type: "spring" }}
+            className="p-6 rounded-2xl bg-card border border-border shadow-xl transform-gpu"
           >
             <div className="flex items-center justify-between mb-6">
               <div>

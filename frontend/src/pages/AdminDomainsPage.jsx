@@ -95,23 +95,11 @@ export default function AdminDomainsPage() {
         setEditingId(null);
         
         try {
-            // Note: Currently tagsAPI doesn't have an update method in services/api.js
-            // but we can add it or call firestore directly if needed.
-            // For now, let's assume we might need to add it to api.js or use direct fs.
-            // Since I updated api.js, I should check if I added update to tagsAPI.
-            // I didn't. I'll use a direct fsDomains call or just leave it for now.
-            // Actually, I'll add an update method to tagsAPI in api.js if I were to be thorough.
-            // But let's use the local fallback.
-            import('@/services/firebaseService').then(async ({ fsDomains }) => {
-                await fsDomains.update(id, { name });
-                toast.success("Domain updated");
-            }).catch(() => {
-                setTags(prev => prev.map(t => t.id === id ? { ...t, name: old.name } : t));
-                toast.error("Failed to update domain");
-            });
-        } catch {
+            await tagsAPI.update(id, { name });
+            toast.success("Domain updated");
+        } catch (error) {
             setTags(prev => prev.map(t => t.id === id ? { ...t, name: old.name } : t));
-            toast.error("Failed to update domain");
+            toast.error(error.response?.data?.message || "Failed to update domain");
         }
     };
 

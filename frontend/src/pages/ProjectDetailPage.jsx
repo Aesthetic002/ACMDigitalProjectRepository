@@ -17,7 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import Layout from "@/components/Layout";
 import Loader from "@/components/common/Loader";
 
-function ProjectDetailContent() {
+export function ProjectDetailContent({ backUrl = "/projects" }) {
     const { id: projectId } = useParams();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
@@ -66,7 +66,7 @@ function ProjectDetailContent() {
             <div className="mb-6 rounded-full bg-red-500/10 p-4 shadow-inner border border-red-500/20"><AlertCircle className="h-12 w-12 text-red-500" /></div>
             <h1 className="text-4xl font-black tracking-tight text-white uppercase italic">Project Not Found</h1>
             <p className="mt-2 text-muted-foreground max-w-sm font-medium">The project you're looking for doesn't exist or has been removed from the archive.</p>
-            <Button onClick={() => navigate("/projects")} className="mt-10 bg-white text-slate-950 hover:bg-slate-200 font-black px-8 py-6 rounded-xl uppercase italic tracking-widest transition-all shadow-xl">Back to Collection</Button>
+            <Button onClick={() => navigate(backUrl)} className="mt-10 bg-white text-slate-950 hover:bg-slate-200 font-black px-8 py-6 rounded-xl uppercase italic tracking-widest transition-all shadow-xl">Back to Collection</Button>
         </div>
     );
 
@@ -77,7 +77,7 @@ function ProjectDetailContent() {
         <div className="min-h-screen bg-background/50 pb-20">
             <div className="border-b border-border/50 bg-slate-950/80 backdrop-blur-xl sticky top-0 z-30 border-t border-t-white/5">
                 <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-                    <Button variant="ghost" size="sm" onClick={() => navigate("/projects")} className="text-muted-foreground hover:text-white font-black uppercase tracking-widest text-[10px] italic -ml-2">
+                    <Button variant="ghost" size="sm" onClick={() => navigate(backUrl)} className="text-muted-foreground hover:text-white font-black uppercase tracking-widest text-[10px] italic -ml-2">
                         <ArrowLeft className="mr-2 h-4 w-4" /> Back to Collection
                     </Button>
                     <div className="flex items-center gap-2">

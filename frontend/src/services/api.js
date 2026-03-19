@@ -1,6 +1,5 @@
 import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
-import { MOCK_USERS, MOCK_PROJECTS, MOCK_TAGS } from './mockData';
 import { fsUsers, fsProjects, fsDomains } from './firebaseService';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -44,9 +43,9 @@ export const projectsAPI = {
 
             // Priority 2: Firestore direct
             const data = await fsProjects.getAll(params?.status);
-            return { data: { projects: data.length > 0 ? data : MOCK_PROJECTS } };
+            return { data: { projects: data || [] } };
         } catch (err) {
-            return { data: { projects: MOCK_PROJECTS } };
+            return { data: { projects: [] } };
         }
     },
     getById: async (id) => {
@@ -55,15 +54,38 @@ export const projectsAPI = {
             if (res) return res;
 
             const project = await fsProjects.getById(id);
-            return { data: { project: project || MOCK_PROJECTS.find(p => p.id === id) } };
-        } catch (err) {
-            const project = MOCK_PROJECTS.find(p => p.id === id);
             return { data: { project } };
+        } catch (err) {
+            return { data: { project: null } };
         }
     },
-    create: (data) => fsProjects.create(data),
-    update: (id, data) => fsProjects.update(id, data),
-    delete: (id) => fsProjects.delete(id),
+    create: async (data) => {
+        try {
+            return await api.post('/projects', data);
+        } catch (error) {
+            console.warn("Backend POST /projects failed, using Firestore fallback.", error);
+            const doc = await fsProjects.create(data);
+            return { data: { project: doc } };
+        }
+    },
+    update: async (id, data) => {
+        try {
+            return await api.put(`/projects/${id}`, data);
+        } catch (error) {
+            console.warn("Backend PUT /projects failed, using Firestore fallback.", error);
+            await fsProjects.update(id, data);
+            return { data: { project: { id, ...data } } };
+        }
+    },
+    delete: async (id) => {
+        try {
+            return await api.delete(`/projects/${id}`);
+        } catch (error) {
+            console.warn("Backend DELETE /projects failed, using Firestore fallback.", error);
+            await fsProjects.delete(id);
+            return { data: { success: true } };
+        }
+    },
 };
 
 // ── Auth ──────────────────────────────────────────────────
@@ -79,14 +101,21 @@ export const usersAPI = {
             if (res) return res;
 
             const user = await fsUsers.getById(uid);
-            return { data: { user: user || MOCK_USERS.find(u => u.uid === uid) } };
-        } catch (err) {
-            const user = MOCK_USERS.find(u => u.uid === uid);
             return { data: { user } };
+        } catch (err) {
+            return { data: { user: null } };
         }
     },
     update: (uid, data) => fsUsers.update(uid, data),
-    delete: (uid) => fsUsers.delete(uid),
+    delete: async (uid) => {
+        try {
+            return await api.delete(`/users/${uid}`);
+        } catch (error) {
+            console.warn("Backend /users DELETE failed, using Firestore fallback.", error);
+            await fsUsers.delete(uid);
+            return { data: { success: true } };
+        }
+    },
 };
 
 // ── Admin ─────────────────────────────────────────────────
@@ -95,7 +124,16 @@ export const adminAPI = {
         try {
             // Try backend first
             const res = await api.get('/admin/analytics').catch(() => null);
-            if (res) return res;
+            if (res && res.data && res.data.analytics) {
+                const a = res.data.analytics;
+                const summary = {
+                    totalUsers: a.totalUsers || 0,
+                    totalProjects: a.totalProjects || 0,
+                    activeDomains: a.totalTags || 0,
+                    pendingApprovals: a.projectsByStatus?.pending || 0,
+                };
+                return { data: { summary, stats: summary } };
+            }
 
             // Otherwise, aggregate from Firestore
             const [users, projects, domains] = await Promise.all([
@@ -105,33 +143,63 @@ export const adminAPI = {
             ]);
 
             const summary = {
-                totalUsers: users.length || 154,
-                totalProjects: projects.length || 42,
-                activeDomains: domains.length || 12,
-                pendingApprovals: projects.filter(p => p.status === 'pending').length || 5,
-                totalViews: 1250,
+                totalUsers: users.length,
+                totalProjects: projects.length,
+                activeDomains: domains.length,
+                pendingApprovals: projects.filter(p => p.status === 'pending').length,
+                totalViews: 0,
             };
 
-            return { data: { summary, stats: summary } }; // Handle both structures
+            return { data: { summary, stats: summary } };
         } catch (err) {
-            return { data: { summary: { totalUsers: 154, totalProjects: 42, activeDomains: 12, pendingApprovals: 5 } } };
+            return { data: { summary: { totalUsers: 0, totalProjects: 0, activeDomains: 0, pendingApprovals: 0 } } };
         }
     },
     getUsers: async (params) => {
         try {
-            const res = await api.get('/admin/users', { params }).catch(() => null);
-            if (res) return res;
+            const res = await api.get('/users', { params }).catch(() => null);
+            if (res?.data) return res;
 
             const users = await fsUsers.getAll();
-            return { data: { users: users.length > 0 ? users : MOCK_USERS } };
+            return { data: { users: users || [] } };
         } catch (err) {
-            return { data: { users: MOCK_USERS } };
+            return { data: { users: [] } };
+        }
+    },
+    createUser: async (uid, data) => {
+        try {
+            return await api.post('/users', { uid, ...data });
+        } catch (error) {
+            console.warn("Backend /users POST failed, using Firestore fallback.", error);
+            await fsUsers.create(uid, data);
+            return { data: { user: data } };
         }
     },
     updateUser: (uid, data) => fsUsers.update(uid, data),
-    approveProject: (id) => fsProjects.update(id, { status: 'approved' }),
-    rejectProject: (id) => fsProjects.update(id, { status: 'rejected' }),
-    resetProject: (id) => fsProjects.update(id, { status: 'pending' }),
+    approveProject: async (id) => {
+        try { return await api.post(`/admin/projects/${id}/review`, { action: 'approve' }); }
+        catch (error) {
+            console.warn("Backend API failed, using Firestore fallback.", error);
+            await fsProjects.update(id, { status: 'approved' });
+            return { data: { success: true } };
+        }
+    },
+    rejectProject: async (id) => {
+        try { return await api.post(`/admin/projects/${id}/review`, { action: 'reject' }); }
+        catch (error) {
+            console.warn("Backend API failed, using Firestore fallback.", error);
+            await fsProjects.update(id, { status: 'rejected' });
+            return { data: { success: true } };
+        }
+    },
+    resetProject: async (id) => {
+        try { return await api.post(`/admin/projects/${id}/review`, { action: 'pending' }); }
+        catch (error) {
+            console.warn("Backend API failed, using Firestore fallback.", error);
+            await fsProjects.update(id, { status: 'pending' });
+            return { data: { success: true } };
+        }
+    },
 };
 
 // ── Tags / Domains ───────────────────────────────────────
@@ -142,13 +210,38 @@ export const tagsAPI = {
             if (res) return res;
 
             const tags = await fsDomains.getAll();
-            return { data: { tags: tags.length > 0 ? tags : MOCK_TAGS } };
+            return { data: { tags: tags || [] } };
         } catch (err) {
-            return { data: { tags: MOCK_TAGS } };
+            return { data: { tags: [] } };
         }
     },
-    create: (data) => fsDomains.create(data),
-    delete: (id) => fsDomains.delete(id),
+    create: async (data) => {
+        try {
+            return await api.post('/tags', data);
+        } catch (error) {
+            console.warn("Backend /tags POST failed, using Firestore fallback.", error);
+            const doc = await fsDomains.create(data);
+            return { data: { tag: doc } };
+        }
+    },
+    update: async (id, data) => {
+        try {
+            return await api.put(`/tags/${id}`, data);
+        } catch (error) {
+            console.warn("Backend /tags PUT failed, using Firestore fallback.", error);
+            await fsDomains.update(id, data);
+            return { data: { tag: { id, ...data } } };
+        }
+    },
+    delete: async (id) => {
+        try {
+            return await api.delete(`/tags/${id}`);
+        } catch (error) {
+            console.warn("Backend /tags DELETE failed, using Firestore fallback.", error);
+            await fsDomains.delete(id);
+            return { data: { success: true } };
+        }
+    },
 };
 
 // ── Assets ────────────────────────────────────────────────
@@ -175,6 +268,23 @@ export const eventsAPI = {
     create: (data) => api.post('/events', data),
     update: (id, data) => api.put(`/events/${id}`, data),
     delete: (id) => api.delete(`/events/${id}`),
+};
+
+// ── Search ────────────────────────────────────────────────
+export const searchAPI = {
+    search: async (query) => {
+        try {
+            // Priority 1: Backend Search API
+            const res = await api.get('/search', { params: { q: query } }).catch(() => null);
+            if (res) return res;
+
+            // Priority 2: Firestore/Mock fallback (simplified)
+            // For now, we search in Firestore results (not implemented here, but removing mock)
+            return { data: { results: [] } };
+        } catch (err) {
+            return { data: { results: [] } };
+        }
+    }
 };
 
 export default api;

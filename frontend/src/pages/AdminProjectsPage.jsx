@@ -1,14 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
-<<<<<<< HEAD
-=======
-import { fsProjects } from "@/services/firebaseService";
-import { MOCK_PROJECTS } from "@/services/mockData";
->>>>>>> 46ea59d2714cab8875623336c99b6803440c5129
 import { Link } from "react-router-dom";
 import { projectsAPI, adminAPI } from "@/services/api";
 import {
     FolderPlus, Search, Trash2, CheckCircle2, XCircle,
-    Clock, FolderGit2, RotateCcw, Filter, Loader2
+    Clock, FolderGit2, RotateCcw, Filter, Loader2, Eye
 } from "lucide-react";
 import Loader from "@/components/common/Loader";
 import {
@@ -36,23 +31,16 @@ const STATUS_CONFIG = {
 };
 
 export default function AdminProjectsPage() {
-<<<<<<< HEAD
     const [projects, setProjects] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-=======
-    const [projects, setProjects] = useState(MOCK_PROJECTS);  // show immediately
-    const [loading, setLoading] = useState(false);
->>>>>>> 46ea59d2714cab8875623336c99b6803440c5129
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
 
     useEffect(() => {
-<<<<<<< HEAD
         const fetchProjects = async () => {
             try {
-                // Notice: the API returns { success: true, projects: [...] }
                 const res = await projectsAPI.getAll({ limit: 100 });
-                if (res.data?.projects) {
+                if (res?.data?.projects) {
                     setProjects(res.data.projects);
                 } else {
                     toast.error("Failed to load projects structure");
@@ -65,101 +53,65 @@ export default function AdminProjectsPage() {
             }
         };
         fetchProjects();
-=======
-        const load = async () => {
-            try {
-                const data = await fsProjects.getAll();
-                if (data.length > 0) setProjects(data);
-            } catch {
-                // mock data already showing
-            }
-        };
-        load();
->>>>>>> 46ea59d2714cab8875623336c99b6803440c5129
     }, []);
 
     const filteredProjects = useMemo(() => {
         return projects.filter(p => {
             const matchSearch = !searchTerm ||
                 p.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-<<<<<<< HEAD
-                p.ownerId?.toLowerCase().includes(searchTerm.toLowerCase()); // Backend uses ownerId, not author object by default in list
+                (p.author?.name || "Member").toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (p.ownerId || "").toLowerCase().includes(searchTerm.toLowerCase());
             const matchesStatus = statusFilter === "all" || p.status === statusFilter;
-            return matchesSearch && matchesStatus;
-=======
-                p.author?.name?.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchStatus = statusFilter === "all" || p.status === statusFilter;
-            return matchSearch && matchStatus;
->>>>>>> 46ea59d2714cab8875623336c99b6803440c5129
+            return matchSearch && matchesStatus;
         });
     }, [projects, searchTerm, statusFilter]);
 
     const updateStatus = async (id, newStatus) => {
-<<<<<<< HEAD
+        const prevProject = projects.find(p => p.id === id);
+        // Optimistic update
+        setProjects(prev => prev.map(p => p.id === id ? { ...p, status: newStatus } : p));
+        
         try {
             let res;
             if (newStatus === 'approved') res = await adminAPI.approveProject(id);
             else if (newStatus === 'rejected') res = await adminAPI.rejectProject(id);
             else res = await adminAPI.resetProject(id);
 
-            if (res.data?.success) {
-                setProjects(prev => prev.map(p => p.id === id ? { ...p, status: newStatus } : p));
+            if (res.data?.success || res === true) {
                 toast.success(`Project ${newStatus}`);
             }
         } catch (error) {
             console.error("Failed to update status:", error);
+            // Rollback on failure
+            setProjects(prev => prev.map(p => p.id === id ? { ...p, status: prevProject.status } : p));
             toast.error(error.response?.data?.message || "Failed to update project status");
-=======
-        const prev = projects.find(p => p.id === id);
-        setProjects(ps => ps.map(p => p.id === id ? { ...p, status: newStatus } : p));
-        try {
-            await fsProjects.update(id, { status: newStatus });
-            toast.success(`Project ${newStatus}`);
-        } catch {
-            setProjects(ps => ps.map(p => p.id === id ? { ...p, status: prev.status } : p));
-            toast.error("Failed to update in Firebase");
->>>>>>> 46ea59d2714cab8875623336c99b6803440c5129
         }
     };
 
     const deleteProject = async (id) => {
-<<<<<<< HEAD
-        // Find project beforehand for toast message if needed
         const project = projects.find(p => p.id === id);
+        // Optimistic delete
+        setProjects(prev => prev.filter(p => p.id !== id));
+        
         try {
             const res = await projectsAPI.delete(id);
-            if (res.data?.success) {
-                setProjects(prev => prev.filter(p => p.id !== id));
+            if (res.data?.success || res === true) {
                 toast.success(`"${project?.title || id}" archived`);
             }
         } catch (error) {
-            console.error("Failed to delete product:", error);
+            console.error("Failed to delete project:", error);
+            // Rollback on failure
+            setProjects(prev => [...prev, project]);
             toast.error(error.response?.data?.message || "Failed to archive project");
-=======
-        const project = projects.find(p => p.id === id);
-        setProjects(ps => ps.filter(p => p.id !== id));
-        try {
-            await fsProjects.delete(id);
-            toast.success(`"${project?.title}" deleted`);
-        } catch {
-            setProjects(ps => [...ps, project]);
-            toast.error("Failed to delete from Firebase");
->>>>>>> 46ea59d2714cab8875623336c99b6803440c5129
         }
     };
-
-    if (loading) return (
-        <div className="flex h-64 items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-acm-blue" />
-        </div>
-    );
 
     return (
         <div className="space-y-8">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-black tracking-tight uppercase italic text-white underline decoration-amber-500 decoration-4 underline-offset-8">Global Repository</h1>
-                    <p className="text-muted-foreground mt-1">All projects stored in Firebase Firestore.</p>
+                    <p className="text-muted-foreground mt-1">Management console for all submitted projects.</p>
                 </div>
                 <Button asChild className="bg-amber-500 hover:bg-amber-600 rounded-xl font-bold px-6 shadow-lg shadow-amber-500/20 text-white">
                     <Link to="/admin/pre-add" className="flex items-center gap-2">
@@ -171,7 +123,12 @@ export default function AdminProjectsPage() {
             <div className="flex flex-col md:flex-row gap-4">
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Filter projects..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 rounded-xl border-border/50 bg-muted/20" />
+                    <Input 
+                        placeholder="Filter projects by title or author..." 
+                        value={searchTerm} 
+                        onChange={e => setSearchTerm(e.target.value)} 
+                        className="pl-10 rounded-xl border-border/50 bg-muted/20" 
+                    />
                 </div>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="w-full md:w-48 rounded-xl border-border/50 bg-muted/20 font-bold uppercase text-[10px]">
@@ -202,22 +159,17 @@ export default function AdminProjectsPage() {
                 })}
             </div>
 
-<<<<<<< HEAD
             {/* Table */}
-            <div className="rounded-2xl border border-border/50 bg-card/20 backdrop-blur-sm overflow-hidden overflow-x-auto shadow-xl">
+            <div className="rounded-2xl border border-border/50 bg-card/20 backdrop-blur-sm shadow-xl overflow-x-auto">
                 {isLoading ? (
                     <div className="text-center py-20">
                         <Loader size={0.8} className="mx-auto mb-3" />
                         <p className="font-bold text-muted-foreground italic">Loading projects...</p>
                     </div>
                 ) : filteredProjects.length === 0 ? (
-=======
-            <div className="rounded-2xl border border-border/50 bg-card/20 backdrop-blur-sm overflow-hidden shadow-xl overflow-x-auto">
-                {filteredProjects.length === 0 ? (
->>>>>>> 46ea59d2714cab8875623336c99b6803440c5129
                     <div className="text-center py-20">
                         <FolderGit2 className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-                        <p className="font-bold text-muted-foreground italic">No projects match your filter</p>
+                        <p className="font-bold text-muted-foreground italic">No projects match your search</p>
                         <Button variant="link" onClick={() => { setSearchTerm(""); setStatusFilter("all"); }} className="text-acm-blue font-bold mt-2">
                             <RotateCcw className="h-3.5 w-3.5 mr-2" /> Clear filters
                         </Button>
@@ -241,11 +193,11 @@ export default function AdminProjectsPage() {
                                     <TableRow key={project.id} className="hover:bg-white/5 border-border/50 group">
                                         <TableCell className="font-bold">
                                             <p className="text-white group-hover:text-acm-blue transition-colors">{project.title}</p>
-                                            <p className="text-[10px] text-muted-foreground">{project.techStack?.join(", ")}</p>
+                                            <p className="text-[10px] text-muted-foreground line-clamp-1">{project.techStack?.join(", ")}</p>
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex items-center gap-2">
-                                                <div className="w-6 h-6 rounded bg-muted flex items-center justify-center text-[10px] font-black">{project.author?.name?.charAt(0) || "?"}</div>
+                                                <div className="w-6 h-6 rounded bg-muted flex items-center justify-center text-[10px] font-black">{(project.author?.name || "M").charAt(0)}</div>
                                                 <span className="text-xs font-semibold">{project.author?.name || "Member"}</span>
                                             </div>
                                         </TableCell>
@@ -261,6 +213,11 @@ export default function AdminProjectsPage() {
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex items-center justify-end gap-1.5">
+                                                <Button asChild size="icon" variant="ghost" className="h-8 w-8 text-acm-blue hover:bg-acm-blue/10 rounded-lg" title="View Project">
+                                                    <Link to={`/admin/projects/${project.id}`}>
+                                                        <Eye className="h-4 w-4" />
+                                                    </Link>
+                                                </Button>
                                                 {project.status !== 'approved' && (
                                                     <Button onClick={() => updateStatus(project.id, 'approved')} size="icon" variant="ghost" className="h-8 w-8 text-emerald-500 hover:bg-emerald-500/10 rounded-lg" title="Approve">
                                                         <CheckCircle2 className="h-4 w-4" />
@@ -282,10 +239,10 @@ export default function AdminProjectsPage() {
                                                             <Trash2 className="h-4 w-4" />
                                                         </Button>
                                                     </AlertDialogTrigger>
-                                                    <AlertDialogContent className="rounded-2xl bg-card/95 border-border/50 backdrop-blur">
+                                                    <AlertDialogContent className="rounded-2xl bg-card/95 border-border/50 backdrop-blur shadow-2xl">
                                                         <AlertDialogHeader>
                                                             <AlertDialogTitle className="font-black uppercase italic">Confirm Deletion</AlertDialogTitle>
-                                                            <AlertDialogDescription>Remove <strong>{project.title}</strong> from Firebase permanently?</AlertDialogDescription>
+                                                            <AlertDialogDescription>Remove <strong>{project.title}</strong> permenantly? This action cannot be undone.</AlertDialogDescription>
                                                         </AlertDialogHeader>
                                                         <AlertDialogFooter>
                                                             <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>

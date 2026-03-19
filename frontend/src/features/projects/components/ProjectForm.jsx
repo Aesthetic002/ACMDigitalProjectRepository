@@ -28,7 +28,15 @@ export default function ProjectForm({ initialData = null, projectId = null, isAd
     const [techInput, setTechInput] = useState('');
     const [files, setFiles] = useState([]);
     const [uploadProgress, setUploadProgress] = useState({});
-    const [availableTags, setAvailableTags] = useState([]);
+    const [availableTags, setAvailableTags] = useState([
+        { id: 'default1', name: 'Web Dev' },
+        { id: 'default2', name: 'Machine Learning' },
+        { id: 'default3', name: 'App Dev' },
+        { id: 'default4', name: 'Blockchain' },
+        { id: 'default5', name: 'Cybersecurity' },
+        { id: 'default6', name: 'Cloud Computing' },
+        { id: 'default7', name: 'UI/UX Design' },
+    ]);
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
@@ -37,7 +45,9 @@ export default function ProjectForm({ initialData = null, projectId = null, isAd
         const fetchTags = async () => {
             try {
                 const response = await tagsAPI.getAll();
-                setAvailableTags(response.data.tags || []);
+                if (response?.data?.tags && response.data.tags.length > 0) {
+                    setAvailableTags(response.data.tags);
+                }
             } catch (err) {
                 console.error('Failed to fetch tags', err);
             }
@@ -129,15 +139,12 @@ export default function ProjectForm({ initialData = null, projectId = null, isAd
             if (files.length > 0) {
                 for (const file of files) {
                     try {
-                        const { data } = await assetsAPI.getUploadUrl({
-                            projectId: targetProjectId,
-                            filename: file.name,
-                            contentType: file.type
-                        });
+                        const formData = new FormData();
+                        formData.append('projectId', targetProjectId);
+                        formData.append('file', file);
 
-                        await axios.put(data.uploadUrl, file, {
-                            headers: { 'Content-Type': file.type },
-                            onUploadProgress: (progressEvent) => {
+                        await assetsAPI.uploadAsset(formData, (progressEvent) => {
+                            if (progressEvent.total) {
                                 const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
                                 setUploadProgress(prev => ({ ...prev, [file.name]: percent }));
                             }

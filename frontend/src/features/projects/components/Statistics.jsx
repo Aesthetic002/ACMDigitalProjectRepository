@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { useCountUp, useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { FolderGit2, Users, Layers, Calendar } from "lucide-react";
-import { adminAPI } from "@/api/admin.api";
+import { adminAPI } from "@/services/api";
 
 function StatCard({ icon, value, label, suffix = "", delay }) {
   const { count, ref } = useCountUp(value, 2000);

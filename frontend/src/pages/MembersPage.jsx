@@ -1,6 +1,7 @@
 import Layout from "@/components/Layout";
 import { useQuery } from "@tanstack/react-query";
-import { adminAPI } from "@/api/admin.api";
+import { adminAPI } from "@/services/api";
+import Loader from "@/components/common/Loader";
 import { motion } from "framer-motion";
 import { Users, Mail, Shield, ShieldCheck, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";

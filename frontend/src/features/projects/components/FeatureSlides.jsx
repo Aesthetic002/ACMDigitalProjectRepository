@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
-import { projectsAPI } from "@/api/projects.api";
+import { projectsAPI, adminAPI } from "@/services/api";
 import {
   FolderOpen,
   FileText,

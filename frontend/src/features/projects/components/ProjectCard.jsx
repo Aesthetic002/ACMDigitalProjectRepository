@@ -52,7 +52,7 @@ export default function ProjectCard({ project }) {
             </div>
 
             <CardHeader className="p-5 pb-0">
-                <Link href={`/projects/${project.id}`}>
+                <Link to={`/projects/${project.id}`}>
                     <h3 className="line-clamp-1 text-lg font-bold tracking-tight text-foreground transition-colors group-hover:text-acm-blue">
                         {project.title}
                     </h3>
@@ -101,7 +101,7 @@ export default function ProjectCard({ project }) {
                 </div>
 
                 <Link
-                    href={`/projects/${project.id}`}
+                    to={`/projects/${project.id}`}
                     className="flex items-center gap-1 text-[11px] font-bold text-acm-blue transition-colors hover:text-acm-blue-dark"
                 >
                     <span>VIEW</span>

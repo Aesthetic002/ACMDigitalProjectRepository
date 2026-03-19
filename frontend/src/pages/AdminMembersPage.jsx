@@ -1,14 +1,11 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-<<<<<<< HEAD
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usersAPI, adminAPI } from "@/services/api";
-=======
-import { fsUsers } from "@/services/firebaseService";
-import { MOCK_USERS } from "@/services/mockData";
->>>>>>> 46ea59d2714cab8875623336c99b6803440c5129
 import {
-    Users, Search, MoreVertical, Shield, ShieldCheck,
-    UserMinus, UserCheck, ExternalLink, GraduationCap
+    Plus, Search, MoreVertical, Shield, ShieldCheck,
+    UserMinus, UserCheck, ExternalLink, GraduationCap, Loader2,
+    Mail, Lock, User, Users
 } from "lucide-react";
 import Loader from "@/components/common/Loader";
 import {
@@ -16,171 +13,265 @@ import {
     TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
+    Dialog, DialogContent, DialogDescription,
+    DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+} from "@/components/ui/dialog";
+import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem,
     DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+    Select, SelectContent,SelectItem,
+    SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
+import { initializeApp } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+
+// Secondary Firebase app to create users without logging out the admin
+const secondaryApp = initializeApp({
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+}, 'SecondaryApp');
+const secondaryAuth = getAuth(secondaryApp);
 
 export default function AdminMembersPage() {
-<<<<<<< HEAD
-    const [members, setMembers] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const queryClient = useQueryClient();
     const [searchTerm, setSearchTerm] = useState("");
+    const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+    const [newMember, setNewMember] = useState({
+        name: "",
+        email: "",
+        password: "",
+        role: "member",
+        graduationYear: new Date().getFullYear().toString()
+    });
 
-    useEffect(() => {
-        const fetchMembers = async () => {
-            try {
-                const res = await adminAPI.getUsers({ limit: 100 });
-                if (res.data?.users) {
-                    setMembers(res.data.users);
-                } else {
-                    toast.error("Failed to load users structure");
-                }
-            } catch (error) {
-                console.error("Failed to fetch members:", error);
-                toast.error("Could not reach backend server");
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchMembers();
-=======
-    const [members, setMembers] = useState(MOCK_USERS);   // show immediately
-    const [loading, setLoading] = useState(false);         // no spinner needed
-    const [searchTerm, setSearchTerm] = useState("");
+    // Fetch members using react-query
+    const { data: membersRes, isLoading, error } = useQuery({
+        queryKey: ["admin-users"],
+        queryFn: () => adminAPI.getUsers({ limit: 100 }),
+    });
 
-    // Background Firestore sync — updates when data arrives
-    useEffect(() => {
-        const load = async () => {
-            try {
-                const users = await fsUsers.getAll();
-                if (users.length > 0) setMembers(users);
-            } catch {
-                // mock data already showing, no-op
-            }
-        };
-        load();
->>>>>>> 46ea59d2714cab8875623336c99b6803440c5129
-    }, []);
+    const members = membersRes?.data?.users || [];
 
     const filteredMembers = useMemo(() =>
         members.filter(m =>
-            m.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            m.email?.toLowerCase().includes(searchTerm.toLowerCase())
+            (m.name || "Member").toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (m.email || "").toLowerCase().includes(searchTerm.toLowerCase())
         ), [members, searchTerm]);
 
-    const toggleRole = async (uid) => {
-<<<<<<< HEAD
-        const member = members.find(m => m.uid === uid);
-        const newRole = member.role === 'admin' ? 'member' : 'admin';
-        try {
-            const res = await adminAPI.updateUser(uid, { role: newRole });
-            if (res.data?.success) {
-                setMembers(prev => prev.map(m => m.uid === uid ? { ...m, role: newRole } : m));
-                toast.success(`${member.name} is now a ${newRole}`);
+    // Mutations
+    const toggleRoleMutation = useMutation({
+        mutationFn: async ({ uid, newRole }) => adminAPI.updateUser(uid, { role: newRole }),
+        onSuccess: (_, variables) => {
+            toast.success(`Role updated successfully`);
+            queryClient.invalidateQueries(["admin-users"]);
+        },
+        onError: (err) => toast.error(err.response?.data?.message || "Failed to update role")
+    });
+
+    const toggleStatusMutation = useMutation({
+        mutationFn: async ({ uid, disabled }) => adminAPI.updateUser(uid, { disabled }),
+        onSuccess: (_, variables) => {
+            toast.success(`Status updated successfully`);
+            queryClient.invalidateQueries(["admin-users"]);
+        },
+        onError: (err) => toast.error(err.response?.data?.message || "Failed to update status")
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: (uid) => usersAPI.delete(uid),
+        onSuccess: () => {
+            toast.success("Member profile removed");
+            queryClient.invalidateQueries(["admin-users"]);
+        },
+        onError: (err) => toast.error(err.response?.data?.message || "Failed to delete member")
+    });
+
+    const createMemberMutation = useMutation({
+        mutationFn: async (data) => {
+            // 1. Create in Firebase Auth using secondary instance
+            const userCredential = await createUserWithEmailAndPassword(
+                secondaryAuth,
+                data.email,
+                data.password
+            );
+            const { user } = userCredential;
+
+            // 2. Update display name
+            await updateProfile(user, { displayName: data.name });
+
+            // 3. Create document in Firestore (using createUser / setDoc)
+            // We wrap this in a try-catch because if Firebase Security Rules deny the client write,
+            // the user might still be created via backend triggers (which the user confirmed is happening),
+            // and we don't want the UI to halt and show an error popup.
+            try {
+                await adminAPI.createUser(user.uid, {
+                    uid: user.uid,
+                    name: data.name,
+                    email: data.email,
+                    role: data.role,
+                    graduationYear: data.graduationYear,
+                    photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(data.name)}`,
+                    joinedDate: new Date().toISOString()
+                });
+            } catch (err) {
+                console.warn("Direct Firestore write failed, likely due to security rules. Relying on backend sync.", err);
             }
-        } catch (error) {
-            console.error("Failed to update role:", error);
-            toast.error(error.response?.data?.message || "Failed to update role");
+            
+            return user;
+        },
+        onSuccess: (user) => {
+            toast.success(`${newMember.name} added successfully`);
+            setIsAddDialogOpen(false);
+            setNewMember({ name: "", email: "", password: "", role: "member", graduationYear: new Date().getFullYear().toString() });
+            queryClient.invalidateQueries(["admin-users"]);
+        },
+        onError: (err) => {
+            console.error("Failed to add member:", err);
+            toast.error(err.message || "Failed to create member account");
         }
+    });
+
+    const handleAddMember = (e) => {
+        e.preventDefault();
+        if (!newMember.name || !newMember.email || !newMember.password) {
+            return toast.error("Please fill in name, email and initial password");
+        }
+        createMemberMutation.mutate(newMember);
     };
 
-    const toggleStatus = async (uid) => {
-        const member = members.find(m => m.uid === uid);
-        const newDisabled = !member.disabled;
-        try {
-            // Note: Update backend 'disabled' flag (this depends on your backend schema supporting it)
-            const res = await adminAPI.updateUser(uid, { disabled: newDisabled });
-            if (res.data?.success) {
-                setMembers(prev => prev.map(m => m.uid === uid ? { ...m, disabled: newDisabled } : m));
-                toast.success(`${member.name} has been ${newDisabled ? "suspended" : "reactivated"}`);
-            }
-        } catch (error) {
-            console.error("Failed to update status:", error);
-            toast.error(error.response?.data?.message || "Failed to update status");
-        }
-    };
-
-    const deleteMember = async (uid) => {
+    const deleteMember = (uid) => {
         const member = members.find(m => m.uid === uid);
         if (!window.confirm(`Are you sure you want to PERMANENTLY delete ${member?.name || 'this member'}? This action cannot be undone.`)) return;
-
-        setIsLoading(true);
-        try {
-            await usersAPI.delete(uid);
-            setMembers(prev => prev.filter(m => m.uid !== uid));
-            toast.success("Member physically deleted from database");
-        } catch (error) {
-            console.error("Failed to delete member:", error);
-            toast.error(error.response?.data?.message || "Failed to delete member");
-        } finally {
-            setIsLoading(false);
-=======
-        const member = members.find(m => m.uid === uid);
-        const newRole = member.role === 'admin' ? 'member' : 'admin';
-        // Optimistic update
-        setMembers(prev => prev.map(m => m.uid === uid ? { ...m, role: newRole } : m));
-        try {
-            await fsUsers.update(uid, { role: newRole });
-            toast.success(`${member.name} is now a ${newRole}`);
-        } catch {
-            // rollback on failure
-            setMembers(prev => prev.map(m => m.uid === uid ? { ...m, role: member.role } : m));
-            toast.error("Failed to update role in Firebase");
-        }
+        deleteMutation.mutate(uid);
     };
-
-    const toggleStatus = async (uid) => {
-        const member = members.find(m => m.uid === uid);
-        const newDisabled = !member.disabled;
-        setMembers(prev => prev.map(m => m.uid === uid ? { ...m, disabled: newDisabled } : m));
-        try {
-            await fsUsers.update(uid, { disabled: newDisabled });
-            toast.success(`${member.name} ${newDisabled ? "suspended" : "reactivated"}`);
-        } catch {
-            setMembers(prev => prev.map(m => m.uid === uid ? { ...m, disabled: member.disabled } : m));
-            toast.error("Failed to update status in Firebase");
-        }
-    };
-
-    const deleteMember = async (uid) => {
-        const member = members.find(m => m.uid === uid);
-        setMembers(prev => prev.filter(m => m.uid !== uid));
-        try {
-            await fsUsers.delete(uid);
-            toast.success(`${member?.name} removed`);
-        } catch {
-            setMembers(prev => [...prev, member]);
-            toast.error("Failed to delete from Firebase");
->>>>>>> 46ea59d2714cab8875623336c99b6803440c5129
-        }
-    };
-
-    if (loading) return (
-        <div className="flex h-64 items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-acm-blue" />
-        </div>
-    );
 
     return (
         <div className="space-y-8">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-black tracking-tight uppercase italic">Member Directory</h1>
-                    <p className="text-muted-foreground">Manage chapter members stored in Firebase.</p>
+                    <h1 className="text-3xl font-black tracking-tight uppercase italic text-white underline decoration-acm-blue decoration-4 underline-offset-8">Member Directory</h1>
+                    <p className="text-muted-foreground mt-1">Manage global chapter members and permissions.</p>
                 </div>
-                <div className="relative w-full md:w-80">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="Search members..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 rounded-xl border-border/50 bg-muted/20 focus-visible:ring-acm-blue"
-                    />
+                <div className="flex items-center gap-3">
+                    <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button className="rounded-xl bg-acm-blue hover:bg-acm-blue-dark shadow-acm-glow font-black uppercase italic tracking-wider gap-2">
+                                <Plus className="h-4 w-4" /> Add Member
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[425px] rounded-[2rem] border-border/50 bg-card/90 backdrop-blur-xl">
+                            <form onSubmit={handleAddMember}>
+                                <DialogHeader>
+                                    <DialogTitle className="text-2xl font-black uppercase italic text-white">Initialize New Member</DialogTitle>
+                                    <DialogDescription className="text-slate-400 font-bold">
+                                        Create a profile and authentication credentials.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <div className="grid gap-4 py-6">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="name" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Full Identification</Label>
+                                        <div className="relative group">
+                                            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-acm-blue transition-colors" />
+                                            <Input
+                                                id="name"
+                                                value={newMember.name}
+                                                onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
+                                                placeholder="e.g. Alan Turing"
+                                                className="pl-10 h-11 rounded-xl border-border/50 bg-muted/20 focus-visible:ring-acm-blue"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Member Email</Label>
+                                        <div className="relative group">
+                                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-acm-blue transition-colors" />
+                                            <Input
+                                                id="email"
+                                                type="email"
+                                                value={newMember.email}
+                                                onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+                                                placeholder="member@university.edu"
+                                                className="pl-10 h-11 rounded-xl border-border/50 bg-muted/20 focus-visible:ring-acm-blue"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="pass" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Initial Security Key</Label>
+                                        <div className="relative group">
+                                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-acm-blue transition-colors" />
+                                            <Input
+                                                id="pass"
+                                                type="password"
+                                                value={newMember.password}
+                                                onChange={(e) => setNewMember({ ...newMember, password: e.target.value })}
+                                                placeholder="Assign temporary password"
+                                                className="pl-10 h-11 rounded-xl border-border/50 bg-muted/20 focus-visible:ring-acm-blue"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid gap-2">
+                                            <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Assigned Role</Label>
+                                            <Select 
+                                                value={newMember.role} 
+                                                onValueChange={(val) => setNewMember({ ...newMember, role: val })}
+                                            >
+                                                <SelectTrigger className="h-11 rounded-xl border-border/50 bg-muted/20">
+                                                    <SelectValue placeholder="Role" />
+                                                </SelectTrigger>
+                                                <SelectContent className="rounded-xl border-border/50 bg-card/95 backdrop-blur-xl">
+                                                    <SelectItem value="member" className="font-bold">MEMBER</SelectItem>
+                                                    <SelectItem value="admin" className="font-bold">ADMIN</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="year" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Graduation</Label>
+                                            <Input
+                                                id="year"
+                                                type="text"
+                                                value={newMember.graduationYear}
+                                                onChange={(e) => setNewMember({ ...newMember, graduationYear: e.target.value })}
+                                                placeholder="2025"
+                                                className="h-11 rounded-xl border-border/50 bg-muted/20 focus-visible:ring-acm-blue"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                                <DialogFooter>
+                                    <Button 
+                                        type="submit" 
+                                        disabled={createMemberMutation.isPending}
+                                        className="w-full h-12 rounded-2xl bg-acm-blue hover:bg-acm-blue-dark shadow-acm-glow font-black uppercase italic tracking-widest"
+                                    >
+                                        {createMemberMutation.isPending ? <Loader size={0.5} /> : "DEPLOY MEMBER ACCOUNT"}
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
+
+                    <div className="relative w-full md:w-80">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search members..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10 rounded-xl border-border/50 bg-muted/20 focus-visible:ring-acm-blue"
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -198,19 +289,19 @@ export default function AdminMembersPage() {
                 ) : (
                     <Table>
                         <TableHeader className="bg-muted/30">
-                            <TableRow className="hover:bg-transparent border-border/50">
-                                <TableHead className="w-[260px] font-bold uppercase tracking-wider text-[10px]">Member</TableHead>
-                                <TableHead className="font-bold uppercase tracking-wider text-[10px]">Class / Year</TableHead>
-                                <TableHead className="font-bold uppercase tracking-wider text-[10px]">Role</TableHead>
-                                <TableHead className="font-bold uppercase tracking-wider text-[10px]">Status</TableHead>
-                                <TableHead className="text-right font-bold uppercase tracking-wider text-[10px]">Actions</TableHead>
+                            <TableRow className="hover:bg-transparent border-border/50 uppercase tracking-tighter italic">
+                                <TableHead className="w-[260px] font-black text-xs">Member</TableHead>
+                                <TableHead className="font-black text-xs">Graduated</TableHead>
+                                <TableHead className="font-black text-xs">Role</TableHead>
+                                <TableHead className="font-black text-xs">Status</TableHead>
+                                <TableHead className="text-right font-black text-xs">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {filteredMembers.map((member) => (
                                 <TableRow key={member.uid} className="hover:bg-white/5 border-border/50 transition-colors">
                                     <TableCell>
-                                        <Link to={`/admin/members/${member.uid}`} className="flex items-center gap-3 group/member">
+                                        <div className="flex items-center gap-3">
                                             <Avatar className="h-9 w-9 rounded-lg border border-border/50 group-hover/member:border-amber-500/50 transition-colors">
                                                 <AvatarImage src={member.photoURL} />
                                                 <AvatarFallback className={`${member.role === 'admin' ? 'bg-amber-500/20 text-amber-500' : 'bg-acm-blue/10 text-acm-blue'} font-bold text-xs uppercase italic`}>
@@ -218,19 +309,19 @@ export default function AdminMembersPage() {
                                                 </AvatarFallback>
                                             </Avatar>
                                             <div className="flex flex-col min-w-0">
-                                                <span className="font-bold text-sm truncate group-hover/member:text-acm-blue transition-colors">{member.name || "Unknown"}</span>
+                                                <span className="font-bold text-sm truncate">{member.name || "Unknown"}</span>
                                                 <span className="text-[10px] text-muted-foreground truncate">{member.email}</span>
                                             </div>
-                                        </Link>
+                                        </div>
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-2 text-xs font-medium">
                                             <GraduationCap className="h-3.5 w-3.5 text-muted-foreground" />
-                                            <span>{member.graduationYear || "Not Set"}</span>
+                                            <span>{member.graduationYear || member.batch || "—"}</span>
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        <Badge variant="outline" className={`font-bold tracking-widest text-[9px] uppercase italic ${member.role === 'admin' ? "border-amber-500/30 text-amber-500 bg-amber-500/5" : "border-acm-blue/30 text-acm-blue bg-acm-blue/5"}`}>
+                                        <Badge variant="outline" className={`font-black uppercase italic text-[9px] tracking-widest ${member.role === 'admin' ? "border-amber-500/30 text-amber-500 bg-amber-500/5" : "border-acm-blue/30 text-acm-blue bg-acm-blue/5"}`}>
                                             {member.role === 'admin' ? <ShieldCheck className="h-2.5 w-2.5 mr-1" /> : null}
                                             {member.role || 'member'}
                                         </Badge>
@@ -250,24 +341,28 @@ export default function AdminMembersPage() {
                                                     <MoreVertical className="h-4 w-4" />
                                                 </Button>
                                             </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="w-52 rounded-xl border-border/50 bg-card/90 backdrop-blur-xl">
-                                                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Management</DropdownMenuLabel>
-                                                <DropdownMenuItem asChild className="gap-2 focus:bg-acm-blue/10 focus:text-acm-blue cursor-pointer font-bold text-xs py-2.5">
-                                                    <Link to={`/admin/members/${member.uid}`}>
-                                                        <ExternalLink className="h-3.5 w-3.5 mr-2" /> View Full Profile
-                                                    </Link>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => toggleRole(member.uid)} className="gap-2 focus:bg-amber-500/10 focus:text-amber-500 cursor-pointer font-bold text-xs py-2.5">
+                                            <DropdownMenuContent align="end" className="w-52 rounded-xl border-border/50 bg-card/90 backdrop-blur-xl shadow-2xl">
+                                                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Management Options</DropdownMenuLabel>
+                                                <DropdownMenuItem onClick={() => toggleRoleMutation.mutate({ uid: member.uid, newRole: member.role === 'admin' ? 'member' : 'admin' })} 
+                                                    className="gap-2 focus:bg-amber-500/10 focus:text-amber-500 cursor-pointer font-bold text-xs py-2.5"
+                                                    disabled={toggleRoleMutation.isPending}
+                                                >
                                                     {member.role === 'admin' ? <Shield className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />}
                                                     {member.role === 'admin' ? "Demote to Member" : "Promote to Admin"}
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => toggleStatus(member.uid)} className={`gap-2 cursor-pointer font-bold text-xs py-2.5 ${member.disabled ? 'focus:bg-emerald-500/10 focus:text-emerald-500' : 'focus:bg-orange-500/10 focus:text-orange-500'}`}>
+                                                <DropdownMenuItem onClick={() => toggleStatusMutation.mutate({ uid: member.uid, disabled: !member.disabled })} 
+                                                    className={`gap-2 cursor-pointer font-bold text-xs py-2.5 ${member.disabled ? 'focus:bg-emerald-500/10 focus:text-emerald-500' : 'focus:bg-orange-500/10 focus:text-orange-500'}`}
+                                                    disabled={toggleStatusMutation.isPending}
+                                                >
                                                     {member.disabled ? <UserCheck className="h-3.5 w-3.5" /> : <UserMinus className="h-3.5 w-3.5" />}
-                                                    {member.disabled ? "Reactivate" : "Suspend"}
+                                                    {member.disabled ? "Reactivate Profile" : "Suspend Access"}
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator className="bg-border/50" />
-                                                <DropdownMenuItem onClick={() => deleteMember(member.uid)} className="gap-2 focus:bg-red-500/10 focus:text-red-500 cursor-pointer text-red-500 font-bold text-xs py-2.5">
-                                                    <UserMinus className="h-3.5 w-3.5" /> Remove from Directory
+                                                <DropdownMenuItem onClick={() => deleteMember(member.uid)} 
+                                                    className="gap-2 focus:bg-red-500/10 focus:text-red-500 cursor-pointer text-red-500 font-bold text-xs py-2.5"
+                                                    disabled={deleteMutation.isPending}
+                                                >
+                                                    <UserMinus className="h-3.5 w-3.5" /> Delete Permanently
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>

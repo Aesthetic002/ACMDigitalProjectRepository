@@ -21,7 +21,6 @@ const sidebarItems = [
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { label: "Members", href: "/admin/members", icon: Users },
     { label: "Projects", href: "/admin/projects", icon: FolderGit2 },
-    { label: "Moderation", href: "/admin/moderation", icon: ShieldCheck },
     { label: "Pre-add Project", href: "/admin/pre-add", icon: PlusCircle },
     { label: "Events", href: "/admin/events/new", icon: Calendar },
     { label: "Domains", href: "/admin/domains", icon: Layers },

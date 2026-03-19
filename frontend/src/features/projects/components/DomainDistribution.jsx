@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { Brain, Globe, Shield, Cpu, Code2, ArrowRight } from "lucide-react";
-import { adminAPI } from "@/api/admin.api";
+import { adminAPI } from "@/services/api";
 import { useAuthStore } from "@/store/authStore";
 
 function DomainCard({

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { MOCK_USERS, MOCK_PROJECTS } from "@/services/mockData";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { usersAPI, projectsAPI, adminAPI } from "@/services/api";
+import Loader from "@/components/common/Loader";
 import {
     GraduationCap, Calendar, Shield, ShieldCheck,
     UserMinus, UserCheck, ArrowLeft, FolderGit2,
@@ -17,12 +19,36 @@ import { format } from "date-fns";
 export default function AdminMemberProfilePage() {
     const { uid } = useParams();
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
 
-    const initialUser = MOCK_USERS.find(u => u.uid === uid);
-    const [user, setUser] = useState(initialUser);
+    // Fetch user details
+    const { data: userData, isLoading: isUserLoading } = useQuery({
+        queryKey: ["member", uid],
+        queryFn: () => usersAPI.getById(uid),
+    });
 
-    // Get projects belonging to this member
-    const projects = MOCK_PROJECTS.filter(p => p.author?.uid === uid);
+    const user = userData?.data?.user;
+
+    // Fetch user projects
+    const { data: projectsData, isLoading: isProjectsLoading } = useQuery({
+        queryKey: ["member-projects", uid],
+        queryFn: () => projectsAPI.getAll({ authorUid: uid }),
+    });
+
+    const projects = projectsData?.data?.projects || [];
+
+    // Mutation for role/status toggle (In a real app, you'd use a server mutation)
+    const updateMutation = useMutation({
+        mutationFn: (data) => usersAPI.update(uid, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries(["member", uid]);
+            toast.success("Profile updated successfully");
+        }
+    });
+
+    if (isUserLoading || isProjectsLoading) {
+        return <div className="flex items-center justify-center py-20"><Loader /></div>;
+    }
 
     if (!user) {
         return (
@@ -38,14 +64,12 @@ export default function AdminMemberProfilePage() {
 
     const toggleRole = () => {
         const newRole = user.role === "admin" ? "member" : "admin";
-        setUser(prev => ({ ...prev, role: newRole }));
-        toast.success(`${user.name} is now a ${newRole}`);
+        updateMutation.mutate({ role: newRole });
     };
 
     const toggleStatus = () => {
         const newDisabled = !user.disabled;
-        setUser(prev => ({ ...prev, disabled: newDisabled }));
-        toast.success(`${user.name} has been ${newDisabled ? "suspended" : "reactivated"}`);
+        updateMutation.mutate({ disabled: newDisabled });
     };
 
     const isAdmin = user.role === "admin";

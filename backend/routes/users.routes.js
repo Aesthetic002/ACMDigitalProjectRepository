@@ -11,7 +11,7 @@ const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middleware/auth');
 const { requireAdmin } = require('../middleware/admin');
-const { db } = require('../firebase');
+const { db, auth } = require('../firebase');
 
 /**
  * GET /api/v1/users/:userId
@@ -204,6 +204,56 @@ router.get('/', verifyToken, async (req, res) => {
 });
 
 /**
+ * POST /api/v1/users
+ * 
+ * Creates a new user document in Firestore.
+ * Admin only.
+ * 
+ * Body: { uid, email, name, role, ... }
+ * 
+ * Response:
+ *   201: { success: true, user: {...} }
+ */
+router.post('/', verifyToken, requireAdmin, async (req, res) => {
+  try {
+    const { uid, email, name, role, photoURL, graduationYear, joinedDate } = req.body;
+
+    if (!uid || !email) {
+      return res.status(400).json({ success: false, message: 'UID and email are required' });
+    }
+
+    const userData = {
+      uid,
+      email,
+      name: name || '',
+      role: role || 'member',
+      photoURL: photoURL || '',
+      graduationYear: graduationYear || '',
+      joinedDate: joinedDate || new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    // Use Admin SDK to bypass client security rules
+    await db.collection('users').doc(uid).set(userData);
+
+    return res.status(201).json({
+      success: true,
+      message: 'User created successfully',
+      user: userData
+    });
+
+  } catch (error) {
+    console.error('Create user error:', error.message);
+    return res.status(500).json({
+      success: false,
+      error: 'InternalServerError',
+      message: 'Failed to create user'
+    });
+  }
+});
+
+/**
  * DELETE /api/v1/users/:userId
  * 
  * Physically deletes a user from the platform.
@@ -232,6 +282,13 @@ router.delete('/:userId', verifyToken, requireAdmin, async (req, res) => {
 
     // Delete user from Firestore
     await userRef.delete();
+
+    // Delete user from Firebase Auth
+    try {
+      await auth.deleteUser(userId);
+    } catch (authError) {
+      console.warn('Could not delete user from Firebase Auth (they may not exist there):', authError.message);
+    }
 
     return res.status(200).json({
       success: true,

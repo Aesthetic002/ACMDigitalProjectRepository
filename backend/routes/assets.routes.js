@@ -300,6 +300,18 @@ router.post("/upload", async (req, res, next) => {
           assetData
         );
 
+        // Set the project thumbnail if this is an image and the project doesn't have one
+        if (req.file.mimetype.startsWith('image/')) {
+          try {
+            const pDoc = await projectRef.get();
+            if (pDoc.exists && (!pDoc.data().thumbnail || pDoc.data().thumbnail === '')) {
+              await projectRef.update({ thumbnail: result.secure_url });
+            }
+          } catch(e) {
+            console.error("Failed to set project thumbnail:", e);
+          }
+        }
+
         return res.status(201).json({
           success: true,
           message: "File uploaded successfully",
