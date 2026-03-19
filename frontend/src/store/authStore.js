@@ -1,220 +1,213 @@
+/**
+ * Auth Store - Mock Data Mode
+ *
+ * This version provides mock authentication for frontend-only development.
+ * No Firebase connection required.
+ */
+
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { auth, db, googleProvider, githubProvider } from '../config/firebase'
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
-import {
-    signInWithEmailAndPassword,
-    createUserWithEmailAndPassword,
-    signInWithPopup,
-    signOut,
-    onAuthStateChanged,
-    updateProfile
-} from 'firebase/auth'
 import { toast } from 'sonner'
-import { usersAPI } from '../services/api'
+import { mockUsers } from '@/data/mockData'
+
+// Mock user database (in-memory)
+let registeredUsers = [...mockUsers];
 
 export const useAuthStore = create(
     persist(
         (set, get) => ({
             user: null,
             token: null,
-            isLoading: true,
+            isLoading: false,
             isAuthenticated: false,
 
             initAuth: () => {
-                // If already authenticated (from persisted state), resolve immediately — no need to hit Firebase
+                // Check if already authenticated from persisted state
                 const currentState = get();
                 if (currentState.isAuthenticated && currentState.user) {
+                    console.log('[Mock Auth] Restored session for:', currentState.user.email);
                     set({ isLoading: false });
                     return;
                 }
-
-                // Safety net: if Firebase doesn't respond in 2s (e.g. no .env config), unblock the app
-                const failsafeTimer = setTimeout(() => {
-                    if (get().isLoading) {
-                        console.warn('Firebase auth timeout — no config or offline. Proceeding as guest.');
-                        set({ isLoading: false });
-                    }
-                }, 2000);
-
-                try {
-                    onAuthStateChanged(auth, async (firebaseUser) => {
-                        clearTimeout(failsafeTimer);
-                        if (firebaseUser) {
-                            try {
-                                const token = await firebaseUser.getIdToken()
-                                set({ token })
-
-                                let role = 'member';
-                                let userData = {};
-                                
-                                // Try API first
-                                try {
-                                    const response = await usersAPI.getById(firebaseUser.uid);
-                                    userData = response.data.user || {};
-                                    role = userData.role || 'member';
-                                } catch {
-                                    // Fallback to Firestore directly
-                                    try {
-                                        const userSnap = await getDoc(doc(db, 'users', firebaseUser.uid));
-                                        if (userSnap.exists()) {
-                                            userData = userSnap.data();
-                                            role = userData.role || 'member';
-                                        }
-                                    } catch { /* Firestore offline — keep default role */ }
-                                }
-
-                                set({
-                                    user: {
-                                        uid: firebaseUser.uid,
-                                        email: firebaseUser.email,
-                                        name: userData.name || firebaseUser.displayName || 'User',
-                                        photoURL: firebaseUser.photoURL,
-                                        role,
-                                        ...userData,
-                                    },
-                                    isAuthenticated: true,
-                                    isLoading: false,
-                                });
-                            } catch (error) {
-                                console.error('Auth error:', error);
-                                set({ user: null, token: null, isAuthenticated: false, isLoading: false });
-                            }
-                        } else {
-                            // Only reset if not in demo mode
-                            if (!get().user?.isDemoUser) {
-                                set({ user: null, token: null, isAuthenticated: false, isLoading: false })
-                            } else {
-                                set({ isLoading: false });
-                            }
-                        }
-                    });
-                } catch (err) {
-                    // Firebase completely unavailable (bad/missing config)
-                    clearTimeout(failsafeTimer);
-                    console.error('Firebase init failed:', err.message);
-                    set({ isLoading: false });
-                }
+                set({ isLoading: false });
             },
 
             login: async (email, password, role = 'member') => {
-                set({ isLoading: true })
-                try {
-                    const result = await signInWithEmailAndPassword(auth, email, password)
-                    const token = await result.user.getIdToken()
+                set({ isLoading: true });
 
-                    // Immediately update state for a faster UI response
-                    set((state) => ({
+                // Simulate network delay
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Find user in mock database
+                const existingUser = registeredUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
+
+                if (existingUser) {
+                    const token = `mock-token-${Date.now()}`;
+                    set({
                         user: {
-                            uid: result.user.uid,
-                            email: result.user.email,
-                            name: result.user.displayName || email.split('@')[0],
-                            photoURL: result.user.photoURL,
-                            role: role, // Use the role passed to the login function
+                            ...existingUser,
+                            role: existingUser.role || role,
                         },
                         token,
                         isAuthenticated: true,
                         isLoading: false,
-                    }));
+                    });
 
-                    toast.success(role === 'admin' ? 'Welcome, Admin!' : 'Welcome back!');
-                    return { success: true }
-                } catch (error) {
-                    const message = getAuthErrorMessage(error.code)
-                    toast.error(message)
-                    set({ isLoading: false })
-                    return { success: false, error: message }
+                    toast.success(existingUser.role === 'admin' ? 'Welcome, Admin!' : 'Welcome back!');
+                    console.log('[Mock Auth] Login successful:', email);
+                    return { success: true };
                 }
+
+                // Auto-create user if not found (for demo purposes)
+                const newUser = {
+                    uid: `user-${Date.now()}`,
+                    email,
+                    name: email.split('@')[0],
+                    role,
+                    photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
+                    createdAt: { _seconds: Math.floor(Date.now() / 1000) },
+                };
+                registeredUsers.push(newUser);
+
+                const token = `mock-token-${Date.now()}`;
+                set({
+                    user: newUser,
+                    token,
+                    isAuthenticated: true,
+                    isLoading: false,
+                });
+
+                toast.success('Welcome! Account created automatically.');
+                console.log('[Mock Auth] New user created and logged in:', email);
+                return { success: true };
             },
 
             register: async (email, password, name, role = 'member') => {
-                set({ isLoading: true })
-                try {
-                    const result = await createUserWithEmailAndPassword(auth, email, password)
-                    await updateProfile(result.user, { displayName: name })
-                    // Write user document to Firestore with role
-                    await setDoc(doc(db, 'users', result.user.uid), {
-                        uid: result.user.uid,
-                        email,
-                        name,
-                        role,
-                        createdAt: serverTimestamp(),
-                        updatedAt: serverTimestamp(),
-                    });
-                    toast.success('Account created successfully!')
-                    return { success: true }
-                } catch (error) {
-                    const message = getAuthErrorMessage(error.code)
-                    toast.error(message)
-                    set({ isLoading: false })
-                    return { success: false, error: message }
+                set({ isLoading: true });
+
+                // Simulate network delay
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Check if user already exists
+                if (registeredUsers.find(u => u.email.toLowerCase() === email.toLowerCase())) {
+                    set({ isLoading: false });
+                    toast.error('This email is already registered');
+                    return { success: false, error: 'Email already in use' };
                 }
+
+                // Create new user
+                const newUser = {
+                    uid: `user-${Date.now()}`,
+                    email,
+                    name,
+                    role,
+                    photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`,
+                    createdAt: { _seconds: Math.floor(Date.now() / 1000) },
+                    updatedAt: { _seconds: Math.floor(Date.now() / 1000) },
+                };
+                registeredUsers.push(newUser);
+
+                const token = `mock-token-${Date.now()}`;
+                set({
+                    user: newUser,
+                    token,
+                    isAuthenticated: true,
+                    isLoading: false,
+                });
+
+                toast.success('Account created successfully!');
+                console.log('[Mock Auth] Registration successful:', email);
+                return { success: true };
             },
 
             loginWithGoogle: async () => {
-                set({ isLoading: true })
-                try {
-                    await signInWithPopup(auth, googleProvider)
-                    toast.success('Welcome!')
-                    return { success: true }
-                } catch (error) {
-                    const message = getAuthErrorMessage(error.code)
-                    toast.error(message)
-                    set({ isLoading: false })
-                    return { success: false, error: message }
-                }
+                set({ isLoading: true });
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Create mock Google user
+                const mockGoogleUser = {
+                    uid: `google-${Date.now()}`,
+                    email: 'demo.google@gmail.com',
+                    name: 'Google Demo User',
+                    role: 'member',
+                    photoURL: 'https://api.dicebear.com/7.x/avataaars/svg?seed=GoogleUser',
+                    provider: 'google',
+                    createdAt: { _seconds: Math.floor(Date.now() / 1000) },
+                };
+
+                const token = `mock-google-token-${Date.now()}`;
+                set({
+                    user: mockGoogleUser,
+                    token,
+                    isAuthenticated: true,
+                    isLoading: false,
+                });
+
+                toast.success('Welcome! (Mock Google login)');
+                console.log('[Mock Auth] Google login simulated');
+                return { success: true };
             },
 
             loginWithGithub: async () => {
-                set({ isLoading: true })
-                try {
-                    await signInWithPopup(auth, githubProvider)
-                    toast.success('Welcome!')
-                    return { success: true }
-                } catch (error) {
-                    const message = getAuthErrorMessage(error.code)
-                    toast.error(message)
-                    set({ isLoading: false })
-                    return { success: false, error: message }
-                }
+                set({ isLoading: true });
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Create mock GitHub user
+                const mockGithubUser = {
+                    uid: `github-${Date.now()}`,
+                    email: 'demo.github@github.com',
+                    name: 'GitHub Demo User',
+                    role: 'member',
+                    photoURL: 'https://api.dicebear.com/7.x/avataaars/svg?seed=GithubUser',
+                    provider: 'github',
+                    createdAt: { _seconds: Math.floor(Date.now() / 1000) },
+                };
+
+                const token = `mock-github-token-${Date.now()}`;
+                set({
+                    user: mockGithubUser,
+                    token,
+                    isAuthenticated: true,
+                    isLoading: false,
+                });
+
+                toast.success('Welcome! (Mock GitHub login)');
+                console.log('[Mock Auth] GitHub login simulated');
+                return { success: true };
             },
 
             logout: async (showToast = true) => {
-                try {
-                    // Only call Firebase signOut for real accounts
-                    const { user } = get();
-                    if (!user?.isDemoUser) {
-                        await signOut(auth)
-                    }
-                    set({ user: null, token: null, isAuthenticated: false })
-                    if (showToast) {
-                        toast.success('Logged out successfully')
-                    }
-                } catch {
-                    if (showToast) {
-                        toast.error('Failed to logout')
-                    }
+                set({ user: null, token: null, isAuthenticated: false });
+                if (showToast) {
+                    toast.success('Logged out successfully');
                 }
+                console.log('[Mock Auth] User logged out');
             },
 
             updateUser: async (data) => {
-                const { user } = get()
-                if (!user) return
-                try {
-                    // Update Firestore directly
-                    await setDoc(doc(db, 'users', user.uid), { ...data, updatedAt: serverTimestamp() }, { merge: true });
-                    set({ user: { ...user, ...data } })
-                    toast.success('Profile updated successfully')
-                    return { success: true }
-                } catch {
-                    toast.error('Failed to update profile')
-                    return { success: false }
+                const { user } = get();
+                if (!user) return { success: false };
+
+                await new Promise(resolve => setTimeout(resolve, 300));
+
+                const updatedUser = { ...user, ...data };
+                set({ user: updatedUser });
+
+                // Update in mock database
+                const index = registeredUsers.findIndex(u => u.uid === user.uid);
+                if (index !== -1) {
+                    registeredUsers[index] = updatedUser;
                 }
+
+                toast.success('Profile updated successfully');
+                console.log('[Mock Auth] User profile updated');
+                return { success: true };
             },
 
             setUser: (user) => set({ user }),
             setToken: (token) => set({ token }),
 
+            // Demo/Quick login methods
             loginAsDemo: (role = 'admin') => {
                 const demoUser = {
                     uid: role === 'admin' ? 'demo-admin-001' : 'demo-member-001',
@@ -233,6 +226,22 @@ export const useAuthStore = create(
                     isLoading: false,
                 });
                 toast.success(`Demo ${role} session started!`);
+                console.log('[Mock Auth] Demo login:', role);
+            },
+
+            // Quick login as existing mock user
+            loginAsMockUser: (userIndex = 0) => {
+                const user = mockUsers[userIndex];
+                if (user) {
+                    set({
+                        user,
+                        token: `mock-token-${user.uid}`,
+                        isAuthenticated: true,
+                        isLoading: false,
+                    });
+                    toast.success(`Logged in as ${user.name}`);
+                    console.log('[Mock Auth] Quick login as:', user.name);
+                }
             },
         }),
         {
@@ -244,20 +253,8 @@ export const useAuthStore = create(
             }),
         }
     )
-)
+);
 
-function getAuthErrorMessage(errorCode) {
-    switch (errorCode) {
-        case 'auth/email-already-in-use': return 'This email is already registered'
-        case 'auth/invalid-email': return 'Invalid email address'
-        case 'auth/operation-not-allowed': return 'This sign-in method is not enabled'
-        case 'auth/weak-password': return 'Password should be at least 6 characters'
-        case 'auth/user-disabled': return 'This account has been disabled'
-        case 'auth/user-not-found': return 'No account found with this email'
-        case 'auth/wrong-password': return 'Incorrect password'
-        case 'auth/invalid-credential': return 'Invalid email or password'
-        case 'auth/too-many-requests': return 'Too many failed attempts. Please try again later'
-        case 'auth/popup-closed-by-user': return 'Sign-in popup was closed'
-        default: return 'An error occurred. Please try again'
-    }
-}
+// Console notification
+console.log('%c[MOCK AUTH] Running in mock authentication mode - no Firebase required',
+    'color: #F59E0B; font-weight: bold; font-size: 12px;');

@@ -4,12 +4,21 @@ import { Users, Calendar, ArrowUpRight, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 
+// Helper to parse dates (handles Firestore timestamps and ISO strings)
+const parseDate = (date) => {
+    if (!date) return null;
+    if (date._seconds) return new Date(date._seconds * 1000);
+    return new Date(date);
+};
+
 export default function ProjectCard({ project }) {
     const statusColors = {
         pending: "bg-amber-500/10 text-amber-500 border-amber-500/20",
         approved: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
         rejected: "bg-red-500/10 text-red-500 border-red-500/20",
     };
+
+    const createdDate = parseDate(project.createdAt);
 
     return (
         <Card className="group overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm transition-all duration-300 hover:shadow-acm-glow hover:border-acm-blue/50">
@@ -71,7 +80,7 @@ export default function ProjectCard({ project }) {
                     )}
                     <span className="flex items-center gap-1 font-medium">
                         <Calendar className="h-3 w-3 text-acm-blue/70" />
-                        <span>{project.createdAt ? formatDistanceToNow(new Date(project.createdAt), { addSuffix: true }) : "Recently"}</span>
+                        <span>{createdDate ? formatDistanceToNow(createdDate, { addSuffix: true }) : "Recently"}</span>
                     </span>
                 </div>
                 <Link to={`/projects/${project.id}`} className="flex items-center gap-1 text-[11px] font-bold text-acm-blue transition-colors hover:text-acm-blue-dark">

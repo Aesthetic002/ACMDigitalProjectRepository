@@ -30,19 +30,23 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { initializeApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 
-// Secondary Firebase app to create users without logging out the admin
-const secondaryApp = initializeApp({
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-    appId: import.meta.env.VITE_FIREBASE_APP_ID,
-}, 'SecondaryApp');
-const secondaryAuth = getAuth(secondaryApp);
+// Mock Firebase auth for frontend-only mode
+const mockCreateUser = async (email, password) => {
+    // Simulate user creation
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return {
+        user: {
+            uid: `user-${Date.now()}`,
+            email,
+            displayName: null,
+        }
+    };
+};
+
+const mockUpdateProfile = async (user, { displayName }) => {
+    user.displayName = displayName;
+};
 
 export default function AdminMembersPage() {
     const queryClient = useQueryClient();
@@ -100,16 +104,12 @@ export default function AdminMembersPage() {
 
     const createMemberMutation = useMutation({
         mutationFn: async (data) => {
-            // 1. Create in Firebase Auth using secondary instance
-            const userCredential = await createUserWithEmailAndPassword(
-                secondaryAuth,
-                data.email,
-                data.password
-            );
+            // 1. Create user using mock function (no Firebase dependency)
+            const userCredential = await mockCreateUser(data.email, data.password);
             const { user } = userCredential;
 
             // 2. Update display name
-            await updateProfile(user, { displayName: data.name });
+            await mockUpdateProfile(user, { displayName: data.name });
 
             // 3. Create document in Firestore (using createUser / setDoc)
             // We wrap this in a try-catch because if Firebase Security Rules deny the client write,

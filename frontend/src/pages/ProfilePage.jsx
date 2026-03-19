@@ -3,8 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usersAPI, projectsAPI } from "@/services/api";
 import { useAuthStore } from "@/store/authStore";
-import { updateProfile } from "firebase/auth";
-import { auth } from "@/config/firebase";
+// Mock updateProfile - actual profile updates handled by API
+const mockUpdateProfile = async () => {};
 import { toast } from "sonner";
 import { format } from "date-fns";
 import {
@@ -48,7 +48,7 @@ function ProfileContent() {
 
     const updateMutation = useMutation({
         mutationFn: async (newName) => {
-            if (auth.currentUser) await updateProfile(auth.currentUser, { displayName: newName });
+            // Profile updates handled by API only in mock mode
             return usersAPI.update(user.uid, { name: newName });
         },
         onSuccess: () => {

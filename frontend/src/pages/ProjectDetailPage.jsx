@@ -5,6 +5,13 @@ import { format } from "date-fns";
 import { projectsAPI } from "@/services/api";
 import { useAuthStore } from "@/store/authStore";
 import { toast } from "sonner";
+
+// Helper to parse dates (handles Firestore timestamps and ISO strings)
+const parseDate = (date) => {
+    if (!date) return null;
+    if (date._seconds) return new Date(date._seconds * 1000);
+    return new Date(date);
+};
 import {
     ArrowLeft, Calendar, Users, Github, ExternalLink,
     Edit, Trash2, Star, Clock, CheckCircle, XCircle,
@@ -120,7 +127,7 @@ export function ProjectDetailContent({ backUrl = "/projects" }) {
                                 <div className="flex flex-wrap items-center gap-4 text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em] italic">
                                     <div className="flex items-center gap-2 bg-white/5 border border-white/5 px-4 py-2 rounded-xl backdrop-blur-md">
                                         <Calendar className="h-3.5 w-3.5 text-acm-blue" />
-                                        <span>INITIALIZED {project.createdAt ? format(new Date(project.createdAt), "MMM d, yyyy") : "RECENTLY"}</span>
+                                        <span>INITIALIZED {parseDate(project.createdAt) ? format(parseDate(project.createdAt), "MMM d, yyyy") : "RECENTLY"}</span>
                                     </div>
                                     {project.contributors?.length > 0 && (
                                         <div className="flex items-center gap-2 bg-white/5 border border-white/5 px-4 py-2 rounded-xl backdrop-blur-md">
@@ -232,7 +239,7 @@ export function ProjectDetailContent({ backUrl = "/projects" }) {
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <dt className="text-[10px] font-black uppercase tracking-widest text-muted-foreground italic">Last Manifest Update</dt>
-                                        <dd className="font-black text-[11px] text-white italic">{project.updatedAt ? format(new Date(project.updatedAt), "MMM d, yyyy") : "RECENT"}</dd>
+                                        <dd className="font-black text-[11px] text-white italic">{parseDate(project.updatedAt) ? format(parseDate(project.updatedAt), "MMM d, yyyy") : "RECENT"}</dd>
                                     </div>
                                     <div className="pt-6 border-t border-white/5">
                                         <dt className="text-[9px] uppercase font-black text-muted-foreground/40 tracking-[0.3em] mb-3 leading-none italic">Archive Identifier</dt>

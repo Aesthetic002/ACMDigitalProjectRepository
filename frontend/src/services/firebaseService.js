@@ -1,55 +1,76 @@
 /**
- * firebaseService.js
+ * Firebase Service - Mock Data Mode
  *
- * Direct Firestore CRUD layer — used when the backend server is unavailable.
- * All reads/writes happen through the Firebase client SDK directly.
+ * This version provides mock Firestore operations for frontend-only development.
+ * No Firebase connection required.
  */
 
 import {
-    collection, doc, getDoc, getDocs, setDoc, updateDoc,
-    deleteDoc, addDoc, query, where, orderBy, serverTimestamp
-} from 'firebase/firestore';
-import {
-    createUserWithEmailAndPassword, signInWithEmailAndPassword,
-    updateProfile
-} from 'firebase/auth';
-import { auth, db } from '@/config/firebase';
+    mockUsers,
+    mockProjects,
+    mockTags,
+} from '@/data/mockData';
+
+// In-memory stores (shared with api.js through imports)
+let usersStore = [...mockUsers];
+let projectsStore = [...mockProjects];
+let tagsStore = [...mockTags];
+
+const generateId = () => `mock-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+const serverTimestamp = () => ({ _seconds: Math.floor(Date.now() / 1000) });
 
 // ─── USERS / MEMBERS ──────────────────────────────────────────────────────────
 
 export const fsUsers = {
-    /** Get all users from Firestore */
+    /** Get all users */
     getAll: async () => {
-        const snap = await getDocs(collection(db, 'users'));
-        return snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+        return usersStore.map(u => ({ ...u }));
     },
 
     /** Get a single user by UID */
     getById: async (uid) => {
-        const snap = await getDoc(doc(db, 'users', uid));
-        return snap.exists() ? { uid: snap.id, ...snap.data() } : null;
+        const user = usersStore.find(u => u.uid === uid);
+        return user ? { ...user } : null;
     },
 
     /** Create or overwrite a user document */
     create: async (uid, data) => {
-        await setDoc(doc(db, 'users', uid), {
+        const existingIndex = usersStore.findIndex(u => u.uid === uid);
+        const userData = {
+            uid,
             ...data,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
-        });
+        };
+
+        if (existingIndex !== -1) {
+            usersStore[existingIndex] = userData;
+        } else {
+            usersStore.push(userData);
+        }
+        console.log('[Mock Firestore] User created/updated:', uid);
     },
 
     /** Update fields on an existing user document */
     update: async (uid, data) => {
-        await updateDoc(doc(db, 'users', uid), {
-            ...data,
-            updatedAt: serverTimestamp(),
-        });
+        const index = usersStore.findIndex(u => u.uid === uid);
+        if (index !== -1) {
+            usersStore[index] = {
+                ...usersStore[index],
+                ...data,
+                updatedAt: serverTimestamp(),
+            };
+            console.log('[Mock Firestore] User updated:', uid);
+        }
     },
 
-    /** Delete a user document (does NOT delete Firebase Auth account) */
+    /** Delete a user document */
     delete: async (uid) => {
-        await deleteDoc(doc(db, 'users', uid));
+        const index = usersStore.findIndex(u => u.uid === uid);
+        if (index !== -1) {
+            usersStore.splice(index, 1);
+            console.log('[Mock Firestore] User deleted:', uid);
+        }
     },
 };
 
@@ -58,42 +79,53 @@ export const fsUsers = {
 export const fsProjects = {
     /** Get all projects, optionally filter by status */
     getAll: async (status = null) => {
-        let q = collection(db, 'projects');
+        let projects = projectsStore.map(p => ({ ...p }));
         if (status) {
-            q = query(q, where('status', '==', status));
+            projects = projects.filter(p => p.status === status);
         }
-        const snap = await getDocs(q);
-        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        return projects;
     },
 
     /** Get a single project */
     getById: async (id) => {
-        const snap = await getDoc(doc(db, 'projects', id));
-        return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+        const project = projectsStore.find(p => p.id === id);
+        return project ? { ...project } : null;
     },
 
     /** Create a new project */
     create: async (data) => {
-        const ref = await addDoc(collection(db, 'projects'), {
+        const newProject = {
+            id: generateId(),
             ...data,
             status: 'pending',
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
-        });
-        return ref.id;
+        };
+        projectsStore.unshift(newProject);
+        console.log('[Mock Firestore] Project created:', newProject.id);
+        return newProject.id;
     },
 
-    /** Update project fields (e.g. status: 'approved') */
+    /** Update project fields */
     update: async (id, data) => {
-        await updateDoc(doc(db, 'projects', id), {
-            ...data,
-            updatedAt: serverTimestamp(),
-        });
+        const index = projectsStore.findIndex(p => p.id === id);
+        if (index !== -1) {
+            projectsStore[index] = {
+                ...projectsStore[index],
+                ...data,
+                updatedAt: serverTimestamp(),
+            };
+            console.log('[Mock Firestore] Project updated:', id);
+        }
     },
 
     /** Delete a project permanently */
     delete: async (id) => {
-        await deleteDoc(doc(db, 'projects', id));
+        const index = projectsStore.findIndex(p => p.id === id);
+        if (index !== -1) {
+            projectsStore.splice(index, 1);
+            console.log('[Mock Firestore] Project deleted:', id);
+        }
     },
 };
 
@@ -102,77 +134,64 @@ export const fsProjects = {
 export const fsDomains = {
     /** Get all domains */
     getAll: async () => {
-        const snap = await getDocs(collection(db, 'tags'));
-        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        return tagsStore.map(t => ({ ...t }));
     },
 
     /** Create a new domain */
     create: async (name) => {
-        const ref = await addDoc(collection(db, 'tags'), {
-            name,
+        const newTag = {
+            id: generateId(),
+            name: typeof name === 'string' ? name : name.name,
             projectCount: 0,
             createdAt: serverTimestamp(),
-        });
-        return ref.id;
+        };
+        tagsStore.push(newTag);
+        console.log('[Mock Firestore] Domain created:', newTag.name);
+        return newTag.id;
     },
 
-    /** Update a domain (e.g. rename) */
+    /** Update a domain */
     update: async (id, data) => {
-        await updateDoc(doc(db, 'tags', id), { ...data });
+        const index = tagsStore.findIndex(t => t.id === id);
+        if (index !== -1) {
+            tagsStore[index] = { ...tagsStore[index], ...data };
+            console.log('[Mock Firestore] Domain updated:', id);
+        }
     },
 
     /** Delete a domain */
     delete: async (id) => {
-        await deleteDoc(doc(db, 'tags', id));
+        const index = tagsStore.findIndex(t => t.id === id);
+        if (index !== -1) {
+            tagsStore.splice(index, 1);
+            console.log('[Mock Firestore] Domain deleted:', id);
+        }
     },
 };
 
-// ─── ADMIN ACCOUNT CREATION ──────────────────────────────────────────────────
+// ─── ADMIN ACCOUNT CREATION (Mock) ────────────────────────────────────────────
 
-/**
- * Create a new admin user in Firebase Auth + Firestore.
- * Call this once to bootstrap an admin account.
- */
 export const createAdminAccount = async ({ email, password, name }) => {
-    // 1. Create in Firebase Auth
-    const result = await createUserWithEmailAndPassword(auth, email, password);
-    const { user } = result;
-
-    // 2. Set display name
-    await updateProfile(user, { displayName: name });
-
-    // 3. Write admin document to Firestore
-    await setDoc(doc(db, 'users', user.uid), {
-        uid: user.uid,
+    const newAdmin = {
+        uid: `admin-${Date.now()}`,
         email,
         name,
         role: 'admin',
+        photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-    });
-
-    return user;
+    };
+    usersStore.push(newAdmin);
+    console.log('[Mock Firestore] Admin account created:', email);
+    return newAdmin;
 };
 
-// ─── SEED DEMO DATA ──────────────────────────────────────────────────────────
+// ─── SEED DEMO DATA (No-op in mock mode) ──────────────────────────────────────
 
-/**
- * Seed the Firestore database with demo members, projects, and domains.
- * Only writes entries if the collection is empty.
- */
 export const seedDemoData = async () => {
-    // Seed domains
-    const tagsSnap = await getDocs(collection(db, 'tags'));
-    if (tagsSnap.empty) {
-        const domains = [
-            'Artificial Intelligence', 'Web Development', 'Machine Learning',
-            'Cybersecurity', 'Blockchain', 'Cloud Computing', 'IoT'
-        ];
-        for (const name of domains) {
-            await addDoc(collection(db, 'tags'), { name, projectCount: 0, createdAt: serverTimestamp() });
-        }
-        console.log('✅ Seeded domains');
-    }
-
-    console.log('✅ Firestore seed complete');
+    console.log('[Mock Firestore] Demo data already seeded from mockData.js');
 };
+
+// Console notification
+console.log('%c[MOCK FIRESTORE] Running with mock Firestore operations',
+    'color: #06B6D4; font-weight: bold; font-size: 12px;');

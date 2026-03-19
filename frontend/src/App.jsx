@@ -42,14 +42,15 @@ function AuthInitializer({ children }) {
 }
 
 function RootApp() {
-    const [animationComplete, setAnimationComplete] = useState(false);
+    // Skip animation for mock mode testing
+    const [animationComplete, setAnimationComplete] = useState(true);
 
     return (
         <>
             {!animationComplete && (
                 <BigBangAnimation onComplete={() => setAnimationComplete(true)} />
             )}
-            <div style={{ opacity: animationComplete ? 1 : 0, transition: 'opacity 0.5s ease-in' }}>
+            <div style={{ opacity: 1 }}>
                 <BrowserRouter>
                     <Routes>
                         <Route path="/" element={<HomePage />} />
