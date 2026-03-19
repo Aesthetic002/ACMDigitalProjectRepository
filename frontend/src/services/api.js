@@ -132,8 +132,15 @@ export const assetsAPI = {
         api.post(`/projects/${projectId}/assets`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
         }),
-    delete: (projectId, assetId) =>
-        api.delete(`/projects/${projectId}/assets/${assetId}`),
+    uploadAsset: (formData, onUploadProgress) => api.post('/assets/upload', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress,
+    }),
+    listProjectAssets: (projectId) => api.get(`/projects/${projectId}/assets`),
+    delete: (assetId) => api.delete(`/assets/${assetId}`),
+    deleteFromProject: (projectId, assetId) => api.delete(`/projects/${projectId}/assets/${assetId}`),
 };
 
 // ── Events ────────────────────────────────────────────────

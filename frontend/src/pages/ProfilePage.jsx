@@ -8,7 +8,7 @@ import { auth } from "@/config/firebase";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import {
-    User, Mail, Calendar, Edit3, Save, X, Loader2, ExternalLink,
+    Mail, Calendar, Edit3, Save, X, Loader2, ExternalLink,
     FolderOpen, CheckCircle, Clock, XCircle, BarChart3, LogOut, Plus, Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ import {
     AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import Layout from "@/components/Layout";
+import Loader from "@/components/common/Loader";
 
 function ProfileContent() {
     const { user, setUser, logout } = useAuthStore();
@@ -90,11 +91,11 @@ function ProfileContent() {
 
     const handleLogout = async () => { await logout(); navigate("/"); };
 
-    if (profileLoading) return <div className="flex min-h-[400px] items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-acm-blue" /></div>;
+    if (profileLoading) return <div className="flex min-h-[400px] items-center justify-center bg-slate-950"><Loader size={1.5} /></div>;
 
     return (
         <div className="pb-20">
-            <section className="relative overflow-hidden bg-slate-950/50 py-20 border-b border-border/50 rounded-[3rem] mb-12">
+            <section className="relative overflow-hidden bg-slate-950/50 py-20 border-b border-border/50 rounded-[3rem] mb-12 border-t border-t-white/5">
                 <div className="absolute inset-0 bg-acm-blue/5 [mask-image:radial-gradient(circle_at_center,white,transparent)]" />
                 <div className="container relative mx-auto px-4">
                     <div className="flex flex-col md:flex-row items-center gap-8 md:items-end">
@@ -109,7 +110,7 @@ function ProfileContent() {
                                     {isEditing ? (
                                         <div className="flex items-center gap-2">
                                             <input value={displayName} onChange={(e) => setDisplayName(e.target.value)}
-                                                className="bg-muted px-4 py-2 rounded-xl border border-acm-blue font-bold text-2xl focus:outline-none focus:ring-2 focus:ring-acm-blue/20" autoFocus />
+                                                className="bg-muted px-4 py-2 rounded-xl border border-acm-blue font-black text-2xl uppercase italic focus:outline-none focus:ring-2 focus:ring-acm-blue/20" autoFocus />
                                             <Button size="icon" onClick={handleSave} className="rounded-xl h-10 w-10 bg-emerald-500 hover:bg-emerald-600">
                                                 {updateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                                             </Button>
@@ -119,20 +120,20 @@ function ProfileContent() {
                                         </div>
                                     ) : (
                                         <>
-                                            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white">{displayName || "Community Member"}</h1>
+                                            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white uppercase italic">{displayName || "Community Member"}</h1>
                                             <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)} className="h-10 w-10 rounded-xl hover:bg-white/10">
                                                 <Edit3 className="h-4 w-4 text-acm-blue" />
                                             </Button>
                                         </>
                                     )}
                                 </div>
-                                <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-slate-400 text-sm font-medium">
-                                    <span className="flex items-center gap-2"><Mail className="h-4 w-4 text-acm-blue/50" />{user?.email}</span>
-                                    <span className="flex items-center gap-2">
-                                        <Calendar className="h-4 w-4 text-acm-blue/50" />
-                                        {profile?.createdAt ? `Member since ${format(new Date(profile.createdAt._seconds ? profile.createdAt._seconds * 1000 : profile.createdAt), "MMM yyyy")}` : "Active Member"}
+                                <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] italic">
+                                    <span className="flex items-center gap-2 bg-white/5 border border-white/5 px-3 py-1 rounded-full"><Mail className="h-3 w-3 text-acm-blue" />{user?.email}</span>
+                                    <span className="flex items-center gap-2 bg-white/5 border border-white/5 px-3 py-1 rounded-full">
+                                        <Calendar className="h-3 w-3 text-acm-blue" />
+                                        {profile?.createdAt ? `MEMBER SINCE ${format(new Date(profile.createdAt._seconds ? profile.createdAt._seconds * 1000 : profile.createdAt), "MMM yyyy")}` : "ACTIVE MEMBER"}
                                     </span>
-                                    <Badge variant="outline" className="border-acm-blue/30 text-acm-blue bg-acm-blue/5 h-6 font-bold uppercase tracking-widest text-[10px]">
+                                    <Badge variant="outline" className="border-acm-blue/30 text-acm-blue bg-white/5 h-6 font-black uppercase tracking-widest text-[9px] italic">
                                         {user?.role || "MEMBER"}
                                     </Badge>
                                 </div>
@@ -140,7 +141,7 @@ function ProfileContent() {
                         </div>
 
                         <div className="flex gap-3">
-                            <Button variant="outline" onClick={handleLogout} className="rounded-2xl border-red-500/20 text-red-500 hover:bg-red-500/10 font-bold h-12 px-6">
+                            <Button variant="outline" onClick={handleLogout} className="rounded-2xl border-red-500/20 text-red-500 hover:bg-red-500/10 font-black uppercase tracking-widest text-xs italic h-12 px-6">
                                 <LogOut className="mr-2 h-4 w-4" /> SIGN OUT
                             </Button>
                         </div>
@@ -148,111 +149,111 @@ function ProfileContent() {
                 </div>
             </section>
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-12">
                 <div className="space-y-6">
-                    <Card className="rounded-[2.5rem] border-border/50 bg-card/30 backdrop-blur-xl overflow-hidden shadow-xl">
-                        <CardHeader className="p-6 pb-2">
-                            <CardTitle className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-                                <BarChart3 className="h-3 w-3 text-acm-blue" /> Contribution Metrics
+                    <Card className="rounded-[2.5rem] border-border/50 bg-card/30 backdrop-blur-xl overflow-hidden shadow-2xl border-t-2 border-t-white/5">
+                        <CardHeader className="p-8 pb-4">
+                            <CardTitle className="text-[10px] font-black uppercase tracking-[0.3em] text-acm-blue flex items-center gap-2 italic">
+                                <BarChart3 className="h-3.5 w-3.5" /> METRICS
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="p-6 space-y-6">
+                        <CardContent className="p-8 space-y-8">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1">
-                                    <p className="text-2xl font-black text-white">{stats.total}</p>
-                                    <p className="text-[10px] uppercase font-bold text-muted-foreground leading-none">Total</p>
+                                    <p className="text-3xl font-black text-white italic">{stats.total}</p>
+                                    <p className="text-[9px] uppercase font-black text-muted-foreground leading-none tracking-widest">TOTAL</p>
                                 </div>
                                 <div className="space-y-1">
-                                    <p className="text-2xl font-black text-emerald-500">{stats.approved}</p>
-                                    <p className="text-[10px] uppercase font-bold text-muted-foreground leading-none">Live</p>
+                                    <p className="text-3xl font-black text-emerald-500 italic">{stats.approved}</p>
+                                    <p className="text-[9px] uppercase font-black text-muted-foreground leading-none tracking-widest">LIVE</p>
                                 </div>
                             </div>
                             <Separator className="bg-border/30" />
                             <div className="flex items-center justify-between">
-                                <span className="text-xs font-medium text-muted-foreground">Pending Review</span>
-                                <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 border-none font-bold">{stats.pending}</Badge>
+                                <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground italic">PROCESSING</span>
+                                <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 border-none font-black italic">{stats.pending}</Badge>
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Button asChild className="w-full h-14 rounded-2xl bg-acm-blue hover:bg-acm-blue-dark shadow-acm-glow font-black tracking-widest transition-all hover:scale-[1.02]">
+                    <Button asChild className="w-full h-16 rounded-[1.5rem] bg-acm-blue hover:bg-acm-blue-dark shadow-acm-glow font-black tracking-[0.2em] transition-all hover:scale-[1.02] uppercase italic">
                         <Link to="/submit"><Plus className="mr-2 h-5 w-5" /> NEW SUBMISSION</Link>
                     </Button>
                 </div>
 
                 <div className="lg:col-span-3">
-                    <h2 className="text-2xl font-black tracking-tighter mb-8 flex items-center gap-3 italic">
-                        <FolderOpen className="h-6 w-6 text-acm-blue" /> MY PROJECTS
+                    <h2 className="text-3xl font-black tracking-tighter mb-10 flex items-center gap-3 italic text-white uppercase">
+                        <FolderOpen className="h-8 w-8 text-acm-blue" /> MY REPOSITORY
                     </h2>
 
                     {projectsLoading ? (
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            {[1, 2].map(i => <div key={i} className="h-48 rounded-3xl bg-muted animate-pulse" />)}
+                        <div className="grid gap-8 sm:grid-cols-2">
+                            {[1, 2].map(i => <div key={i} className="h-64 rounded-[2.5rem] bg-card/30 border border-white/5 animate-pulse" />)}
                         </div>
                     ) : projects.length === 0 ? (
-                        <Card className="rounded-[3rem] border-dashed border-2 border-border/50 bg-muted/5 p-20 text-center">
-                            <div className="mb-6 rounded-full bg-muted p-4 inline-flex"><FolderOpen className="h-12 w-12 text-muted-foreground" /></div>
-                            <h3 className="text-xl font-bold mb-2">No active projects found.</h3>
-                            <p className="text-muted-foreground mb-8 max-w-xs mx-auto text-sm">You haven't submitted any projects yet.</p>
-                            <Button asChild className="rounded-2xl h-12 px-8 bg-acm-blue hover:bg-acm-blue-dark">
-                                <Link to="/submit">Start your first contribution</Link>
+                        <Card className="rounded-[3rem] border-dashed-2 border-border/30 bg-white/2 p-24 text-center border-2">
+                            <div className="mb-6 rounded-[2rem] bg-muted/50 p-6 inline-flex shadow-inner"><FolderOpen className="h-16 w-16 text-muted-foreground/30" /></div>
+                            <h3 className="text-3xl font-black tracking-tight text-white uppercase italic mb-3">Void Detected.</h3>
+                            <p className="text-muted-foreground mb-10 max-w-xs mx-auto text-sm font-medium">Your contribution archive is currently uninitialized.</p>
+                            <Button asChild className="rounded-xl h-14 px-10 bg-white text-slate-950 hover:bg-slate-200 font-black uppercase tracking-widest italic">
+                                <Link to="/submit">Initialize First Record</Link>
                             </Button>
                         </Card>
                     ) : (
-                        <div className="grid gap-6 sm:grid-cols-2">
+                        <div className="grid gap-10 sm:grid-cols-2">
                             {projects.map((project) => {
                                 const status = getStatusConfig(project.status);
                                 const StatusIcon = status.icon;
                                 return (
-                                    <Card key={project.id} className="group rounded-[2rem] border-border/50 bg-card/40 backdrop-blur-sm transition-all hover:border-acm-blue/50 hover:shadow-acm-glow overflow-hidden">
-                                        <CardContent className="p-6">
-                                            <div className="flex items-start justify-between gap-4 mb-4">
-                                                <Badge variant="outline" className={`${status.bg} ${status.color} border-none font-bold text-[10px] tracking-widest px-2.5`}>
-                                                    <StatusIcon className="mr-1 h-3 w-3" /> {status.label.toUpperCase()}
+                                    <Card key={project.id} className="group rounded-[2.5rem] border-border/50 bg-card/40 backdrop-blur-xl transition-all hover:border-acm-blue/50 hover:shadow-acm-glow overflow-hidden border-t border-t-white/5 shadow-2xl">
+                                        <CardContent className="p-8">
+                                            <div className="flex items-start justify-between gap-4 mb-6">
+                                                <Badge variant="outline" className={`${status.bg} ${status.color} border-none font-black text-[9px] tracking-[0.2em] px-3 py-1 uppercase italic bg-white/5`}>
+                                                    <StatusIcon className="mr-1.5 h-3 w-3" /> {status.label}
                                                 </Badge>
-                                                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <Button variant="ghost" size="icon" asChild className="h-8 w-8 rounded-lg hover:bg-acm-blue/10">
+                                                <div className="flex gap-2.5 translate-x-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
+                                                    <Button variant="ghost" size="icon" asChild className="h-9 w-9 rounded-xl border border-white/5 hover:bg-acm-blue/10 bg-white/5">
                                                         <Link to={`/projects/${project.id}`}><ExternalLink className="h-4 w-4 text-acm-blue" /></Link>
                                                     </Button>
-                                                    <Button variant="ghost" size="icon" asChild className="h-8 w-8 rounded-lg hover:bg-amber-500/10 text-muted-foreground hover:text-amber-500">
+                                                    <Button variant="ghost" size="icon" asChild className="h-9 w-9 rounded-xl border border-white/5 hover:bg-amber-500/10 bg-white/5 text-muted-foreground hover:text-amber-500">
                                                         <Link to={`/projects/${project.id}/edit`}><Edit3 className="h-4 w-4" /></Link>
                                                     </Button>
                                                     <AlertDialog>
                                                         <AlertDialogTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500">
+                                                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl border border-white/5 hover:bg-red-500/10 bg-white/5 text-muted-foreground hover:text-red-500">
                                                                 <Trash2 className="h-4 w-4" />
                                                             </Button>
                                                         </AlertDialogTrigger>
-                                                        <AlertDialogContent className="rounded-2xl bg-card/95 border-border/50 backdrop-blur">
+                                                        <AlertDialogContent className="rounded-[2rem] bg-slate-950 border-border/50 backdrop-blur-xl border-t-2 border-t-white/5">
                                                             <AlertDialogHeader>
-                                                                <AlertDialogTitle className="font-black uppercase italic">Delete Project</AlertDialogTitle>
-                                                                <AlertDialogDescription>
-                                                                    Permanently remove <strong>{project.title}</strong>? This cannot be undone.
+                                                                <AlertDialogTitle className="font-black uppercase italic text-2xl tracking-tighter">Deprecate Record</AlertDialogTitle>
+                                                                <AlertDialogDescription className="text-slate-400 font-medium pt-2">
+                                                                    Are you certain you wish to permanently deprecate <strong>{project.title}</strong>? This action is non-reversible.
                                                                 </AlertDialogDescription>
                                                             </AlertDialogHeader>
-                                                            <AlertDialogFooter>
-                                                                <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+                                                            <AlertDialogFooter className="pt-6">
+                                                                <AlertDialogCancel className="rounded-xl font-black uppercase italic text-xs tracking-widest border-white/5 hover:bg-white/5">ABORT</AlertDialogCancel>
                                                                 <AlertDialogAction
                                                                     onClick={() => deleteMutation.mutate(project.id)}
-                                                                    className="bg-red-500 hover:bg-red-600 rounded-xl font-bold"
+                                                                    className="bg-red-500 hover:bg-red-600 rounded-xl font-black uppercase italic text-xs tracking-widest text-white px-8"
                                                                 >
-                                                                    {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete'}
+                                                                    {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'DEPRECATE'}
                                                                 </AlertDialogAction>
                                                             </AlertDialogFooter>
                                                         </AlertDialogContent>
                                                     </AlertDialog>
                                                 </div>
                                             </div>
-                                            <h4 className="text-lg font-bold truncate group-hover:text-acm-blue transition-colors mb-2 uppercase tracking-tight">{project.title}</h4>
-                                            <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed h-8">{project.description}</p>
-                                            <Separator className="my-4 bg-border/30" />
+                                            <h4 className="text-xl font-black truncate group-hover:text-acm-blue transition-colors mb-4 uppercase tracking-tight italic text-white">{project.title}</h4>
+                                            <p className="text-sm font-medium text-slate-400 line-clamp-2 leading-relaxed h-10 mb-6">{project.description}</p>
+                                            <Separator className="mb-6 bg-white/5" />
                                             <div className="flex items-center justify-between">
-                                                <div className="flex flex-wrap gap-1.5">
+                                                <div className="flex flex-wrap gap-2">
                                                     {project.techStack?.slice(0, 3).map(t => (
-                                                        <Badge key={t} variant="secondary" className="text-[9px] h-4 leading-none bg-muted/50 border-none font-medium">{t}</Badge>
+                                                        <Badge key={t} variant="secondary" className="text-[8px] h-5 leading-none bg-white/5 border border-white/5 font-black uppercase tracking-widest italic text-white/40">{t}</Badge>
                                                     ))}
                                                 </div>
-                                                <span className="text-[10px] font-black text-muted-foreground/50">{format(new Date(project.createdAt), "MMM d")}</span>
+                                                <span className="text-[10px] font-black text-muted-foreground/30 italic uppercase tracking-widest">{format(new Date(project.createdAt), "MMM d")}</span>
                                             </div>
                                         </CardContent>
                                     </Card>

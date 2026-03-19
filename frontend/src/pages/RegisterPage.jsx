@@ -3,7 +3,8 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Mail, Lock, User, Loader2, Eye, EyeOff, Github, Chrome, CheckCircle, ArrowRight, Sparkles, Shield, Key } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff, Github, Chrome, CheckCircle, ArrowRight, Sparkles, Shield, Key } from "lucide-react";
+import Loader from "@/components/common/Loader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -56,20 +57,20 @@ export default function RegisterPage() {
     };
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 px-4 py-20 relative overflow-hidden">
+        <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 px-4 py-20 relative overflow-hidden text-white">
             <div className="absolute top-1/4 right-1/4 w-[500px] h-[500px] bg-acm-blue/10 rounded-full blur-[120px] pointer-events-none" />
             <div className="absolute bottom-1/4 left-1/4 w-[500px] h-[500px] bg-cyan-500/5 rounded-full blur-[120px] pointer-events-none" />
 
             <div className="w-full max-w-md relative z-10">
-                <Card className="border-border/50 bg-card/40 backdrop-blur-xl rounded-[2.5rem] shadow-2xl overflow-hidden">
+                <Card className="border-border/50 bg-card/40 backdrop-blur-xl rounded-[2.5rem] shadow-2xl overflow-hidden border-t-2 border-t-white/5">
                     <CardHeader className="text-center pt-12 pb-8 px-8 sm:px-10">
                         <Link to="/" className="inline-block mx-auto mb-6 transition-transform hover:scale-110 duration-300">
                             <div className="w-16 h-16 bg-gradient-to-tr from-acm-blue to-cyan-400 rounded-2xl flex items-center justify-center shadow-acm-glow">
                                 <Sparkles className="w-8 h-8 text-white" />
                             </div>
                         </Link>
-                        <CardTitle className="text-3xl font-black tracking-tight text-white italic">Level Up.</CardTitle>
-                        <CardDescription className="text-slate-400 text-base mt-2">Join the ACM community and start contributing</CardDescription>
+                        <CardTitle className="text-3xl font-black tracking-tight text-white italic uppercase">Level Up.</CardTitle>
+                        <CardDescription className="text-slate-400 text-base mt-2 font-medium">Join the ACM community and start contributing</CardDescription>
                     </CardHeader>
 
                     <CardContent className="px-8 sm:px-10 space-y-8">
@@ -152,7 +153,7 @@ export default function RegisterPage() {
                                 )}
                             </div>
                             <Button type="submit" disabled={isLoading}
-                                className="w-full h-14 rounded-2xl bg-acm-blue hover:bg-acm-blue-dark shadow-acm-glow text-lg font-black tracking-widest mt-6 transition-all">
+                                className="w-full h-14 rounded-2xl bg-acm-blue hover:bg-acm-blue-dark shadow-acm-glow text-lg font-black tracking-widest mt-6 transition-all uppercase italic">
                                 {isLoading ? <Loader size={0.5} /> : (
                                     <div className="flex items-center gap-2">INITIALIZE ACCOUNT <ArrowRight className="h-5 w-5" /></div>
                                 )}
@@ -162,29 +163,29 @@ export default function RegisterPage() {
                         <div className="relative">
                             <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border/20" /></div>
                             <div className="relative flex justify-center text-[10px] uppercase font-black tracking-[0.2em] leading-none">
-                                <span className="bg-slate-950 px-4 text-muted-foreground/40">Swift Auth</span>
+                                <span className="bg-slate-950 px-4 text-muted-foreground/40 italic">SWIFT AUTH</span>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <Button variant="outline" onClick={() => handleOAuth("google")} disabled={!!oauthLoading}
-                                className="h-12 rounded-xl border-border/50 bg-white/5 hover:bg-white/10 text-white gap-2 text-xs font-bold">
+                                className="h-12 rounded-xl border-border/50 bg-white/5 hover:bg-white/10 text-white gap-2 text-xs font-bold transition-all">
                                 {oauthLoading === "google" ? <Loader size={0.3} /> : <Chrome className="h-4 w-4" />} GOOGLE
                             </Button>
                             <Button variant="outline" onClick={() => handleOAuth("github")} disabled={!!oauthLoading}
-                                className="h-12 rounded-xl border-border/50 bg-white/5 hover:bg-white/10 text-white gap-2 text-xs font-bold">
+                                className="h-12 rounded-xl border-border/50 bg-white/5 hover:bg-white/10 text-white gap-2 text-xs font-bold transition-all">
                                 {oauthLoading === "github" ? <Loader size={0.3} /> : <Github className="h-4 w-4" />} GITHUB
                             </Button>
                         </div>
                     </CardContent>
 
                     <CardFooter className="flex flex-col gap-6 px-10 pb-12 pt-6">
-                        <p className="text-center text-xs text-muted-foreground px-4 leading-relaxed">
-                            By creating an account, you agree to the <span className="text-slate-300 font-bold">Community Protocol</span> and <span className="text-slate-300 font-bold">Privacy Interface</span>.
+                        <p className="text-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-4 leading-relaxed italic">
+                            By creating an account, you agree to the <span className="text-slate-300">Chapter Protocol</span> and <span className="text-slate-300">Privacy Interface</span>.
                         </p>
-                        <p className="text-center text-sm text-slate-400">
+                        <p className="text-center text-sm text-slate-400 font-medium">
                             Already a member?{" "}
-                            <Link to="/login" className="text-acm-blue font-bold hover:text-acm-blue-dark transition-colors">Sign In here</Link>
+                            <Link to="/login" className="text-acm-blue font-black hover:text-acm-blue-dark transition-colors uppercase italic tracking-wider">Sign In here</Link>
                         </p>
                     </CardFooter>
                 </Card>

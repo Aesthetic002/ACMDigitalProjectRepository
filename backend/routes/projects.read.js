@@ -11,6 +11,7 @@ const router = express.Router();
 const { verifyToken } = require("../middleware/auth");
 const { db } = require("../firebase");
 const storageService = require("../services/storage.service");
+const cloudinary = require("../utils/cloudinary");
 
 /**
  * GET /api/v1/projects
@@ -181,12 +182,48 @@ router.get("/:projectId", async (req, res) => {
       const assetsSnapshot = await projectRef.collection("assets").get();
       assets = await Promise.all(assetsSnapshot.docs.map(async (doc) => {
         const data = doc.data();
-        let url = '';
-        try {
-          url = await storageService.generateSignedDownloadUrl(data.storagePath);
-        } catch (e) {
-          console.error(`Failed to generate signed URL for asset ${doc.id}:`, e.message);
+        let url = data.url; // Use Cloudinary URL if it exists
+
+        if (url) {
+          // Some Cloudinary accounts restrict 'raw' file delivery without a signature.
+          // To be safe and ensure all files are downloadable, we can generate a signed URL.
+          // We extract the public_id from the storagePath which we set during upload.
+          if (data.storagePath) {
+             const isImageOrVideo = data.contentType && (data.contentType.startsWith('image/') || data.contentType.startsWith('video/'));
+             const resourceType = !isImageOrVideo ? 'raw' : 'image'; // Note: Cloudinary defaults video to video, but the URL format uses raw/image/video
+             // Note: In Cloudinary v2, URL signing requires using cloudinary.url
+             try {
+                // Determine resource type for URL generation
+                let rType = "image";
+                if (data.contentType) {
+                    if (data.contentType.startsWith("video/")) rType = "video";
+                    else if (!data.contentType.startsWith("image/")) rType = "raw";
+                }
+
+                // Append extension for raw files if missing from public_id but we know it's there
+                let publicIdForUrl = data.storagePath;
+                if (rType === "raw" && data.filename && !publicIdForUrl.endsWith('.' + data.filename.split('.').pop())) {
+                    publicIdForUrl += '.' + data.filename.split('.').pop();
+                }
+
+                url = cloudinary.url(publicIdForUrl, {
+                   resource_type: rType,
+                   sign_url: true,
+                   secure: true
+                });
+             } catch(e) {
+                console.error("Failed to sign Cloudinary URL:", e);
+             }
+          }
+        } else {
+          // If there's no direct URL (legacy Firebase), generate a signed URL
+          try {
+            url = await storageService.generateSignedDownloadUrl(data.storagePath);
+          } catch (e) {
+            console.error(`Failed to generate signed URL for asset ${doc.id}:`, e.message);
+          }
         }
+
         return {
           id: doc.id,
           ...data,

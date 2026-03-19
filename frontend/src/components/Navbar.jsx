@@ -5,6 +5,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import {
     Sun, Moon, Menu, X, FolderOpen, Shield, Search,
     PlusCircle, LogIn, User as UserIcon, Users, Home,
