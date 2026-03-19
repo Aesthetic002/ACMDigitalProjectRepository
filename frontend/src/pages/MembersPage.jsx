@@ -29,7 +29,7 @@ export default function MembersPage() {
 
                 {isLoading ? (
                     <div className="flex justify-center py-20">
-                        <Loader2 className="h-10 w-10 animate-spin text-acm-blue" />
+                        <Loader />
                     </div>
                 ) : (isError || members.length === 0) ? (
                     <div className="text-center py-20 px-6 bg-muted/5 rounded-[3rem] border-2 border-dashed border-border/50 max-w-xl mx-auto flex flex-col items-center">

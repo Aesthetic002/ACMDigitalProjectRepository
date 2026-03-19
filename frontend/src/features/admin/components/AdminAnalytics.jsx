@@ -9,12 +9,13 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
-  Loader2,
   XCircle,
 } from "lucide-react";
+import Loader from "@/components/common/Loader";
 import { adminAPI, projectsAPI } from "@/services/api";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useAuthStore } from "@/store/authStore";
 
 // ── Stat Card ───────────────────────────────────────────────
 function StatCard({ icon, label, value, trend, delay }) {
@@ -51,11 +52,15 @@ export function AdminAnalytics() {
   const { ref: sectionRef, isInView } = useScrollAnimation({ threshold: 0.1 });
   const queryClient = useQueryClient();
 
+  const { isAuthenticated, user } = useAuthStore();
+  const isAdmin = isAuthenticated && user?.role === "admin";
+
   // Analytics summary
   const { data: analyticsData } = useQuery({
     queryKey: ["admin-analytics"],
     queryFn: () => adminAPI.getAnalytics(),
     refetchInterval: 30000,
+    enabled: isAdmin,
   });
 
   // Real users from API
@@ -63,6 +68,7 @@ export function AdminAnalytics() {
     queryKey: ["admin-users"],
     queryFn: () => adminAPI.getUsers({ limit: 10 }),
     refetchInterval: 30000,
+    enabled: isAdmin,
   });
 
   // Real pending projects from API
@@ -70,6 +76,7 @@ export function AdminAnalytics() {
     queryKey: ["projects", { status: "pending" }],
     queryFn: () => projectsAPI.getAll({ status: "pending", limit: 10 }),
     refetchInterval: 15000,
+    enabled: isAdmin,
   });
 
   const approveMutation = useMutation({
@@ -154,7 +161,7 @@ export function AdminAnalytics() {
 
             {usersLoading ? (
               <div className="flex items-center justify-center h-32">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <Loader size={0.6} />
               </div>
             ) : users.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-32 text-center">
@@ -224,7 +231,7 @@ export function AdminAnalytics() {
 
             {pendingLoading ? (
               <div className="flex items-center justify-center h-32">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <Loader size={0.6} />
               </div>
             ) : pendingProjects.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-32 text-center">
@@ -258,7 +265,7 @@ export function AdminAnalytics() {
                         disabled={approveMutation.isPending || rejectMutation.isPending}
                         className="flex-1 py-1.5 rounded-lg bg-green-500/10 text-green-500 text-xs font-medium hover:bg-green-500/20 transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
                       >
-                        {approveMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle className="h-3 w-3" />}
+                        {approveMutation.isPending ? <Loader size={0.3} /> : <CheckCircle className="h-3 w-3" />}
                         Approve
                       </button>
                       <button
@@ -266,7 +273,7 @@ export function AdminAnalytics() {
                         disabled={approveMutation.isPending || rejectMutation.isPending}
                         className="flex-1 py-1.5 rounded-lg bg-red-500/10 text-red-500 text-xs font-medium hover:bg-red-500/20 transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
                       >
-                        {rejectMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
+                        {rejectMutation.isPending ? <Loader size={0.3} /> : <XCircle className="h-3 w-3" />}
                         Reject
                       </button>
                     </div>

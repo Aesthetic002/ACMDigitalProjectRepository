@@ -10,6 +10,7 @@
 const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middleware/auth');
+const { requireAdmin } = require('../middleware/admin');
 const { db } = require('../firebase');
 
 /**
@@ -47,7 +48,7 @@ router.get('/:userId', verifyToken, async (req, res) => {
 
   } catch (error) {
     console.error('Get user error:', error.message);
-    
+
     return res.status(500).json({
       success: false,
       error: 'InternalServerError',
@@ -91,11 +92,11 @@ router.put('/:userId', verifyToken, async (req, res) => {
     // (In a real app, you might allow admins to update any user)
     if (userId !== authenticatedUid) {
       const currentUserData = userDoc.data();
-      
+
       // Allow if the authenticated user is an admin
       const authenticatedUserRef = db.collection('users').doc(authenticatedUid);
       const authenticatedUserDoc = await authenticatedUserRef.get();
-      
+
       if (!authenticatedUserDoc.exists || authenticatedUserDoc.data().role !== 'admin') {
         return res.status(403).json({
           success: false,
@@ -115,7 +116,7 @@ router.put('/:userId', verifyToken, async (req, res) => {
 
     if (name !== undefined) updateData.name = name;
     if (role !== undefined) updateData.role = role;
-    
+
     // Allow other profile fields
     Object.keys(otherFields).forEach(key => {
       // Prevent updating protected fields
@@ -139,7 +140,7 @@ router.put('/:userId', verifyToken, async (req, res) => {
 
   } catch (error) {
     console.error('Update user error:', error.message);
-    
+
     return res.status(500).json({
       success: false,
       error: 'InternalServerError',
@@ -193,11 +194,57 @@ router.get('/', verifyToken, async (req, res) => {
 
   } catch (error) {
     console.error('Get users error:', error.message);
-    
+
     return res.status(500).json({
       success: false,
       error: 'InternalServerError',
       message: 'Failed to retrieve users'
+    });
+  }
+});
+
+/**
+ * DELETE /api/v1/users/:userId
+ * 
+ * Physically deletes a user from the platform.
+ * Admin only.
+ * 
+ * Response:
+ *   200: { success: true, message: 'User deleted successfully' }
+ *   403: { success: false, error: 'Forbidden', message: '...' }
+ *   404: { success: false, error: 'NotFound', message: 'User not found' }
+ */
+router.delete('/:userId', verifyToken, requireAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Check if user exists
+    const userRef = db.collection('users').doc(userId);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      return res.status(404).json({
+        success: false,
+        error: 'NotFound',
+        message: 'User not found'
+      });
+    }
+
+    // Delete user from Firestore
+    await userRef.delete();
+
+    return res.status(200).json({
+      success: true,
+      message: 'User deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('Delete user error:', error.message);
+
+    return res.status(500).json({
+      success: false,
+      error: 'InternalServerError',
+      message: 'Failed to delete user'
     });
   }
 });

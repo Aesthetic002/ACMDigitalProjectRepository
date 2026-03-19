@@ -19,7 +19,7 @@ export default function AdminPreAddPage() {
             </div>
 
             <div className="max-w-4xl">
-                <ProjectForm />
+                <ProjectForm isAdmin={true} />
             </div>
         </div>
     );

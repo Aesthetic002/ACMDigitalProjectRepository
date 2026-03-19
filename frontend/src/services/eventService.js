@@ -1,61 +1,42 @@
-import {
-    collection,
-    addDoc,
-    getDocs,
-    query,
-    orderBy,
-    deleteDoc,
-    doc
-} from "firebase/firestore";
-import { db } from "../config/firebase";
-
-const COLLECTION_NAME = "events";
+import { eventsAPI } from "./api";
 
 export const eventService = {
     /**
-     * Create a new event in Firestore
+     * Create a new event via backend API
      */
     async createEvent(eventData) {
         try {
-            const docRef = await addDoc(collection(db, COLLECTION_NAME), {
-                ...eventData,
-                createdAt: new Date().toISOString(),
-            });
-            return { success: true, id: docRef.id };
+            const res = await eventsAPI.create(eventData);
+            return { success: true, id: res.data.event.id };
         } catch (error) {
             console.error("Error adding event: ", error);
-            return { success: false, error: error.message };
+            return { success: false, error: error.response?.data?.message || error.message };
         }
     },
 
     /**
-     * Get all events from Firestore, ordered by date
+     * Get all events via backend API
      */
     async getEvents() {
         try {
-            const q = query(collection(db, COLLECTION_NAME), orderBy("date", "asc"));
-            const querySnapshot = await getDocs(q);
-            const events = [];
-            querySnapshot.forEach((doc) => {
-                events.push({ id: doc.id, ...doc.data() });
-            });
-            return { success: true, events };
+            const res = await eventsAPI.getAll();
+            return { success: true, events: res.data.events };
         } catch (error) {
             console.error("Error getting events: ", error);
-            return { success: false, error: error.message };
+            return { success: false, error: error.response?.data?.message || error.message };
         }
     },
 
     /**
-     * Delete an event from Firestore
+     * Delete an event via backend API
      */
     async deleteEvent(eventId) {
         try {
-            await deleteDoc(doc(db, COLLECTION_NAME, eventId));
+            await eventsAPI.delete(eventId);
             return { success: true };
         } catch (error) {
             console.error("Error deleting event: ", error);
-            return { success: false, error: error.message };
+            return { success: false, error: error.response?.data?.message || error.message };
         }
     }
 };

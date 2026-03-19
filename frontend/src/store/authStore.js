@@ -71,23 +71,20 @@ export const useAuthStore = create(
                 try {
                     const result = await signInWithEmailAndPassword(auth, email, password)
 
-                    if (role === 'admin') {
-                        set((state) => ({
-                            user: {
-                                uid: result.user.uid,
-                                email: result.user.email,
-                                name: result.user.displayName || email.split('@')[0],
-                                photoURL: result.user.photoURL,
-                                role: 'admin',
-                            },
-                            isAuthenticated: true,
-                            isLoading: false,
-                        }));
-                        toast.success('Welcome, Admin!');
-                        return { success: true }
-                    }
+                    // Immediately update state for a faster UI response
+                    set((state) => ({
+                        user: {
+                            uid: result.user.uid,
+                            email: result.user.email,
+                            name: result.user.displayName || email.split('@')[0],
+                            photoURL: result.user.photoURL,
+                            role: role, // Use the role passed to the login function
+                        },
+                        isAuthenticated: true,
+                        isLoading: false,
+                    }));
 
-                    toast.success('Welcome back!')
+                    toast.success(role === 'admin' ? 'Welcome, Admin!' : 'Welcome back!');
                     return { success: true }
                 } catch (error) {
                     const message = getAuthErrorMessage(error.code)
@@ -140,13 +137,17 @@ export const useAuthStore = create(
                 }
             },
 
-            logout: async () => {
+            logout: async (showToast = true) => {
                 try {
                     await signOut(auth)
                     set({ user: null, token: null, isAuthenticated: false })
-                    toast.success('Logged out successfully')
+                    if (showToast) {
+                        toast.success('Logged out successfully')
+                    }
                 } catch {
-                    toast.error('Failed to logout')
+                    if (showToast) {
+                        toast.error('Failed to logout')
+                    }
                 }
             },
 
@@ -198,7 +199,11 @@ export const useAuthStore = create(
         }),
         {
             name: 'auth-storage',
-            partialize: (state) => ({ token: state.token }),
+            partialize: (state) => ({ 
+                user: state.user,
+                token: state.token,
+                isAuthenticated: state.isAuthenticated 
+            }),
         }
     )
 )

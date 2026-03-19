@@ -27,7 +27,7 @@ api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
-            useAuthStore.getState().logout();
+            useAuthStore.getState().logout(false);
         }
         return Promise.reject(error);
     }
@@ -74,13 +74,36 @@ export const usersAPI = {
         }
     },
     update: (uid, data) => api.put(`/users/${uid}`, data),
+    delete: (uid) => api.delete(`/users/${uid}`),
 };
 
 // ── Admin ─────────────────────────────────────────────────
 export const adminAPI = {
-    getAnalytics: () => api.get('/admin/analytics'),
-    // Backend doesn't have a dedicated /admin/users endpoint; use /users with role filter if needed
-    getUsers: (params) => api.get('/users', { params }),
+    getAnalytics: async () => {
+        try {
+            return await api.get('/admin/analytics');
+        } catch (err) {
+            await delay(500);
+            return {
+                data: {
+                    stats: {
+                        totalUsers: MOCK_USERS.length,
+                        totalProjects: MOCK_PROJECTS.length,
+                        pendingProjects: MOCK_PROJECTS.filter(p => p.status === 'pending').length,
+                        totalViews: 1250,
+                    }
+                }
+            };
+        }
+    },
+    getUsers: async (params) => {
+        try {
+            return await api.get('/users', { params });
+        } catch (err) {
+            await delay(500);
+            return { data: { users: MOCK_USERS } };
+        }
+    },
 
     // Note: Users can only update themselves unless they are admin, so this uses the standard users PUT route
     updateUser: (uid, data) => api.put(`/users/${uid}`, data),
@@ -111,6 +134,15 @@ export const assetsAPI = {
         }),
     delete: (projectId, assetId) =>
         api.delete(`/projects/${projectId}/assets/${assetId}`),
+};
+
+// ── Events ────────────────────────────────────────────────
+export const eventsAPI = {
+    getAll: () => api.get('/events'),
+    getById: (id) => api.get(`/events/${id}`),
+    create: (data) => api.post('/events', data),
+    update: (id, data) => api.put(`/events/${id}`, data),
+    delete: (id) => api.delete(`/events/${id}`),
 };
 
 export default api;

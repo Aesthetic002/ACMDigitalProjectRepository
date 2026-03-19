@@ -3,8 +3,9 @@ import { Link } from "react-router-dom";
 import { usersAPI, adminAPI } from "@/services/api";
 import {
     Users, Search, MoreVertical, Shield, ShieldCheck,
-    UserMinus, UserCheck, ExternalLink, GraduationCap, Loader2
+    UserMinus, UserCheck, ExternalLink, GraduationCap
 } from "lucide-react";
+import Loader from "@/components/common/Loader";
 import {
     Table, TableBody, TableCell, TableHead,
     TableHeader, TableRow,
@@ -80,12 +81,21 @@ export default function AdminMembersPage() {
         }
     };
 
-    const deleteMember = (uid) => {
-        // Backend lacks an explicit delete user route in users.routes.js.
-        // So this is a soft visual removal for the session to prevent a 404 crash.
+    const deleteMember = async (uid) => {
         const member = members.find(m => m.uid === uid);
-        setMembers(prev => prev.filter(m => m.uid !== uid));
-        toast.success(`Soft override: ${member?.name} removed from view. (Real backend deletion not yet supported)`);
+        if (!window.confirm(`Are you sure you want to PERMANENTLY delete ${member?.name || 'this member'}? This action cannot be undone.`)) return;
+
+        setIsLoading(true);
+        try {
+            await usersAPI.delete(uid);
+            setMembers(prev => prev.filter(m => m.uid !== uid));
+            toast.success("Member physically deleted from database");
+        } catch (error) {
+            console.error("Failed to delete member:", error);
+            toast.error(error.response?.data?.message || "Failed to delete member");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -109,7 +119,7 @@ export default function AdminMembersPage() {
             <div className="rounded-2xl border border-border/50 bg-card/20 backdrop-blur-sm overflow-hidden shadow-xl">
                 {isLoading ? (
                     <div className="text-center py-20">
-                        <Loader2 className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3 animate-spin" />
+                        <Loader size={0.8} className="mx-auto mb-3" />
                         <p className="font-bold text-muted-foreground italic">Loading members...</p>
                     </div>
                 ) : filteredMembers.length === 0 ? (

@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 
-export default function ProjectForm({ initialData = null, projectId = null }) {
+export default function ProjectForm({ initialData = null, projectId = null, isAdmin = false }) {
     const isEditing = !!projectId;
     const navigate = useNavigate();
     const queryClient = useQueryClient();
@@ -149,7 +149,12 @@ export default function ProjectForm({ initialData = null, projectId = null }) {
                 }
             }
 
-            navigate(`/projects/${targetProjectId}`);
+            // Redirect: admin stays in admin, members go to project detail
+            if (isAdmin) {
+                navigate('/admin/projects');
+            } else {
+                navigate(`/projects/${targetProjectId}`);
+            }
         } catch (error) {
             // Handled by mutation
         }
@@ -395,7 +400,7 @@ export default function ProjectForm({ initialData = null, projectId = null }) {
                             <Button
                                 type="button"
                                 variant="outline"
-                                onClick={() => router.back()}
+                                onClick={() => navigate(-1)}
                                 className="flex-1 sm:flex-none rounded-2xl h-14 px-8 font-bold border-border/50"
                             >
                                 CANCEL

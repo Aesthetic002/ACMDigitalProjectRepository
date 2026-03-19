@@ -153,7 +153,7 @@ export default function RegisterPage() {
                             </div>
                             <Button type="submit" disabled={isLoading}
                                 className="w-full h-14 rounded-2xl bg-acm-blue hover:bg-acm-blue-dark shadow-acm-glow text-lg font-black tracking-widest mt-6 transition-all">
-                                {isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : (
+                                {isLoading ? <Loader size={0.5} /> : (
                                     <div className="flex items-center gap-2">INITIALIZE ACCOUNT <ArrowRight className="h-5 w-5" /></div>
                                 )}
                             </Button>
@@ -169,11 +169,11 @@ export default function RegisterPage() {
                         <div className="grid grid-cols-2 gap-4">
                             <Button variant="outline" onClick={() => handleOAuth("google")} disabled={!!oauthLoading}
                                 className="h-12 rounded-xl border-border/50 bg-white/5 hover:bg-white/10 text-white gap-2 text-xs font-bold">
-                                {oauthLoading === "google" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Chrome className="h-4 w-4" />} GOOGLE
+                                {oauthLoading === "google" ? <Loader size={0.3} /> : <Chrome className="h-4 w-4" />} GOOGLE
                             </Button>
                             <Button variant="outline" onClick={() => handleOAuth("github")} disabled={!!oauthLoading}
                                 className="h-12 rounded-xl border-border/50 bg-white/5 hover:bg-white/10 text-white gap-2 text-xs font-bold">
-                                {oauthLoading === "github" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Github className="h-4 w-4" />} GITHUB
+                                {oauthLoading === "github" ? <Loader size={0.3} /> : <Github className="h-4 w-4" />} GITHUB
                             </Button>
                         </div>
                     </CardContent>

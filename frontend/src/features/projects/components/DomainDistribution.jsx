@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { Brain, Globe, Shield, Cpu, Code2, ArrowRight } from "lucide-react";
 import { adminAPI } from "@/api/admin.api";
+import { useAuthStore } from "@/store/authStore";
 
 function DomainCard({
   icon,
@@ -100,9 +101,13 @@ function DomainCard({
 export function DomainDistribution() {
   const { ref: sectionRef, isInView } = useScrollAnimation({ threshold: 0.1 });
 
+  const { isAuthenticated, user } = useAuthStore();
+  const isAdmin = isAuthenticated && user?.role === "admin";
+
   const { data: analyticsData } = useQuery({
     queryKey: ['admin-analytics'],
     queryFn: () => adminAPI.getAnalytics(),
+    enabled: isAdmin,
   });
 
   const domainStats = analyticsData?.data?.distribution || {};

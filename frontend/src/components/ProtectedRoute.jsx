@@ -1,6 +1,6 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
-import { Loader2 } from "lucide-react";
+import Loader from "./common/Loader";
 
 export default function ProtectedRoute({ children, adminOnly = false }) {
     const { isAuthenticated, isLoading, user } = useAuthStore();
@@ -8,8 +8,8 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
 
     if (isLoading) {
         return (
-            <div className="flex min-h-screen items-center justify-center">
-                <Loader2 className="h-10 w-10 animate-spin text-acm-blue" />
+            <div className="flex min-h-screen items-center justify-center bg-[#090E1A]">
+                <Loader />
             </div>
         );
     }

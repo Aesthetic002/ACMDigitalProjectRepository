@@ -9,13 +9,18 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import {
     User, Mail, Calendar, Edit3, Save, X, Loader2, ExternalLink,
-    FolderOpen, CheckCircle, Clock, XCircle, BarChart3, LogOut, Plus
+    FolderOpen, CheckCircle, Clock, XCircle, BarChart3, LogOut, Plus, Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import {
+    AlertDialog, AlertDialogAction, AlertDialogCancel,
+    AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+    AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import Layout from "@/components/Layout";
 
 function ProfileContent() {
@@ -58,6 +63,15 @@ function ProfileContent() {
         if (!displayName.trim()) return toast.error("Name cannot be null");
         updateMutation.mutate(displayName);
     };
+
+    const deleteMutation = useMutation({
+        mutationFn: (projectId) => projectsAPI.delete(projectId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['my-projects', user?.uid] });
+            toast.success('Project deleted successfully');
+        },
+        onError: (error) => toast.error(error.response?.data?.message || 'Failed to delete project'),
+    });
 
     const getStatusConfig = (status) => {
         switch (status) {
@@ -200,6 +214,33 @@ function ProfileContent() {
                                                     <Button variant="ghost" size="icon" asChild className="h-8 w-8 rounded-lg hover:bg-acm-blue/10">
                                                         <Link to={`/projects/${project.id}`}><ExternalLink className="h-4 w-4 text-acm-blue" /></Link>
                                                     </Button>
+                                                    <Button variant="ghost" size="icon" asChild className="h-8 w-8 rounded-lg hover:bg-amber-500/10 text-muted-foreground hover:text-amber-500">
+                                                        <Link to={`/projects/${project.id}/edit`}><Edit3 className="h-4 w-4" /></Link>
+                                                    </Button>
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500">
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent className="rounded-2xl bg-card/95 border-border/50 backdrop-blur">
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle className="font-black uppercase italic">Delete Project</AlertDialogTitle>
+                                                                <AlertDialogDescription>
+                                                                    Permanently remove <strong>{project.title}</strong>? This cannot be undone.
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+                                                                <AlertDialogAction
+                                                                    onClick={() => deleteMutation.mutate(project.id)}
+                                                                    className="bg-red-500 hover:bg-red-600 rounded-xl font-bold"
+                                                                >
+                                                                    {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete'}
+                                                                </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
                                                 </div>
                                             </div>
                                             <h4 className="text-lg font-bold truncate group-hover:text-acm-blue transition-colors mb-2 uppercase tracking-tight">{project.title}</h4>

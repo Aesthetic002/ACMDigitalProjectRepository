@@ -143,7 +143,7 @@ function ProjectsContent() {
 export default function ProjectsPage() {
     return (
         <Layout>
-            <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-slate-950"><Loader2 className="h-12 w-12 animate-spin text-acm-blue" /></div>}>
+            <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-slate-950"><Loader /></div>}>
                 <ProjectsContent />
             </Suspense>
         </Layout>

@@ -34,6 +34,7 @@ const projectsReadRoutes = require("./routes/projects.read");
 const searchRoutes = require("./routes/search.routes");
 const assetsRoutes = require("./routes/assets.routes");
 const tagsRoutes = require("./routes/tags.routes");
+const eventsRoutes = require("./routes/events.routes");
 const adminRoutes = require("./routes/admin.routes");
 
 // Import routes - Development Only
@@ -50,6 +51,7 @@ app.use("/api/v1/projects", projectsReadRoutes); // GET endpoints
 app.use("/api/v1/search", searchRoutes);
 app.use("/api/v1/assets", assetsRoutes);
 app.use("/api/v1/tags", tagsRoutes);
+app.use("/api/v1/events", eventsRoutes);
 app.use("/api/v1/admin", adminRoutes);
 
 // Wire routes - Development Only

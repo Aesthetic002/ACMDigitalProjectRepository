@@ -4,8 +4,9 @@ import { projectsAPI, adminAPI } from "@/services/api";
 import {
     FolderPlus, Search, ExternalLink, Trash2,
     CheckCircle2, XCircle, Clock, FolderGit2,
-    RotateCcw, Filter, Loader2
+    RotateCcw, Filter
 } from "lucide-react";
+import Loader from "@/components/common/Loader";
 import {
     Table, TableBody, TableCell, TableHead,
     TableHeader, TableRow,
@@ -157,7 +158,7 @@ export default function AdminProjectsPage() {
             <div className="rounded-2xl border border-border/50 bg-card/20 backdrop-blur-sm overflow-hidden overflow-x-auto shadow-xl">
                 {isLoading ? (
                     <div className="text-center py-20">
-                        <Loader2 className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3 animate-spin" />
+                        <Loader size={0.8} className="mx-auto mb-3" />
                         <p className="font-bold text-muted-foreground italic">Loading projects...</p>
                     </div>
                 ) : filteredProjects.length === 0 ? (

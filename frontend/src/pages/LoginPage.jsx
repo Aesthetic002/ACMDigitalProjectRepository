@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
 import { toast } from "sonner";
-import { Mail, Lock, Loader2, Eye, EyeOff, Github, Chrome, ArrowRight, ShieldCheck, Zap } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Github, Chrome, ArrowRight, ShieldCheck, Zap, User } from "lucide-react";
+import Loader from "@/components/common/Loader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -18,8 +19,6 @@ export default function LoginPage() {
     const [oauthLoading, setOauthLoading] = useState(null);
 
     const [loginRole, setLoginRole] = useState("member"); // "member" or "admin"
-
-    // Redirect path computed dynamically inside handlers
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -48,9 +47,9 @@ export default function LoginPage() {
         }
     };
 
-    const handleDemoAdmin = () => {
-        loginAsDemo('admin');
-        navigate("/admin");
+    const handleDemoLogin = (role) => {
+        loginAsDemo(role);
+        navigate(role === 'admin' ? "/admin" : "/");
     };
 
     return (
@@ -91,18 +90,18 @@ export default function LoginPage() {
                     </CardHeader>
 
                     <CardContent className="px-8 sm:px-10 space-y-6">
-                        {/* Demo Admin Access — shown when admin tab is selected */}
+                        {/* Demo Access — only for Admin */}
                         {loginRole === 'admin' && (
                             <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5 space-y-3">
-                                <div className="flex items-center gap-2 text-amber-400 mb-1">
-                                    <Zap className="h-4 w-4 fill-amber-400" />
-                                    <span className="text-[10px] font-black uppercase tracking-widest">Demo Access Available</span>
+                                <div className="flex items-center gap-2 text-primary mb-1">
+                                    <Zap className="h-4 w-4 fill-amber-400 text-amber-400" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-amber-400">Demo Access Available</span>
                                 </div>
                                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                                    Backend is offline. Click below to instantly access the Admin Console with full CRUD capabilities using pre-loaded demo data.
+                                    Backend is offline or restricted. Access the Admin Console with full CRUD capabilities using pre-loaded data.
                                 </p>
-                                <Button onClick={handleDemoAdmin}
-                                    className="w-full h-12 bg-amber-500 hover:bg-amber-600 text-white font-black tracking-widest uppercase italic rounded-xl shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.02] gap-2">
+                                <Button onClick={() => handleDemoLogin('admin')}
+                                    className="w-full h-12 bg-amber-500 hover:bg-amber-600 shadow-amber-500/20 text-white font-black tracking-widest uppercase italic rounded-xl transition-all hover:scale-[1.02] gap-2">
                                     <ShieldCheck className="h-4 w-4" />
                                     ENTER DEMO ADMIN CONSOLE
                                 </Button>
@@ -114,12 +113,12 @@ export default function LoginPage() {
                                 <div className="grid grid-cols-2 gap-4">
                                     <Button variant="outline" onClick={() => handleOAuth("google")} disabled={!!oauthLoading}
                                         className="h-14 rounded-2xl border-border/50 bg-white/5 hover:bg-white/10 text-white gap-3 transition-all">
-                                        {oauthLoading === "google" ? <Loader2 className="h-5 w-5 animate-spin" /> : <Chrome className="h-5 w-5" />}
+                                        {oauthLoading === "google" ? <Loader size={0.4} /> : <Chrome className="h-5 w-5" />}
                                         <span className="font-bold">Google</span>
                                     </Button>
                                     <Button variant="outline" onClick={() => handleOAuth("github")} disabled={!!oauthLoading}
                                         className="h-14 rounded-2xl border-border/50 bg-white/5 hover:bg-white/10 text-white gap-3 transition-all">
-                                        {oauthLoading === "github" ? <Loader2 className="h-5 w-5 animate-spin" /> : <Github className="h-5 w-5" />}
+                                        {oauthLoading === "github" ? <Loader size={0.4} /> : <Github className="h-5 w-5" />}
                                         <span className="font-bold">GitHub</span>
                                     </Button>
                                 </div>
@@ -127,18 +126,17 @@ export default function LoginPage() {
                                 <div className="relative">
                                     <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border/30" /></div>
                                     <div className="relative flex justify-center text-[10px] uppercase font-black tracking-widest leading-none">
-                                        <span className="bg-[#0f172a] px-4 text-muted-foreground/60 italic">OR USE CREDENTIALS</span>
+                                        <span className="bg-slate-950 px-4 text-muted-foreground/60 italic">OR USE CREDENTIALS</span>
                                     </div>
                                 </div>
                             </>
                         )}
 
-                        {/* Divider for admin email form */}
                         {loginRole === 'admin' && (
                             <div className="relative">
                                 <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border/30" /></div>
                                 <div className="relative flex justify-center text-[10px] uppercase font-black tracking-widest leading-none">
-                                    <span className="bg-[#0f172a] px-4 text-muted-foreground/60 italic">OR USE REAL CREDENTIALS</span>
+                                    <span className="bg-slate-950 px-4 text-muted-foreground/60 italic">OR USE REAL CREDENTIALS</span>
                                 </div>
                             </div>
                         )}
@@ -160,8 +158,8 @@ export default function LoginPage() {
                                 </button>
                             </div>
                             <Button type="submit" disabled={isEmailLoading}
-                                className={`w-full h-14 rounded-2xl shadow-acm-glow text-lg font-black tracking-[0.2em] transition-all uppercase italic ${loginRole === 'admin' ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20' : 'bg-acm-blue hover:bg-acm-blue-dark'}`}>
-                                {isEmailLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : (
+                                className={`w-full h-14 rounded-2xl shadow-acm-glow text-lg font-black tracking-[0.2em] transition-all uppercase italic ${loginRole === 'admin' ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20' : 'bg-acm-blue hover:bg-acm-blue-dark shadow-acm-glow'}`}>
+                                {isEmailLoading ? <Loader size={0.5} /> : (
                                     <div className="flex items-center gap-2 tracking-widest">{loginRole === 'admin' ? "INITIALIZE CONSOLE" : "SIGN IN"} <ArrowRight className="h-5 w-5" /></div>
                                 )}
                             </Button>
