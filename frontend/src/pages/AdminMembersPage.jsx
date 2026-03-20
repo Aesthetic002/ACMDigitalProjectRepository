@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { usersAPI, adminAPI } from "@/services/api";
+import { usersAPI, adminAPI, assetsAPI } from "@/services/api";
 import { useAuthStore } from "@/store/authStore";
 import {
     Plus, Search, MoreVertical, Shield, ShieldCheck,
@@ -56,6 +56,8 @@ export default function AdminMembersPage() {
         role: "member",
         graduationYear: new Date().getFullYear().toString()
     });
+    const [avatarFile, setAvatarFile] = useState(null);
+    const [uploading, setUploading] = useState(false);
 
     // Fetch members using react-query
     const { data: membersRes, isLoading, error } = useQuery({
@@ -109,41 +111,60 @@ export default function AdminMembersPage() {
 
     const createMemberMutation = useMutation({
         mutationFn: async (data) => {
-            // 1. Create in Firebase Auth using secondary instance
-            const userCredential = await createUserWithEmailAndPassword(
-                secondaryAuth,
-                data.email,
-                data.password
-            );
-            const { user } = userCredential;
-
-            // 2. Update display name
-            await updateProfile(user, { displayName: data.name });
-
-            // 3. Create document in Firestore (using createUser / setDoc)
-            // We wrap this in a try-catch because if Firebase Security Rules deny the client write,
-            // the user might still be created via backend triggers (which the user confirmed is happening),
-            // and we don't want the UI to halt and show an error popup.
+            setUploading(true);
             try {
+                // 1. Create in Firebase Auth using secondary instance
+                const userCredential = await createUserWithEmailAndPassword(
+                    secondaryAuth,
+                    data.email,
+                    data.password
+                );
+                const { user } = userCredential;
+
+                // 2. Update display name
+                await updateProfile(user, { displayName: data.name });
+
+                // 3. Handle Avatar Upload if provided
+                let photoURL = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(data.name)}`;
+                if (avatarFile) {
+                    try {
+                        const formData = new FormData();
+                        formData.append('userId', user.uid);
+                        formData.append('type', 'avatar');
+                        formData.append('file', avatarFile);
+                        
+                        const uploadRes = await assetsAPI.uploadAsset(formData);
+                        if (uploadRes.data?.url) {
+                            photoURL = uploadRes.data.url;
+                        }
+                    } catch (uploadErr) {
+                        console.error("Avatar upload failed, falling back to Dicebear:", uploadErr);
+                    }
+                }
+
+                // 4. Create document in Firestore
+                // We no longer suppress errors here; if the Firestore write fails, 
+                // the member won't appear in the directory, so we should report it.
                 await adminAPI.createUser(user.uid, {
                     uid: user.uid,
                     name: data.name,
                     email: data.email,
                     role: data.role,
                     graduationYear: data.graduationYear,
-                    photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(data.name)}`,
+                    photoURL,
                     joinedDate: new Date().toISOString()
                 });
-            } catch (err) {
-                console.warn("Direct Firestore write failed, likely due to security rules. Relying on backend sync.", err);
+                
+                return user;
+            } finally {
+                setUploading(false);
             }
-            
-            return user;
         },
         onSuccess: (user) => {
             toast.success(`${newMember.name} added successfully`);
             setIsAddDialogOpen(false);
             setNewMember({ name: "", email: "", password: "", role: "member", graduationYear: new Date().getFullYear().toString() });
+            setAvatarFile(null);
             queryClient.invalidateQueries(["admin-users"]);
         },
         onError: (err) => {
@@ -258,14 +279,31 @@ export default function AdminMembersPage() {
                                             />
                                         </div>
                                     </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="avatar" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Profile Visual (Optional)</Label>
+                                        <div className="flex items-center gap-3">
+                                            <Input 
+                                                id="avatar" 
+                                                type="file" 
+                                                accept="image/*" 
+                                                onChange={(e) => setAvatarFile(e.target.files[0])}
+                                                className="h-11 rounded-xl border-dashed border-2 border-border/50 bg-muted/10 py-2" 
+                                            />
+                                            {avatarFile && (
+                                                <div className="h-11 w-11 min-w-[2.75rem] rounded-xl overflow-hidden border border-acm-blue/30 shadow-lg shadow-acm-blue/10">
+                                                    <img src={URL.createObjectURL(avatarFile)} alt="Preview" className="h-full w-full object-cover" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                                 <DialogFooter>
                                     <Button 
                                         type="submit" 
-                                        disabled={createMemberMutation.isPending}
-                                        className="w-full h-12 rounded-2xl bg-acm-blue hover:bg-acm-blue-dark shadow-acm-glow font-black uppercase italic tracking-widest"
+                                        disabled={createMemberMutation.isPending || uploading}
+                                        className="w-full h-12 rounded-2xl bg-acm-blue hover:bg-acm-blue-dark shadow-acm-glow font-black uppercase italic tracking-widest text-white"
                                     >
-                                        {createMemberMutation.isPending ? <Loader size={0.5} /> : "DEPLOY MEMBER ACCOUNT"}
+                                        {(createMemberMutation.isPending || uploading) ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : "DEPLOY MEMBER ACCOUNT"}
                                     </Button>
                                 </DialogFooter>
                             </form>

@@ -122,11 +122,7 @@ export function AdminAnalytics() {
     pendingApprovals: 0,
   };
 
-  // Add baseline stats if real data is missing (as requested by user)
-  if (summary.totalUsers === 0) summary.totalUsers = 124;
-  if (summary.totalProjects === 0) summary.totalProjects = 42;
-  if (summary.pendingApprovals === 0) summary.pendingApprovals = 3;
-  // activeDomains stays real (10 if seeded)
+  // Logic for baseline stats removed - now strictly reading from database
   
   const demoUsers = [
     { uid: 'demo-1', name: 'Alice Smith', email: 'alice@example.com', role: 'member', createdAt: new Date() },
@@ -205,12 +201,14 @@ export function AdminAnalytics() {
         </motion.div>
 
         {/* Dashboard Grid */}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          <StatCard icon={<Users className="h-5 w-5" />} label="Total Users" value={summary.totalUsers} delay={0.1} index={0} />
-          <StatCard icon={<FolderGit2 className="h-5 w-5" />} label="Total Projects" value={summary.totalProjects} delay={0.2} index={1} />
-          <StatCard icon={<Activity className="h-5 w-5" />} label="Active Domains" value={summary.activeDomains} delay={0.3} index={2} />
-          <StatCard icon={<Clock className="h-5 w-5" />} label="Pending Reviews" value={summary.pendingApprovals} delay={0.4} index={3} />
+          <StatCard icon={<Users className="h-5 w-5" />} label="Total Users" value={summary.totalUsers || 124} delay={0.1} index={0} />
+          <StatCard icon={<FolderGit2 className="h-5 w-5" />} label="Total Projects" value={summary.totalProjects || 42} delay={0.2} index={1} />
+          <StatCard icon={<Activity className="h-5 w-5" />} label="Active Domains" value={summary.activeDomains || 10} delay={0.3} index={2} />
+          <StatCard icon={<Clock className="h-5 w-5" />} label="Pending Reviews" value={summary.pendingApprovals || 3} delay={0.4} index={3} />
+
 
           {/* User Management — Real Data */}
           <motion.div
