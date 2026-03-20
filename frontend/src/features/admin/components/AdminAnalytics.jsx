@@ -1,6 +1,6 @@
 import { useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform, useSpring } from "framer-motion";
 import { animate, stagger, createDrawable } from "animejs";
 import { useScrollAnimation, useCountUp } from "@/hooks/useScrollAnimation";
 import {
@@ -62,7 +62,9 @@ function StatCard({ icon, label, value, delay, index = 0 }) {
 
 // ── Main Component ───────────────────────────────────────────
 export function AdminAnalytics() {
-  const { ref: sectionRef, isInView } = useScrollAnimation({ threshold: 0.1 });
+  const { ref: sectionRef, isInView: headerInView } = useScrollAnimation({ threshold: 0.1 });
+  const { ref: membersRef, isInView: membersInView } = useScrollAnimation({ threshold: 0.1 });
+  const { ref: moderationRef, isInView: moderationInView } = useScrollAnimation({ threshold: 0.1 });
   const queryClient = useQueryClient();
 
   const { isAuthenticated, user } = useAuthStore();
@@ -112,15 +114,50 @@ export function AdminAnalytics() {
     onError: () => toast.error("Failed to reject project"),
   });
 
-  const summary = analyticsData?.data?.summary || {
+  const summary = analyticsData?.data?.summary || (user?.isDemoUser ? {
+    totalUsers: 124,
+    totalProjects: 42,
+    activeDomains: 8,
+    pendingApprovals: 3,
+  } : {
     totalUsers: 0,
     totalProjects: 0,
     activeDomains: 0,
     pendingApprovals: 0,
-  };
+  });
+  
+  const demoUsers = [
+    { uid: 'demo-1', name: 'Alice Smith', email: 'alice@example.com', role: 'member', createdAt: new Date() },
+    { uid: 'demo-2', name: 'Bob Johnson', email: 'bob@example.com', role: 'admin', createdAt: new Date() },
+    { uid: 'demo-3', name: 'Charlie Davis', email: 'charlie@acm.org', role: 'member', createdAt: new Date() },
+  ];
 
-  const users = usersData?.data?.users || [];
-  const pendingProjects = pendingData?.data?.projects || [];
+  const demoProjects = [
+    { id: 'p1', title: 'Neural Link API', techStack: ['Python', 'PyTorch'], status: 'pending', createdAt: new Date() },
+    { id: 'p2', title: 'Quantum Encryption', techStack: ['Rust', 'Wasm'], status: 'pending', createdAt: new Date() },
+    { id: 'p3', title: 'Autonomous Drone Fleet', techStack: ['C++', 'ROS'], status: 'pending', createdAt: new Date() },
+    { id: 'p4', title: 'Smart Agriculture IoT', techStack: ['Arduino', 'LoRa'], status: 'pending', createdAt: new Date() },
+    { id: 'p5', title: 'Blockchain Voting System', techStack: ['Solidity', 'React'], status: 'pending', createdAt: new Date() },
+    { id: 'p6', title: 'Cyber Threat Detector', techStack: ['Go', 'ElasticSearch'], status: 'pending', createdAt: new Date() },
+    { id: 'p7', title: 'AR Campus Navigation', techStack: ['Swift', 'Unity'], status: 'pending', createdAt: new Date() },
+    { id: 'p8', title: 'Sustainable Energy Grid', techStack: ['Python', 'Pandas'], status: 'pending', createdAt: new Date() },
+  ];
+
+  const users = user?.isDemoUser 
+    ? [...demoUsers, ...(usersData?.data?.users || [])] 
+    : (usersData?.data?.users || []);
+
+  const pendingProjects = user?.isDemoUser 
+    ? [...demoProjects, ...(pendingData?.data?.projects || [])] 
+    : (pendingData?.data?.projects || []);
+
+  // Ensure summary looks good for demo
+  if (user?.isDemoUser) {
+    summary.totalUsers = Math.max(summary.totalUsers, 124);
+    summary.totalProjects = Math.max(summary.totalProjects, 42);
+    summary.activeDomains = Math.max(summary.activeDomains, 8);
+    summary.pendingApprovals = Math.max(summary.pendingApprovals, pendingProjects.length);
+  }
 
   useEffect(() => {
     const paths = document.querySelectorAll('path.dashboard-draw-path');
@@ -156,7 +193,7 @@ export function AdminAnalytics() {
         <motion.div
           ref={sectionRef}
           initial={{ opacity: 0, y: 20 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          animate={headerInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
@@ -181,8 +218,9 @@ export function AdminAnalytics() {
 
           {/* User Management — Real Data */}
           <motion.div
+            ref={membersRef}
             initial={{ opacity: 0, x: -50, y: 20 }}
-            animate={isInView ? { opacity: 1, x: 0, y: 0 } : {}}
+            animate={membersInView ? { opacity: 1, x: 0, y: 0 } : {}}
             transition={{ duration: 0.6, delay: 0.4, type: "spring" }}
             className="lg:col-span-2 p-6 rounded-2xl bg-card border border-border shadow-xl transform-gpu"
           >
@@ -252,8 +290,9 @@ export function AdminAnalytics() {
 
           {/* Pending Projects Queue — Real Data */}
           <motion.div
+            ref={moderationRef}
             initial={{ opacity: 0, x: 50, y: 20 }}
-            animate={isInView ? { opacity: 1, x: 0, y: 0 } : {}}
+            animate={moderationInView ? { opacity: 1, x: 0, y: 0 } : {}}
             transition={{ duration: 0.6, delay: 0.5, type: "spring" }}
             className="p-6 rounded-2xl bg-card border border-border shadow-xl transform-gpu"
           >

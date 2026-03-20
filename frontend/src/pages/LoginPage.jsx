@@ -61,7 +61,7 @@ export default function LoginPage() {
                 <Card className="border-border/50 bg-card/40 backdrop-blur-xl rounded-[2.5rem] shadow-2xl overflow-hidden border-t-2 border-t-white/5">
                     <CardHeader className="text-center pt-12 pb-6">
                         <Link to="/" className="inline-block mx-auto mb-6 transition-transform hover:scale-110 duration-300">
-                            <div className={`w-20 h-20 bg-gradient-to-tr ${loginRole === 'admin' ? 'from-amber-500 to-orange-400 shadow-amber-500/20' : 'from-acm-blue to-cyan-400 shadow-acm-glow'} rounded-3xl flex items-center justify-center shadow-2xl transition-all duration-500`}>
+                            <div className={`w-20 h-20 bg-gradient-to-tr ${loginRole === 'admin' ? 'from-primary to-cyan-400 shadow-primary/20' : 'from-acm-blue to-cyan-400 shadow-acm-glow'} rounded-3xl flex items-center justify-center shadow-2xl transition-all duration-500`}>
                                 {loginRole === 'admin' ? <ShieldCheck className="w-10 h-10 text-white" /> : <Lock className="w-10 h-10 text-white" />}
                             </div>
                         </Link>
@@ -92,16 +92,16 @@ export default function LoginPage() {
                     <CardContent className="px-8 sm:px-10 space-y-6">
                         {/* Demo Access — only for Admin */}
                         {loginRole === 'admin' && (
-                            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5 space-y-3">
+                            <div className="rounded-2xl border-primary/30 bg-primary/5 p-5 space-y-3">
                                 <div className="flex items-center gap-2 text-primary mb-1">
-                                    <Zap className="h-4 w-4 fill-amber-400 text-amber-400" />
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-amber-400">Demo Access Available</span>
+                                    <Zap className="h-4 w-4 fill-primary text-primary" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-primary">Demo Access Available</span>
                                 </div>
                                 <p className="text-[11px] text-muted-foreground leading-relaxed">
                                     Backend is offline or restricted. Access the Admin Console with full CRUD capabilities using pre-loaded data.
                                 </p>
                                 <Button onClick={() => handleDemoLogin('admin')}
-                                    className="w-full h-12 bg-amber-500 hover:bg-amber-600 shadow-amber-500/20 text-white font-black tracking-widest uppercase italic rounded-xl transition-all hover:scale-[1.02] gap-2">
+                                    className="w-full h-12 bg-primary hover:bg-primary/90 shadow-primary/20 text-white font-black tracking-widest uppercase italic rounded-xl transition-all hover:scale-[1.02] gap-2">
                                     <ShieldCheck className="h-4 w-4" />
                                     ENTER DEMO ADMIN CONSOLE
                                 </Button>
@@ -143,22 +143,22 @@ export default function LoginPage() {
 
                         <form onSubmit={handleEmailLogin} className="space-y-5">
                             <div className="relative group">
-                                <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors ${loginRole === 'admin' ? 'group-focus-within:text-amber-500' : 'group-focus-within:text-acm-blue'}`} />
+                                <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors group-focus-within:text-primary`} />
                                 <Input name="email" type="email" value={formData.email} onChange={handleChange}
                                     placeholder={loginRole === 'admin' ? "Admin Identifier" : "Member Email"}
-                                    className={`h-14 rounded-2xl border-border/50 bg-muted/20 pl-12 transition-all ${loginRole === 'admin' ? 'focus-visible:ring-amber-500' : 'focus-visible:ring-acm-blue'}`} />
+                                    className={`h-14 rounded-2xl border-border/50 bg-muted/20 pl-12 transition-all focus-visible:ring-primary`} />
                             </div>
                             <div className="relative group">
-                                <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors ${loginRole === 'admin' ? 'group-focus-within:text-amber-500' : 'group-focus-within:text-acm-blue'}`} />
+                                <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors group-focus-within:text-primary`} />
                                 <Input name="password" type={showPassword ? "text" : "password"} value={formData.password} onChange={handleChange}
-                                    placeholder="Security Key" className={`h-14 rounded-2xl border-border/50 bg-muted/20 pl-12 pr-12 transition-all ${loginRole === 'admin' ? 'focus-visible:ring-amber-500' : 'focus-visible:ring-acm-blue'}`} />
+                                    placeholder="Security Key" className={`h-14 rounded-2xl border-border/50 bg-muted/20 pl-12 pr-12 transition-all focus-visible:ring-primary`} />
                                 <button type="button" onClick={() => setShowPassword(!showPassword)}
                                     className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white transition-colors">
                                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                                 </button>
                             </div>
                             <Button type="submit" disabled={isEmailLoading}
-                                className={`w-full h-14 rounded-2xl shadow-acm-glow text-lg font-black tracking-[0.2em] transition-all uppercase italic ${loginRole === 'admin' ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20' : 'bg-acm-blue hover:bg-acm-blue-dark shadow-acm-glow'}`}>
+                                className={`w-full h-14 rounded-2xl shadow-acm-glow text-lg font-black tracking-[0.2em] transition-all uppercase italic bg-primary hover:bg-primary/90 shadow-primary/20`}>
                                 {isEmailLoading ? <Loader size={0.5} /> : (
                                     <div className="flex items-center gap-2 tracking-widest">{loginRole === 'admin' ? "INITIALIZE CONSOLE" : "SIGN IN"} <ArrowRight className="h-5 w-5" /></div>
                                 )}

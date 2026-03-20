@@ -26,7 +26,7 @@ export const useAuthStore = create(
                 const currentState = get();
                 if (currentState.isAuthenticated && currentState.user) {
                     set({ isLoading: false });
-                    return;
+                    // Keep going to attach onAuthStateChanged listener to sync real auth state
                 }
 
                 // Safety net: if Firebase doesn't respond in 2s (e.g. no .env config), unblock the app
@@ -154,7 +154,46 @@ export const useAuthStore = create(
             loginWithGoogle: async () => {
                 set({ isLoading: true })
                 try {
-                    await signInWithPopup(auth, googleProvider)
+                    const result = await signInWithPopup(auth, googleProvider)
+                    const token = await result.user.getIdToken()
+                    
+                    let role = 'member';
+                    let userData = {};
+                    try {
+                        const userSnap = await getDoc(doc(db, 'users', result.user.uid));
+                        if (userSnap.exists()) {
+                            userData = userSnap.data();
+                            role = userData.role || 'member';
+                        } else {
+                            userData = {
+                                uid: result.user.uid,
+                                email: result.user.email,
+                                name: result.user.displayName || result.user.email.split('@')[0],
+                                photoURL: result.user.photoURL,
+                                role: 'member',
+                                createdAt: serverTimestamp(),
+                                updatedAt: serverTimestamp(),
+                            };
+                            await setDoc(doc(db, 'users', result.user.uid), userData);
+                        }
+                    } catch (e) {
+                        console.error("Error setting up OAuth user:", e);
+                    }
+
+                    set({
+                        user: {
+                            uid: result.user.uid,
+                            email: result.user.email,
+                            name: userData.name || result.user.displayName,
+                            photoURL: result.user.photoURL,
+                            role,
+                            ...userData,
+                        },
+                        token,
+                        isAuthenticated: true,
+                        isLoading: false,
+                    });
+
                     toast.success('Welcome!')
                     return { success: true }
                 } catch (error) {
@@ -168,7 +207,46 @@ export const useAuthStore = create(
             loginWithGithub: async () => {
                 set({ isLoading: true })
                 try {
-                    await signInWithPopup(auth, githubProvider)
+                    const result = await signInWithPopup(auth, githubProvider)
+                    const token = await result.user.getIdToken()
+                    
+                    let role = 'member';
+                    let userData = {};
+                    try {
+                        const userSnap = await getDoc(doc(db, 'users', result.user.uid));
+                        if (userSnap.exists()) {
+                            userData = userSnap.data();
+                            role = userData.role || 'member';
+                        } else {
+                            userData = {
+                                uid: result.user.uid,
+                                email: result.user.email || `${result.user.uid}@github.local`,
+                                name: result.user.displayName || 'GitHub User',
+                                photoURL: result.user.photoURL,
+                                role: 'member',
+                                createdAt: serverTimestamp(),
+                                updatedAt: serverTimestamp(),
+                            };
+                            await setDoc(doc(db, 'users', result.user.uid), userData);
+                        }
+                    } catch (e) {
+                         console.error("Error setting up OAuth user:", e);
+                    }
+
+                    set({
+                        user: {
+                            uid: result.user.uid,
+                            email: result.user.email,
+                            name: userData.name || result.user.displayName,
+                            photoURL: result.user.photoURL,
+                            role,
+                            ...userData,
+                        },
+                        token,
+                        isAuthenticated: true,
+                        isLoading: false,
+                    });
+
                     toast.success('Welcome!')
                     return { success: true }
                 } catch (error) {

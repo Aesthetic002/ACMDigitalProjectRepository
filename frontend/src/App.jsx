@@ -4,6 +4,7 @@ import { Toaster } from 'sonner';
 import { ThemeProvider } from '@/hooks/useTheme';
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
+import { seedDemoData } from '@/services/firebaseService';
 
 import HomePage from '@/pages/HomePage';
 import ProjectsPage from '@/pages/ProjectsPage';
@@ -11,6 +12,7 @@ import ProjectDetailPage from '@/pages/ProjectDetailPage';
 import SearchPage from '@/pages/SearchPage';
 import CreateProjectPage from '@/pages/CreateProjectPage';
 import ProfilePage from '@/pages/ProfilePage';
+import EventsPage from '@/pages/EventsPage';
 import EditProjectPage from '@/pages/EditProjectPage';
 import AdminPage from '@/pages/AdminPage';
 import LoginPage from '@/pages/LoginPage';
@@ -25,6 +27,7 @@ import AdminMemberProfilePage from '@/pages/AdminMemberProfilePage';
 import AdminProjectsPage from '@/pages/AdminProjectsPage';
 import AdminProjectDetailPage from '@/pages/AdminProjectDetailPage';
 import AdminDomainsPage from '@/pages/AdminDomainsPage';
+import AdminEventsPage from '@/pages/AdminEventsPage';
 import AdminLayout from '@/components/AdminLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import BigBangAnimation from '@/components/BigBangAnimation';
@@ -37,7 +40,11 @@ const queryClient = new QueryClient({
 
 function AuthInitializer({ children }) {
     const initAuth = useAuthStore((s) => s.initAuth);
-    useEffect(() => { initAuth(); }, [initAuth]);
+    useEffect(() => { 
+        initAuth(); 
+        // Seed demo data (idempotent)
+        seedDemoData().catch(err => console.error('Seeding failed:', err));
+    }, [initAuth]);
     return children;
 }
 
@@ -71,6 +78,9 @@ function RootApp() {
                         <Route path="/search" element={
                             <ProtectedRoute><SearchPage /></ProtectedRoute>
                         } />
+                        <Route path="/events" element={
+                            <ProtectedRoute><EventsPage /></ProtectedRoute>
+                        } />
                         <Route path="/login" element={<LoginPage />} />
                         <Route path="/register" element={<RegisterPage />} />
                         <Route path="/submit" element={
@@ -92,7 +102,9 @@ function RootApp() {
                             <Route path="projects/:id" element={<AdminProjectDetailPage />} />
                             <Route path="moderation" element={<AdminModerationPage />} />
                             <Route path="pre-add" element={<AdminPreAddPage />} />
+                            <Route path="events" element={<AdminEventsPage />} />
                             <Route path="events/new" element={<CreateEventPage />} />
+                            <Route path="events/:id/edit" element={<CreateEventPage />} />
                             <Route path="domains" element={<AdminDomainsPage />} />
                         </Route>
                         <Route path="*" element={<Navigate to="/" replace />} />

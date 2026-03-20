@@ -127,6 +127,45 @@ export const fsDomains = {
     },
 };
 
+// ─── EVENTS ──────────────────────────────────────────────────────────────────
+
+export const fsEvents = {
+    /** Get all events */
+    getAll: async () => {
+        const snap = await getDocs(query(collection(db, 'events'), orderBy('date', 'asc')));
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    },
+
+    /** Get a single event by ID */
+    getById: async (id) => {
+        const snap = await getDoc(doc(db, 'events', id));
+        return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+    },
+
+    /** Create a new event */
+    create: async (data) => {
+        const ref = await addDoc(collection(db, 'events'), {
+            ...data,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        });
+        return ref.id;
+    },
+
+    /** Update an event */
+    update: async (id, data) => {
+        await updateDoc(doc(db, 'events', id), {
+            ...data,
+            updatedAt: serverTimestamp(),
+        });
+    },
+
+    /** Delete an event */
+    delete: async (id) => {
+        await deleteDoc(doc(db, 'events', id));
+    },
+};
+
 // ─── ADMIN ACCOUNT CREATION ──────────────────────────────────────────────────
 
 /**
@@ -172,6 +211,55 @@ export const seedDemoData = async () => {
             await addDoc(collection(db, 'tags'), { name, projectCount: 0, createdAt: serverTimestamp() });
         }
         console.log('✅ Seeded domains');
+    }
+
+    // Seed users
+    const usersSnap = await getDocs(collection(db, 'users'));
+    if (usersSnap.empty) {
+        const demoUsers = [
+            { name: 'Alice Smith', email: 'alice@example.com', role: 'member', createdAt: serverTimestamp() },
+            { name: 'Bob Johnson', email: 'bob@example.com', role: 'admin', createdAt: serverTimestamp() },
+            { name: 'Charlie Davis', email: 'charlie@acm.org', role: 'member', createdAt: serverTimestamp() },
+        ];
+        for (const user of demoUsers) {
+            await addDoc(collection(db, 'users'), user);
+        }
+        console.log('✅ Seeded users');
+    }
+
+    // Seed events
+    const eventsSnap = await getDocs(collection(db, 'events'));
+    if (eventsSnap.empty) {
+        const demoEvents = [
+            { 
+                title: 'Spring Hackathon 2026', 
+                description: '48-hour coding marathon to build solutions for social good.',
+                date: '2026-04-15',
+                time: '09:00 AM',
+                location: 'Main Engineering Hall',
+                createdAt: serverTimestamp() 
+            },
+            { 
+                title: 'AI Workshop: Neural Networks', 
+                description: 'Hands-on introduction to building deep learning models.',
+                date: '2026-03-25',
+                time: '02:00 PM',
+                location: 'Room 302',
+                createdAt: serverTimestamp() 
+            },
+            { 
+                title: 'Career Fair Mixer', 
+                description: 'Network with industry leaders from Google, Meta, and more.',
+                date: '2026-03-30',
+                time: '05:30 PM',
+                location: 'Student Union Ballroom',
+                createdAt: serverTimestamp() 
+            },
+        ];
+        for (const event of demoEvents) {
+            await addDoc(collection(db, 'events'), event);
+        }
+        console.log('✅ Seeded events');
     }
 
     console.log('✅ Firestore seed complete');

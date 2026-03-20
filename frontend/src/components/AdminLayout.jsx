@@ -22,7 +22,7 @@ const sidebarItems = [
     { label: "Members", href: "/admin/members", icon: Users },
     { label: "Projects", href: "/admin/projects", icon: FolderGit2 },
     { label: "Pre-add Project", href: "/admin/pre-add", icon: PlusCircle },
-    { label: "Events", href: "/admin/events/new", icon: Calendar },
+    { label: "Events", href: "/admin/events", icon: Calendar },
     { label: "Domains", href: "/admin/domains", icon: Layers },
 ];
 
@@ -40,15 +40,15 @@ export default function AdminLayout() {
         <div className="flex h-screen bg-slate-950 text-slate-200 overflow-hidden">
             {/* Sidebar */}
             <aside className="w-72 border-r border-border/50 bg-card/30 backdrop-blur-xl flex flex-col relative">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 via-acm-blue to-cyan-400" />
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-acm-blue to-cyan-400" />
 
                 <div className="p-8">
                     <Link to="/" className="flex items-center gap-3 group">
-                        <div className="w-10 h-10 rounded-2xl bg-amber-500 flex items-center justify-center group-hover:scale-105 transition-transform shadow-lg shadow-amber-500/20">
+                        <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center group-hover:scale-105 transition-transform shadow-lg shadow-primary/20">
                             <ShieldCheck className="text-white h-5 w-5" />
                         </div>
                         <div className="flex flex-col">
-                            <span className="font-black text-white text-sm tracking-tight uppercase italic underline decoration-amber-500 decoration-2 underline-offset-4">Console</span>
+                            <span className="font-black text-white text-sm tracking-tight uppercase italic underline decoration-primary decoration-2 underline-offset-4">Console</span>
                             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Management</span>
                         </div>
                     </Link>
@@ -62,12 +62,12 @@ export default function AdminLayout() {
                                 key={item.label}
                                 to={item.href}
                                 className={`flex items-center justify-between px-4 py-3 rounded-2xl transition-all duration-300 group ${location.pathname === item.href
-                                    ? "bg-amber-500/10 text-amber-500 shadow-inner"
+                                    ? "bg-primary/10 text-primary shadow-inner"
                                     : "hover:bg-white/5 text-slate-400 hover:text-white"
                                     }`}
                             >
                                 <div className="flex items-center gap-3">
-                                    <item.icon className={`h-5 w-5 ${location.pathname === item.href ? "text-amber-500" : "text-slate-500 group-hover:text-slate-300"}`} />
+                                    <item.icon className={`h-5 w-5 ${location.pathname === item.href ? "text-primary" : "text-slate-500 group-hover:text-slate-300"}`} />
                                     <span className="text-sm font-bold tracking-tight">{item.label}</span>
                                 </div>
                                 {location.pathname === item.href && <ChevronRight className="h-4 w-4" />}

@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usersAPI, adminAPI } from "@/services/api";
+import { useAuthStore } from "@/store/authStore";
 import {
     Plus, Search, MoreVertical, Shield, ShieldCheck,
     UserMinus, UserCheck, ExternalLink, GraduationCap, Loader2,
@@ -62,7 +63,15 @@ export default function AdminMembersPage() {
         queryFn: () => adminAPI.getUsers({ limit: 100 }),
     });
 
-    const members = membersRes?.data?.users || [];
+    const { user } = useAuthStore();
+    
+    const demoMembers = [
+        { uid: 'demo-1', name: 'Alice Smith', email: 'alice@example.com', role: 'member', createdAt: new Date(), graduationYear: '2025', disabled: false },
+        { uid: 'demo-2', name: 'Bob Johnson', email: 'bob@example.com', role: 'admin', createdAt: new Date(), graduationYear: '2024', disabled: false },
+        { uid: 'demo-3', name: 'Charlie Davis', email: 'charlie@acm.org', role: 'member', createdAt: new Date(), graduationYear: '2026', disabled: false },
+    ];
+
+    const members = (membersRes?.data?.users?.length > 0) ? membersRes.data.users : (user?.isDemoUser ? demoMembers : []);
 
     const filteredMembers = useMemo(() =>
         members.filter(m =>

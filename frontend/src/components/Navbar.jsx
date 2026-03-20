@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import {
     Sun, Moon, Menu, X, FolderOpen, Shield, Search,
     PlusCircle, LogIn, User as UserIcon, Users, Home,
-    FolderGit2
+    FolderGit2, Calendar
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -22,6 +22,7 @@ const navItems = [
     { label: "Archive", href: "/projects", icon: FolderOpen },
     { label: "Members", href: "/members", icon: Users },
     { label: "Domains", href: "/domains", icon: Shield },
+    { label: "Events", href: "/events", icon: Calendar },
     { label: "Search", href: "/search", icon: Search },
 ];
 

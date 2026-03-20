@@ -16,16 +16,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { eventService } from "@/services/eventService";
 
-export default function EventForm() {
+export default function EventForm({ initialData = null, eventId = null }) {
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState(initialData || {
         title: "",
         description: "",
         date: "",
         time: "",
         location: "",
     });
+
+    const isEditing = !!eventId;
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -41,14 +43,19 @@ export default function EventForm() {
         }
 
         setIsLoading(true);
-        const result = await eventService.createEvent(formData);
+        let result;
+        if (isEditing) {
+            result = await eventService.updateEvent(eventId, formData);
+        } else {
+            result = await eventService.createEvent(formData);
+        }
         setIsLoading(false);
 
         if (result.success) {
-            toast.success("Event created successfully!");
-            navigate("/");
+            toast.success(isEditing ? "Event updated successfully!" : "Event created successfully!");
+            navigate("/admin/events");
         } else {
-            toast.error(result.error || "Failed to create event");
+            toast.error(result.error || (isEditing ? "Failed to update event" : "Failed to create event"));
         }
     };
 
@@ -70,9 +77,11 @@ export default function EventForm() {
                         </div>
                         <span className="text-xs font-black uppercase tracking-widest text-primary">ADMIN CONSOLE</span>
                     </div>
-                    <CardTitle className="text-3xl font-black tracking-tight text-white mb-2">Create New Event</CardTitle>
+                    <CardTitle className="text-3xl font-black tracking-tight text-white mb-2">
+                        {isEditing ? "Edit Event" : "Create New Event"}
+                    </CardTitle>
                     <CardDescription className="text-muted-foreground text-lg">
-                        Schedule an event that will be visible to all members on the dashboard.
+                        {isEditing ? "Update details for this scheduled gathering." : "Schedule an event that will be visible to all members on the dashboard."}
                     </CardDescription>
                 </CardHeader>
 
@@ -156,7 +165,7 @@ export default function EventForm() {
                                     <Loader2 className="h-5 w-5 animate-spin" /> INITIALIZING...
                                 </div>
                             ) : (
-                                "PUBLISH EVENT"
+                                isEditing ? "SAVE CHANGES" : "PUBLISH EVENT"
                             )}
                         </Button>
                     </form>

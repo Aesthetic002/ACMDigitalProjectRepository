@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { projectsAPI, adminAPI } from "@/services/api";
+import { useAuthStore } from "@/store/authStore";
 import {
     FolderPlus, Search, Trash2, CheckCircle2, XCircle,
     Clock, FolderGit2, RotateCcw, Filter, Loader2, Eye
@@ -35,19 +36,51 @@ export default function AdminProjectsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
+    const { user } = useAuthStore();
+
+    const demoProjects = [
+        { id: 'dp1', title: 'Neural Link API', author: { name: 'Alice Smith' }, status: 'approved', techStack: ['Python', 'PyTorch'], createdAt: new Date('2026-03-01') },
+        { id: 'dp2', title: 'Quantum Encryption', author: { name: 'Bob Johnson' }, status: 'pending', techStack: ['Rust', 'Wasm'], createdAt: new Date('2026-03-05') },
+        { id: 'dp3', title: 'Autonomous Drone Fleet', author: { name: 'Charlie Davis' }, status: 'approved', techStack: ['C++', 'ROS'], createdAt: new Date('2026-03-08') },
+        { id: 'dp4', title: 'Smart Agriculture IoT', author: { name: 'Diana Prince' }, status: 'rejected', techStack: ['Arduino', 'LoRa'], createdAt: new Date('2026-03-10') },
+        { id: 'dp5', title: 'Blockchain Voting System', author: { name: 'Edward Nigma' }, status: 'pending', techStack: ['Solidity', 'React'], createdAt: new Date('2026-03-12') },
+        { id: 'dp6', title: 'Cyber Threat Detector', author: { name: 'Frank Castle' }, status: 'approved', techStack: ['Go', 'ElasticSearch'], createdAt: new Date('2026-03-14') },
+        { id: 'dp7', title: 'AR Campus Navigation', author: { name: 'Gwen Stacy' }, status: 'approved', techStack: ['Swift', 'Unity'], createdAt: new Date('2026-03-15') },
+        { id: 'dp8', title: 'Sustainable Energy Grid', author: { name: 'Hank Pym' }, status: 'pending', techStack: ['Python', 'Pandas'], createdAt: new Date('2026-03-16') },
+        { id: 'dp9', title: 'Medical Image Classifier', author: { name: 'Iris West' }, status: 'rejected', techStack: ['TensorFlow', 'Keras'], createdAt: new Date('2026-03-17') },
+        { id: 'dp10', title: 'Multilingual Translator', author: { name: 'James Gordon' }, status: 'approved', techStack: ['TypeScript', 'OpenAI'], createdAt: new Date('2026-03-18') },
+        { id: 'dp11', title: 'Gesture Control Interface', author: { name: 'Kara Danvers' }, status: 'pending', techStack: ['Python', 'OpenCV'], createdAt: new Date('2026-03-19') },
+        { id: 'dp12', title: 'Real-time Traffic Monitor', author: { name: 'Lex Luthor' }, status: 'approved', techStack: ['Node.js', 'Socket.io'], createdAt: new Date('2026-03-20') },
+    ];
 
     useEffect(() => {
         const fetchProjects = async () => {
             try {
                 const res = await projectsAPI.getAll({ limit: 100 });
-                if (res?.data?.projects) {
+                if (user?.isDemoUser) {
+                    // Combine real projects with demo ones for a "full" look
+                    const realProjects = res?.data?.projects || [];
+                    const combined = [...realProjects];
+                    
+                    // Only add demo projects if they don't overlap by title
+                    demoProjects.forEach(dp => {
+                        if (!combined.some(p => p.title === dp.title)) {
+                            combined.push(dp);
+                        }
+                    });
+                    setProjects(combined);
+                } else if (res?.data?.projects) {
                     setProjects(res.data.projects);
                 } else {
-                    toast.error("Failed to load projects structure");
+                    toast.error("No projects found in repository");
                 }
             } catch (error) {
                 console.error("Failed to fetch projects:", error);
-                toast.error("Could not reach backend server");
+                if (user?.isDemoUser) {
+                    setProjects(demoProjects);
+                } else {
+                    toast.error("Could not reach backend server");
+                }
             } finally {
                 setIsLoading(false);
             }

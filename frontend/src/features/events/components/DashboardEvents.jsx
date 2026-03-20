@@ -14,18 +14,55 @@ import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { eventService } from "@/services/eventService";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useAuthStore } from "@/store/authStore";
 
 export function DashboardEvents() {
     const [events, setEvents] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const { user } = useAuthStore();
     const { ref: sectionRef, isInView } = useScrollAnimation({ threshold: 0.1 });
+
+    const demoEvents = [
+        {
+            id: 'de1',
+            title: 'Spring Hackathon 2026',
+            description: '48-hour coding marathon to build solutions for social good. Prizes up to $5000 in cloud credits.',
+            date: '2026-04-15',
+            time: '09:00 AM',
+            location: 'Main Engineering Hall'
+        },
+        {
+            id: 'de2',
+            title: 'AI Workshop: Neural Networks',
+            description: 'Hands-on introduction to building deep learning models from scratch using Python and PyTorch.',
+            date: '2026-03-25',
+            time: '02:00 PM',
+            location: 'Room 302'
+        },
+        {
+            id: 'de3',
+            title: 'Career Fair Mixer',
+            description: 'Network with industry leaders from Google, Meta, and local tech startups in a relaxed environment.',
+            date: '2026-03-30',
+            time: '05:30 PM',
+            location: 'Student Union Ballroom'
+        }
+    ];
 
     useEffect(() => {
         const fetchEvents = async () => {
             const result = await eventService.getEvents();
-            if (result.success) {
-                setEvents(result.events);
-            }
+            const realEvents = (result.success && result.events) ? result.events : [];
+            const combined = [...realEvents];
+            
+            // Provide a rich experience for all users by blending in demo data if needed.
+            demoEvents.forEach(de => {
+                if (!combined.some(e => e.title === de.title)) {
+                    combined.push(de);
+                }
+            });
+            
+            setEvents(combined);
             setIsLoading(false);
         };
         fetchEvents();

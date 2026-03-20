@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { tagsAPI } from "@/services/api";
+import { useAuthStore } from "@/store/authStore";
 import {
     Plus, Trash2, Edit3, Search, Hash, Layers, Check, X, Loader2
 } from "lucide-react";
@@ -23,6 +24,20 @@ export default function AdminDomainsPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [newTagName, setNewTagName] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const { user } = useAuthStore();
+
+    const demoDomains = [
+        { id: 'dt1', name: 'Artificial Intelligence', projectCount: 14 },
+        { id: 'dt2', name: 'Web Development', projectCount: 28 },
+        { id: 'dt3', name: 'Machine Learning', projectCount: 9 },
+        { id: 'dt4', name: 'Cybersecurity', projectCount: 6 },
+        { id: 'dt5', name: 'Blockchain', projectCount: 4 },
+        { id: 'dt6', name: 'Cloud Computing', projectCount: 11 },
+        { id: 'dt7', name: 'Internet of Things', projectCount: 5 },
+        { id: 'dt8', name: 'Data Science', projectCount: 18 },
+        { id: 'dt9', name: 'Mobile Apps', projectCount: 7 },
+        { id: 'dt10', name: 'DevOps', projectCount: 3 },
+    ];
     
     // Inline editing state
     const [editingId, setEditingId] = useState(null);
@@ -32,14 +47,27 @@ export default function AdminDomainsPage() {
         const fetchTags = async () => {
             try {
                 const res = await tagsAPI.getAll();
-                if (res.data?.tags) {
+                if (user?.isDemoUser) {
+                    const realTags = res.data?.tags || [];
+                    const combined = [...realTags];
+                    demoDomains.forEach(dt => {
+                        if (!combined.some(t => t.name === dt.name)) {
+                            combined.push(dt);
+                        }
+                    });
+                    setTags(combined);
+                } else if (res.data?.tags) {
                     setTags(res.data.tags);
                 } else {
                     toast.error("Failed to load domains structure");
                 }
             } catch (error) {
                 console.error("Failed to fetch tags:", error);
-                toast.error("Could not reach backend server");
+                if (user?.isDemoUser) {
+                    setTags(demoDomains);
+                } else {
+                    toast.error("Could not reach backend server");
+                }
             } finally {
                 setIsLoading(false);
             }
@@ -120,15 +148,15 @@ export default function AdminDomainsPage() {
     return (
         <div className="space-y-8">
             <div>
-                <h1 className="text-3xl font-black tracking-tight uppercase italic text-white underline decoration-amber-500 decoration-4 underline-offset-8">Domain Taxonomy</h1>
+                <h1 className="text-3xl font-black tracking-tight uppercase italic text-white underline decoration-primary decoration-4 underline-offset-8">Domain Taxonomy</h1>
                 <p className="text-muted-foreground mt-1">Classify and manage technical specializations and technology tags.</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Add New Domain */}
                 <div className="lg:col-span-1">
-                    <div className="p-6 rounded-2xl border border-amber-500/20 bg-amber-500/5 backdrop-blur-md shadow-xl">
-                        <h2 className="text-lg font-black uppercase italic mb-6 flex items-center gap-2 text-amber-400">
+                    <div className="p-6 rounded-2xl border border-primary/20 bg-primary/5 backdrop-blur-md shadow-xl">
+                        <h2 className="text-lg font-black uppercase italic mb-6 flex items-center gap-2 text-primary">
                             <Plus className="h-5 w-5" /> Register Domain
                         </h2>
                         <form onSubmit={addTag} className="space-y-4">
@@ -139,13 +167,13 @@ export default function AdminDomainsPage() {
                                     value={newTagName}
                                     onChange={(e) => setNewTagName(e.target.value)}
                                     disabled={isSubmitting}
-                                    className="rounded-xl border-border/50 bg-black/20 focus-visible:ring-amber-500"
+                                    className="rounded-xl border-border/50 bg-black/20 focus-visible:ring-primary"
                                 />
                             </div>
                             <Button
                                 type="submit"
                                 disabled={!newTagName.trim() || isSubmitting}
-                                className="w-full bg-amber-500 hover:bg-amber-600 rounded-xl font-black tracking-widest uppercase transition-all shadow-lg shadow-amber-500/20 h-11 text-white"
+                                className="w-full bg-primary hover:bg-primary/90 rounded-xl font-black tracking-widest uppercase transition-all shadow-lg shadow-primary/20 h-11 text-white"
                             >
                                 {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "ADD DOMAIN"}
                             </Button>
@@ -205,7 +233,7 @@ export default function AdminDomainsPage() {
                                                         <Input 
                                                             value={editValue} 
                                                             onChange={e => setEditValue(e.target.value)}
-                                                            className="h-8 rounded-lg border-amber-500/50 text-sm focus-visible:ring-amber-500 bg-black/20"
+                                                            className="h-8 rounded-lg border-primary/50 text-sm focus-visible:ring-primary bg-black/20"
                                                             autoFocus
                                                             onKeyDown={e => { 
                                                                 if (e.key === 'Enter') saveEdit(tag.id); 
@@ -236,7 +264,7 @@ export default function AdminDomainsPage() {
                                                             size="icon" 
                                                             variant="ghost" 
                                                             onClick={() => { setEditingId(tag.id); setEditValue(tag.name); }}
-                                                            className="h-8 w-8 text-slate-500 hover:bg-amber-500/10 hover:text-amber-500 rounded-lg"
+                                                            className="h-8 w-8 text-slate-500 hover:bg-primary/10 hover:text-primary rounded-lg"
                                                             title="Edit domain"
                                                         >
                                                             <Edit3 className="h-4 w-4" />

@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { searchAPI } from "@/services/api";
+import { useAuthStore } from "@/store/authStore";
+import { History } from "lucide-react";
 import ProjectCard from "@/components/ProjectCard";
 import Layout from "@/components/Layout";
 import {
@@ -24,6 +26,13 @@ function SearchContent() {
         techStack: searchParams.get("tech") || "",
         status: searchParams.get("status") || "",
     });
+    const { user } = useAuthStore();
+
+    const recentSearches = [
+        "React Performance", "Next.js Hydration", "Firebase Auth", "Tailwind CSS",
+        "Rust Backend", "Python ML", "Data Viz", "Cybersecurity", "IoT Hub",
+        "Blockchain Voting", "Neural Networks", "GraphQL API"
+    ];
 
     const { data: searchData, isLoading } = useQuery({
         queryKey: ["search", query, filters],
@@ -119,16 +128,32 @@ function SearchContent() {
                         </form>
 
                         {!query && (
-                            <div className="mt-8 flex flex-wrap justify-center gap-2">
-                                <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground mr-2 italic">
-                                    <TrendingUp className="h-3 w-3" /> Suggested:
-                                </span>
-                                {["Machine Learning", "Next.js", "Firebase", "Data Visualization", "Security"].map((tag) => (
-                                    <button key={tag} onClick={() => handleQuickSearch(tag)}
-                                        className="rounded-full border border-border/50 bg-card/30 px-4 py-1.5 text-xs font-bold uppercase tracking-tight text-white/50 transition-all hover:border-acm-blue/50 hover:bg-acm-blue/5 hover:text-white italic">
-                                        {tag}
-                                    </button>
-                                ))}
+                            <div className="mt-8 space-y-6">
+                                <div className="flex flex-wrap justify-center gap-2">
+                                    <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground mr-2 italic">
+                                        <TrendingUp className="h-3 w-3" /> Suggested:
+                                    </span>
+                                    {["Machine Learning", "Next.js", "Firebase", "Data Visualization", "Security"].map((tag) => (
+                                        <button key={tag} onClick={() => handleQuickSearch(tag)}
+                                            className="rounded-full border border-border/50 bg-card/30 px-4 py-1.5 text-xs font-bold uppercase tracking-tight text-white/50 transition-all hover:border-acm-blue/50 hover:bg-acm-blue/5 hover:text-white italic">
+                                            {tag}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {user?.isDemoUser && (
+                                    <div className="flex flex-wrap justify-center gap-2 max-w-2xl mx-auto pt-4 border-t border-white/5">
+                                        <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground mr-2 italic">
+                                            <History className="h-3 w-3" /> Recent:
+                                        </span>
+                                        {recentSearches.map((term) => (
+                                            <button key={term} onClick={() => handleQuickSearch(term)}
+                                                className="px-3 py-1 text-[11px] font-bold text-muted-foreground hover:text-white transition-colors uppercase tracking-tight">
+                                                {term}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
