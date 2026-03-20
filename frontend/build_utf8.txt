@@ -1,0 +1,95 @@
+﻿
+> frontend@0.1.0 build
+> vite build
+
+[36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
+transforming...
+node.exe : 
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
+    + CategoryInfo         
+     : NotSpecified: (:St  
+  ring) [], RemoteExcept   
+ ion
+    + FullyQualifiedErrorI 
+   d : NativeCommandError
+ 
+/grid.svg referenced in 
+/grid.svg didn't resolve 
+at build time, it will 
+remain unchanged to be 
+resolved at runtime
+[32mΓ£ô[39m 70 modules transformed.
+[31mΓ£ù[39m Build failed 
+in 841ms
+[31merror during build:
+[31m[commonjs--resolver] 
+Missing 
+"./lib/anime.es.js" 
+specifier in "animejs" 
+package[31m
+    at e (file:///C:/Users/
+lalan/Desktop/acm/ACMDigita
+lProjectRepository/frontend
+/node_modules/vite/dist/nod
+e/chunks/config.js:6651:8)
+    at n (file:///C:/Users/
+lalan/Desktop/acm/ACMDigita
+lProjectRepository/frontend
+/node_modules/vite/dist/nod
+e/chunks/config.js:6663:14)
+    at o (file:///C:/Users/
+lalan/Desktop/acm/ACMDigita
+lProjectRepository/frontend
+/node_modules/vite/dist/nod
+e/chunks/config.js:6691:10)
+    at 
+resolveExportsOrImports (fi
+le:///C:/Users/lalan/Deskto
+p/acm/ACMDigitalProjectRepo
+sitory/frontend/node_module
+s/vite/dist/node/chunks/con
+fig.js:32827:45)
+    at resolveDeepImport (f
+ile:///C:/Users/lalan/Deskt
+op/acm/ACMDigitalProjectRep
+ository/frontend/node_modul
+es/vite/dist/node/chunks/co
+nfig.js:32841:22)
+    at tryNodeResolve (file
+:///C:/Users/lalan/Desktop/
+acm/ACMDigitalProjectReposi
+tory/frontend/node_modules/
+vite/dist/node/chunks/confi
+g.js:32716:70)
+    at Object.handler (file
+:///C:/Users/lalan/Desktop/
+acm/ACMDigitalProjectReposi
+tory/frontend/node_modules/
+vite/dist/node/chunks/confi
+g.js:32555:16)
+    at Object.handler (file
+:///C:/Users/lalan/Desktop/
+acm/ACMDigitalProjectReposi
+tory/frontend/node_modules/
+vite/dist/node/chunks/confi
+g.js:33706:13)
+    at file:///C:/Users/lal
+an/Desktop/acm/ACMDigitalPr
+ojectRepository/frontend/no
+de_modules/rollup/dist/es/s
+hared/node-entry.js:22571:4
+0
+    at async PluginDriver.h
+ookFirstAndGetPlugin (file:
+///C:/Users/lalan/Desktop/a
+cm/ACMDigitalProjectReposit
+ory/frontend/node_modules/r
+ollup/dist/es/shared/node-e
+ntry.js:22453:28)[39m

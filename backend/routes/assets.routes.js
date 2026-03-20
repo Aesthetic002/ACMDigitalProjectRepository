@@ -204,23 +204,50 @@ router.post("/upload", async (req, res, next) => {
   }
 }, async (req, res) => {
   try {
-    const { projectId } = req.body;
+    const { projectId, userId, type } = req.body;
     const authenticatedUid = req.user.uid;
 
     // Validation
-    if (!projectId || projectId.trim() === "") {
-      return res.status(400).json({
-        success: false,
-        error: "ValidationError",
-        message: "Project ID is required",
-      });
-    }
-
     if (!req.file) {
       return res.status(400).json({
         success: false,
         error: "ValidationError",
         message: "File is required",
+      });
+    }
+
+    // Special case: User Avatar upload
+    if (type === 'avatar' && userId) {
+      const userRef = db.collection("users").doc(userId);
+      const userDoc = await userRef.get();
+      
+      if (!userDoc.exists) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+
+      // Upload stream to user folder
+      const uploadStream = cloudinary.uploader.upload_stream(
+        { folder: `users/${userId}`, resource_type: "image" },
+        async (error, result) => {
+          if (error) return res.status(500).json({ success: false, message: "Cloudinary upload failed" });
+          
+          await userRef.update({ photoURL: result.secure_url });
+          
+          return res.status(201).json({
+            success: true,
+            url: result.secure_url,
+            message: "Avatar uploaded successfully"
+          });
+        }
+      );
+      return uploadStream.end(req.file.buffer);
+    }
+
+    if (!projectId || projectId.trim() === "") {
+      return res.status(400).json({
+        success: false,
+        error: "ValidationError",
+        message: "Project ID is required",
       });
     }
 
@@ -299,6 +326,18 @@ router.post("/upload", async (req, res, next) => {
           projectId,
           assetData
         );
+
+        // Update the project thumbnail with the latest uploaded image
+        if (req.file.mimetype.startsWith('image/')) {
+          try {
+            await projectRef.update({ 
+               thumbnail: result.secure_url,
+               updatedAt: new Date().toISOString()
+            });
+          } catch(e) {
+            console.error("Failed to set project thumbnail:", e);
+          }
+        }
 
         return res.status(201).json({
           success: true,

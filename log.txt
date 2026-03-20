@@ -1,0 +1,20 @@
+0a464de feat: lock dark mode for beta — useTheme always returns dark, html class=dark
+5cdf2c1 fix: inject role:admin into Zustand state directly on admin login, no Firestore write
+fc7d7c3 fix: pass loginRole to login(); write role:admin to Firestore on admin login
+cf366aa fix: authStore always registers Firebase listener, demo users skip listener, 3s fallback
+9366264 fix: admin login redirects to /admin; CRUD failsafe for demo mode in all admin pages
+46ea59d fix: refactor api.js to use direct Firestore calls, fixing dashboard loading hang
+f1789dd fix: authStore — 2s timeout fallback, full session persistence, no hang without Firebase
+cd586e9 feat: Firebase-backed CRUD — users/projects/domains read/write Firestore directly
+6059ca5 feat: demo admin login
+4af09c1 fix: CRUD operations work with local state, prominent admin role in profile
+6e8c2e1 feat: mock data for CRUD and admin member profiles
+6c3de64 feat: complete admin management, split login paths, and graceful error handling
+25f5251 Fix blank screen render error, remove requested metrics from UI, and add 'No Events' placeholder
+f495678 Implement Event Management system and cleanup Admin Dashboard
+defb9aa Migrate frontend from Next.js to Vite + React, clean up old files, and update layout/routing
+3b864b0 Refactor: Modular feature-based architecture and real data integration
+b4188a0 feat: migrate frontend to Next.js using Kimi Agent UI components
+588ba0c docs: add comprehensive frontend UI/UX development guide
+d63ca4b Add complete ACM Digital Project Repository codebase with frontend, backend, and documentation
+f0d5de2 Merge shriram branch: Add READ operations, search, admin features, and asset management
