@@ -60,6 +60,7 @@ export default function ProjectForm({ initialData = null, projectId = null, isAd
         mutationFn: (data) => projectsAPI.create(data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['projects'] });
+            queryClient.invalidateQueries({ queryKey: ['admin-analytics'] });
         },
         onError: (error) => {
             toast.error(error.response?.data?.message || 'Failed to create project');

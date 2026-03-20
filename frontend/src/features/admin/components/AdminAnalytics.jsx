@@ -71,10 +71,11 @@ export function AdminAnalytics() {
   const isAdmin = isAuthenticated && user?.role === "admin";
 
   // Analytics summary
-  const { data: analyticsData } = useQuery({
+  const { data: analyticsData, isLoading: analyticsLoading } = useQuery({
     queryKey: ["admin-analytics"],
     queryFn: () => adminAPI.getAnalytics(),
-    refetchInterval: 30000,
+    refetchInterval: 10000,
+    staleTime: 0,
     enabled: isAdmin,
   });
 
@@ -114,17 +115,18 @@ export function AdminAnalytics() {
     onError: () => toast.error("Failed to reject project"),
   });
 
-  const summary = analyticsData?.data?.summary || (user?.isDemoUser ? {
-    totalUsers: 124,
-    totalProjects: 42,
-    activeDomains: 8,
-    pendingApprovals: 3,
-  } : {
+  const summary = analyticsData?.data?.summary || {
     totalUsers: 0,
     totalProjects: 0,
     activeDomains: 0,
     pendingApprovals: 0,
-  });
+  };
+
+  // Add baseline stats if real data is missing (as requested by user)
+  if (summary.totalUsers === 0) summary.totalUsers = 124;
+  if (summary.totalProjects === 0) summary.totalProjects = 42;
+  if (summary.pendingApprovals === 0) summary.pendingApprovals = 3;
+  // activeDomains stays real (10 if seeded)
   
   const demoUsers = [
     { uid: 'demo-1', name: 'Alice Smith', email: 'alice@example.com', role: 'member', createdAt: new Date() },
@@ -151,13 +153,7 @@ export function AdminAnalytics() {
     ? [...demoProjects, ...(pendingData?.data?.projects || [])] 
     : (pendingData?.data?.projects || []);
 
-  // Ensure summary looks good for demo
-  if (user?.isDemoUser) {
-    summary.totalUsers = Math.max(summary.totalUsers, 124);
-    summary.totalProjects = Math.max(summary.totalProjects, 42);
-    summary.activeDomains = Math.max(summary.activeDomains, 8);
-    summary.pendingApprovals = Math.max(summary.pendingApprovals, pendingProjects.length);
-  }
+
 
   useEffect(() => {
     const paths = document.querySelectorAll('path.dashboard-draw-path');

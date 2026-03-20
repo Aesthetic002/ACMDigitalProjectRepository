@@ -9,38 +9,13 @@ import Layout from "@/components/Layout";
 export default function EventsPage() {
     const [searchTerm, setSearchTerm] = useState("");
 
-    const demoEvents = [
-        {
-            id: 'de1', title: 'Spring Hackathon 2026',
-            description: '48-hour coding marathon to build solutions for social good. Prizes up to $5000 in cloud credits.',
-            date: '2026-04-15', time: '09:00 AM', location: 'Main Engineering Hall'
-        },
-        {
-            id: 'de2', title: 'AI Workshop: Neural Networks',
-            description: 'Hands-on introduction to building deep learning models from scratch using Python and PyTorch.',
-            date: '2026-03-25', time: '02:00 PM', location: 'Room 302'
-        },
-        {
-            id: 'de3', title: 'Career Fair Mixer',
-            description: 'Network with industry leaders from Google, Meta, and local tech startups in a relaxed environment.',
-            date: '2026-03-30', time: '05:30 PM', location: 'Student Union Ballroom'
-        }
-    ];
+
 
     const { data: eventsList = [], isLoading } = useQuery({
         queryKey: ["public-events"],
         queryFn: async () => {
             const res = await eventService.getEvents();
-            const realEvents = (res.success && res.events) ? res.events : [];
-            const combined = [...realEvents];
-            
-            // Combine with demo events for public view
-            demoEvents.forEach(de => {
-                if (!combined.some(e => e.title === de.title)) {
-                    combined.push(de);
-                }
-            });
-            return combined;
+            return (res.success && res.events) ? res.events : [];
         }
     });
 

@@ -28,11 +28,7 @@ function SearchContent() {
     });
     const { user } = useAuthStore();
 
-    const recentSearches = [
-        "React Performance", "Next.js Hydration", "Firebase Auth", "Tailwind CSS",
-        "Rust Backend", "Python ML", "Data Viz", "Cybersecurity", "IoT Hub",
-        "Blockchain Voting", "Neural Networks", "GraphQL API"
-    ];
+    const recentSearches = user?.isDemoUser ? ["AI Assistant", "Blockchain Voting", "Portfolio"] : [];
 
     const { data: searchData, isLoading } = useQuery({
         queryKey: ["search", query, filters],
@@ -141,7 +137,7 @@ function SearchContent() {
                                     ))}
                                 </div>
 
-                                {user?.isDemoUser && (
+                                {user?.isDemoUser && recentSearches.length > 0 && (
                                     <div className="flex flex-wrap justify-center gap-2 max-w-2xl mx-auto pt-4 border-t border-white/5">
                                         <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground mr-2 italic">
                                             <History className="h-3 w-3" /> Recent:

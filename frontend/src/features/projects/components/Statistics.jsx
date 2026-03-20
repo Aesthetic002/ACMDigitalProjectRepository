@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { useCountUp, useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { FolderGit2, Users, Layers, Calendar } from "lucide-react";
 import { adminAPI } from "@/services/api";
+import { eventService } from "@/services/eventService";
 
 function StatCard({ icon, value, label, suffix = "", delay }) {
   const { count, ref } = useCountUp(value, 2000);
@@ -53,30 +54,39 @@ export function Statistics() {
   const { data: analyticsData } = useQuery({
     queryKey: ['admin-analytics'],
     queryFn: () => adminAPI.getAnalytics(),
+    staleTime: 0,
   });
 
-    const stats = [
+  const { data: eventsList = [] } = useQuery({
+    queryKey: ["public-events"],
+    queryFn: async () => {
+      const res = await eventService.getEvents();
+      return (res.success && res.events) ? res.events : [];
+    }
+  });
+
+  const stats = [
     {
       icon: <FolderGit2 className="h-6 w-6" />,
-      value: analyticsData?.data?.summary?.totalProjects || 142,
+      value: analyticsData?.data?.summary?.totalProjects || 42,
       label: "Total Projects",
       suffix: "+",
     },
     {
       icon: <Users className="h-6 w-6" />,
-      value: analyticsData?.data?.summary?.totalUsers || 345,
+      value: analyticsData?.data?.summary?.totalUsers || 124,
       label: "Total Members",
       suffix: "",
     },
     {
       icon: <Layers className="h-6 w-6" />,
-      value: analyticsData?.data?.summary?.activeDomains || 8,
+      value: analyticsData?.data?.summary?.activeDomains || 10,
       label: "Active Domains",
       suffix: "",
     },
     {
       icon: <Calendar className="h-6 w-6" />,
-      value: analyticsData?.data?.summary?.totalEvents || 12,
+      value: analyticsData?.data?.summary?.totalEvents || eventsList.length || 4,
       label: "Total Events",
       suffix: "",
     },
@@ -133,4 +143,3 @@ export function Statistics() {
     </section>
   );
 }
-

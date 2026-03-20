@@ -25,19 +25,6 @@ export default function AdminDomainsPage() {
     const [newTagName, setNewTagName] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { user } = useAuthStore();
-
-    const demoDomains = [
-        { id: 'dt1', name: 'Artificial Intelligence', projectCount: 14 },
-        { id: 'dt2', name: 'Web Development', projectCount: 28 },
-        { id: 'dt3', name: 'Machine Learning', projectCount: 9 },
-        { id: 'dt4', name: 'Cybersecurity', projectCount: 6 },
-        { id: 'dt5', name: 'Blockchain', projectCount: 4 },
-        { id: 'dt6', name: 'Cloud Computing', projectCount: 11 },
-        { id: 'dt7', name: 'Internet of Things', projectCount: 5 },
-        { id: 'dt8', name: 'Data Science', projectCount: 18 },
-        { id: 'dt9', name: 'Mobile Apps', projectCount: 7 },
-        { id: 'dt10', name: 'DevOps', projectCount: 3 },
-    ];
     
     // Inline editing state
     const [editingId, setEditingId] = useState(null);
@@ -47,27 +34,14 @@ export default function AdminDomainsPage() {
         const fetchTags = async () => {
             try {
                 const res = await tagsAPI.getAll();
-                if (user?.isDemoUser) {
-                    const realTags = res.data?.tags || [];
-                    const combined = [...realTags];
-                    demoDomains.forEach(dt => {
-                        if (!combined.some(t => t.name === dt.name)) {
-                            combined.push(dt);
-                        }
-                    });
-                    setTags(combined);
-                } else if (res.data?.tags) {
+                if (res.data?.tags) {
                     setTags(res.data.tags);
                 } else {
                     toast.error("Failed to load domains structure");
                 }
             } catch (error) {
                 console.error("Failed to fetch tags:", error);
-                if (user?.isDemoUser) {
-                    setTags(demoDomains);
-                } else {
-                    toast.error("Could not reach backend server");
-                }
+                toast.error("Could not reach backend server or database");
             } finally {
                 setIsLoading(false);
             }
@@ -97,13 +71,18 @@ export default function AdminDomainsPage() {
         try {
             const slug = generateSlug(name);
             const res = await tagsAPI.create({ name, slug });
-            // Handle both structure scenarios
-            const newTag = res.data?.tag || (typeof res === 'string' ? { id: res, name, slug } : null);
+            // Handle both structure scenarios (backend vs firestore)
+            const newTag = res.data?.tag || (typeof res.data === 'string' ? { id: res.data, name, slug, projectCount: 0 } : null);
             
-            if (newTag) {
-                setTags(prev => [newTag, ...prev]);
+            if (newTag || res.data) {
+                const addedTag = newTag || { id: res.data.tag?.id || 'new', name, slug, projectCount: 0 };
+                setTags(prev => [addedTag, ...prev]);
                 setNewTagName("");
                 toast.success(`Domain "${name}" registered`);
+                
+                // Refresh list to get real ID if fallback was used
+                const refresh = await tagsAPI.getAll();
+                if (refresh.data?.tags) setTags(refresh.data.tags);
             }
         } catch (error) {
             console.error("Failed to create tag:", error);

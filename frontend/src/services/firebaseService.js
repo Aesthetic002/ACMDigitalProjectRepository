@@ -7,8 +7,10 @@
 
 import {
     collection, doc, getDoc, getDocs, setDoc, updateDoc,
-    deleteDoc, addDoc, query, where, orderBy, serverTimestamp
+    deleteDoc, addDoc, query, where, orderBy, serverTimestamp,
+    writeBatch
 } from 'firebase/firestore';
+import { toast } from 'sonner';
 import {
     createUserWithEmailAndPassword, signInWithEmailAndPassword,
     updateProfile
@@ -195,72 +197,33 @@ export const createAdminAccount = async ({ email, password, name }) => {
 
 // ─── SEED DEMO DATA ──────────────────────────────────────────────────────────
 
-/**
- * Seed the Firestore database with demo members, projects, and domains.
- * Only writes entries if the collection is empty.
- */
 export const seedDemoData = async () => {
     // Seed domains
     const tagsSnap = await getDocs(collection(db, 'tags'));
-    if (tagsSnap.empty) {
-        const domains = [
-            'Artificial Intelligence', 'Web Development', 'Machine Learning',
-            'Cybersecurity', 'Blockchain', 'Cloud Computing', 'IoT'
-        ];
-        for (const name of domains) {
-            await addDoc(collection(db, 'tags'), { name, projectCount: 0, createdAt: serverTimestamp() });
-        }
-        console.log('✅ Seeded domains');
-    }
+    const existingNames = tagsSnap.docs.map(d => d.data().name);
+    
+    const domains = [
+        { name: 'Artificial Intelligence', projectCount: 14 },
+        { name: 'Web Development', projectCount: 28 },
+        { name: 'Machine Learning', projectCount: 9 },
+        { name: 'Cybersecurity', projectCount: 6 },
+        { name: 'Blockchain', projectCount: 4 },
+        { name: 'Cloud Computing', projectCount: 11 },
+        { name: 'Internet of Things', projectCount: 5 },
+        { name: 'Data Science', projectCount: 18 },
+        { name: 'Mobile Apps', projectCount: 7 },
+        { name: 'DevOps', projectCount: 3 }
+    ];
 
-    // Seed users
-    const usersSnap = await getDocs(collection(db, 'users'));
-    if (usersSnap.empty) {
-        const demoUsers = [
-            { name: 'Alice Smith', email: 'alice@example.com', role: 'member', createdAt: serverTimestamp() },
-            { name: 'Bob Johnson', email: 'bob@example.com', role: 'admin', createdAt: serverTimestamp() },
-            { name: 'Charlie Davis', email: 'charlie@acm.org', role: 'member', createdAt: serverTimestamp() },
-        ];
-        for (const user of demoUsers) {
-            await addDoc(collection(db, 'users'), user);
+    for (const domain of domains) {
+        if (!existingNames.includes(domain.name)) {
+            await addDoc(collection(db, 'tags'), { 
+                ...domain, 
+                createdAt: serverTimestamp() 
+            });
+            console.log(`✅ Seeded missing domain: ${domain.name}`);
         }
-        console.log('✅ Seeded users');
     }
-
-    // Seed events
-    const eventsSnap = await getDocs(collection(db, 'events'));
-    if (eventsSnap.empty) {
-        const demoEvents = [
-            { 
-                title: 'Spring Hackathon 2026', 
-                description: '48-hour coding marathon to build solutions for social good.',
-                date: '2026-04-15',
-                time: '09:00 AM',
-                location: 'Main Engineering Hall',
-                createdAt: serverTimestamp() 
-            },
-            { 
-                title: 'AI Workshop: Neural Networks', 
-                description: 'Hands-on introduction to building deep learning models.',
-                date: '2026-03-25',
-                time: '02:00 PM',
-                location: 'Room 302',
-                createdAt: serverTimestamp() 
-            },
-            { 
-                title: 'Career Fair Mixer', 
-                description: 'Network with industry leaders from Google, Meta, and more.',
-                date: '2026-03-30',
-                time: '05:30 PM',
-                location: 'Student Union Ballroom',
-                createdAt: serverTimestamp() 
-            },
-        ];
-        for (const event of demoEvents) {
-            await addDoc(collection(db, 'events'), event);
-        }
-        console.log('✅ Seeded events');
-    }
-
+    
     console.log('✅ Firestore seed complete');
 };

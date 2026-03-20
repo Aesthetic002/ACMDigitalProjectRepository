@@ -152,6 +152,7 @@ export const adminAPI = {
 
             return { data: { summary, stats: summary } };
         } catch (err) {
+            console.error('❌ Analytics Fetch Failed:', err);
             return { data: { summary: { totalUsers: 0, totalProjects: 0, activeDomains: 0, pendingApprovals: 0 } } };
         }
     },
@@ -272,15 +273,20 @@ export const eventsAPI = {
 
 // ── Search ────────────────────────────────────────────────
 export const searchAPI = {
-    search: async (query) => {
+    search: async (params) => {
         try {
-            // Priority 1: Backend Search API
-            const res = await api.get('/search', { params: { q: query } }).catch(() => null);
+            const query = typeof params === 'string' ? params : params.q;
+            const res = await api.get('/search', { params: typeof params === 'string' ? { q: params } : params }).catch(() => null);
             if (res) return res;
 
-            // Priority 2: Firestore/Mock fallback (simplified)
-            // For now, we search in Firestore results (not implemented here, but removing mock)
-            return { data: { results: [] } };
+            // Fallback: Client-side search in Firestore projects
+            const allProjects = await fsProjects.getAll();
+            const results = allProjects.filter(p => 
+                p.title?.toLowerCase().includes(query?.toLowerCase()) || 
+                p.techStack?.some(tech => tech.toLowerCase().includes(query?.toLowerCase())) ||
+                p.description?.toLowerCase().includes(query?.toLowerCase())
+            );
+            return { data: { results } };
         } catch (err) {
             return { data: { results: [] } };
         }
