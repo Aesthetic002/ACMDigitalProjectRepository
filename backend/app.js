@@ -37,6 +37,7 @@ const assetsRoutes = require("./routes/assets.routes");
 const tagsRoutes = require("./routes/tags.routes");
 const eventsRoutes = require("./routes/events.routes");
 const adminRoutes = require("./routes/admin.routes");
+const commentsRoutes = require("./routes/comments.routes");
 
 // Import routes - Development Only
 const testRoutes = require("./routes/test.routes"); // DEVELOPMENT ONLY - Remove in production
@@ -54,6 +55,7 @@ app.use("/api/v1/assets", assetsRoutes);
 app.use("/api/v1/tags", tagsRoutes);
 app.use("/api/v1/events", eventsRoutes);
 app.use("/api/v1/admin", adminRoutes);
+app.use("/api/v1/comments", commentsRoutes);
 
 // Wire routes - Development Only
 app.use("/api/v1/test", testRoutes); // DEVELOPMENT ONLY - Remove in production

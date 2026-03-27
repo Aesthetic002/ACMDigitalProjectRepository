@@ -133,7 +133,111 @@ const verifyToken = async (req, res, next) => {
 };
 
 /**
- * Optional: Middleware to check if user has admin role
+ * Middleware to check if user has viewer role or above
+ * Allows: viewers, contributors, admins
+ * Requires verifyToken to be run first
+ */
+const viewerAuth = async (req, res, next) => {
+  try {
+    if (!req.user || !req.user.uid) {
+      return res.status(401).json({
+        success: false,
+        error: "Unauthorized",
+        message: "Authentication required",
+      });
+    }
+
+    const { db } = require("../firebase");
+    const userRef = db.collection("users").doc(req.user.uid);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      return res.status(404).json({
+        success: false,
+        error: "NotFound",
+        message: "User not found",
+      });
+    }
+
+    const userData = userDoc.data();
+    const validRoles = ["viewer", "contributor", "admin"];
+
+    if (!validRoles.includes(userData.role)) {
+      return res.status(403).json({
+        success: false,
+        error: "Forbidden",
+        message: "Viewer access or above required",
+      });
+    }
+
+    // Attach full user data to request
+    req.userData = userData;
+    next();
+  } catch (error) {
+    console.error("Viewer auth error:", error.message);
+    return res.status(403).json({
+      success: false,
+      error: "Forbidden",
+      message: "Access denied",
+    });
+  }
+};
+
+/**
+ * Middleware to check if user has contributor role or above
+ * Allows: contributors, admins (NOT viewers)
+ * Requires verifyToken to be run first
+ */
+const contributorAuth = async (req, res, next) => {
+  try {
+    if (!req.user || !req.user.uid) {
+      return res.status(401).json({
+        success: false,
+        error: "Unauthorized",
+        message: "Authentication required",
+      });
+    }
+
+    const { db } = require("../firebase");
+    const userRef = db.collection("users").doc(req.user.uid);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      return res.status(404).json({
+        success: false,
+        error: "NotFound",
+        message: "User not found",
+      });
+    }
+
+    const userData = userDoc.data();
+    const validRoles = ["contributor", "admin"];
+
+    if (!validRoles.includes(userData.role)) {
+      return res.status(403).json({
+        success: false,
+        error: "Forbidden",
+        message:
+          "Contributor access required. Viewers cannot perform this action.",
+      });
+    }
+
+    // Attach full user data to request
+    req.userData = userData;
+    next();
+  } catch (error) {
+    console.error("Contributor auth error:", error.message);
+    return res.status(403).json({
+      success: false,
+      error: "Forbidden",
+      message: "Access denied",
+    });
+  }
+};
+
+/**
+ * Middleware to check if user has admin role
+ * Allows: admins only
  * Requires verifyToken to be run first
  */
 const requireAdmin = async (req, res, next) => {
@@ -146,8 +250,30 @@ const requireAdmin = async (req, res, next) => {
       });
     }
 
-    // This would typically check user role from database
-    // For now, just a placeholder
+    const { db } = require("../firebase");
+    const userRef = db.collection("users").doc(req.user.uid);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      return res.status(404).json({
+        success: false,
+        error: "NotFound",
+        message: "User not found",
+      });
+    }
+
+    const userData = userDoc.data();
+
+    if (userData.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        error: "Forbidden",
+        message: "Admin access required",
+      });
+    }
+
+    // Attach full user data to request
+    req.userData = userData;
     next();
   } catch (error) {
     console.error("Admin verification error:", error.message);
@@ -161,5 +287,7 @@ const requireAdmin = async (req, res, next) => {
 
 module.exports = {
   verifyToken,
+  viewerAuth,
+  contributorAuth,
   requireAdmin,
 };
