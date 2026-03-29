@@ -1,0 +1,166 @@
+syntax = "proto3";
+
+package acm.project;
+
+service ProjectService {
+  // List projects with filters and pagination
+  rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
+
+  // Get a single project by ID
+  rpc GetProject(GetProjectRequest) returns (ProjectResponse);
+
+  // Create a new project
+  rpc CreateProject(CreateProjectRequest) returns (ProjectResponse);
+
+  // Update an existing project
+  rpc UpdateProject(UpdateProjectRequest) returns (ProjectResponse);
+
+  // Delete/soft-delete a project
+  rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
+
+  // Search projects by query
+  rpc SearchProjects(SearchProjectsRequest) returns (ListProjectsResponse);
+
+  // Get all tags
+  rpc GetTags(Empty) returns (TagsResponse);
+
+  // Create a new tag (admin only)
+  rpc CreateTag(CreateTagRequest) returns (TagResponse);
+
+  // Update an existing tag (admin only)
+  rpc UpdateTag(UpdateTagRequest) returns (TagResponse);
+
+  // Delete a tag (admin only)
+  rpc DeleteTag(DeleteTagRequest) returns (DeleteTagResponse);
+
+  // Search users by name/email
+  rpc SearchUsers(SearchUsersRequest) returns (SearchUsersResponse);
+}
+
+message ProjectResponse {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  string owner_id = 4;
+  string owner_name = 5;
+  string status = 6;
+  repeated string tags = 7;
+  repeated string tech_stack = 8;
+  repeated string contributors = 9;
+  bool is_featured = 10;
+  bool is_deleted = 11;
+  repeated Asset assets = 12;
+  int64 created_at = 13;
+  int64 updated_at = 14;
+  bool is_approved = 15;
+}
+
+message Asset {
+  string id = 1;
+  string name = 2;
+  string url = 3;
+  string type = 4;
+  int64 size = 5;
+}
+
+message ListProjectsRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+  string status = 3;
+  repeated string tech_stack = 4;
+  string owner_id = 5;
+  repeated string tag_ids = 6;
+}
+
+message ListProjectsResponse {
+  repeated ProjectResponse projects = 1;
+  int32 total = 2;
+}
+
+message GetProjectRequest {
+  string project_id = 1;
+}
+
+message CreateProjectRequest {
+  string title = 1;
+  string description = 2;
+  string owner_id = 3;
+  repeated string tags = 4;
+  repeated string tech_stack = 5;
+  repeated string contributors = 6;
+}
+
+message UpdateProjectRequest {
+  string project_id = 1;
+  string user_id = 2;
+  string title = 3;
+  string description = 4;
+  repeated string tags = 5;
+  repeated string tech_stack = 6;
+  repeated string contributors = 7;
+  string status = 8;
+}
+
+message DeleteProjectRequest {
+  string project_id = 1;
+  string user_id = 2;
+}
+
+message DeleteProjectResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message SearchProjectsRequest {
+  string query = 1;
+  int32 limit = 2;
+}
+
+message TagResponse {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+  int32 usage_count = 4;
+}
+
+message TagsResponse {
+  repeated TagResponse tags = 1;
+}
+
+message CreateTagRequest {
+  string name = 1;
+  string slug = 2;
+}
+
+message UpdateTagRequest {
+  string tag_id = 1;
+  string name = 2;
+  string slug = 3;
+}
+
+message DeleteTagRequest {
+  string tag_id = 1;
+}
+
+message DeleteTagResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message SearchUsersRequest {
+  string query = 1;
+  int32 limit = 2;
+}
+
+message SearchUsersResponse {
+  repeated UserSearchResult users = 1;
+}
+
+message UserSearchResult {
+  string id = 1;
+  string name = 2;
+  string email = 3;
+  string avatar = 4;
+}
+
+message Empty {}

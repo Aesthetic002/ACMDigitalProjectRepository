@@ -176,6 +176,114 @@ router.post("/", verifyToken, async (req, res) => {
 });
 
 /**
+ * PUT /api/v1/tags/:tagId
+ *
+ * Updates an existing tag.
+ * Authentication required - admin only.
+ *
+ * Body:
+ *   - name: string (optional) - New tag name
+ *   - slug: string (optional) - New URL-friendly slug
+ *
+ * Response:
+ *   200: { success: true, tag: {...} }
+ *   400: { success: false, error: 'ValidationError', message: '...' }
+ *   403: { success: false, error: 'Forbidden', message: '...' }
+ *   404: { success: false, error: 'NotFound', message: '...' }
+ *   409: { success: false, error: 'Conflict', message: '...' }
+ */
+router.put("/:tagId", verifyToken, async (req, res) => {
+  try {
+    const { tagId } = req.params;
+    const { name, slug } = req.body;
+    const authenticatedUid = req.user.uid;
+
+    // Check if user is admin
+    const userDoc = await db.collection("users").doc(authenticatedUid).get();
+
+    if (!userDoc.exists || userDoc.data().role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        error: "Forbidden",
+        message: "Admin access required",
+      });
+    }
+
+    if (!name && !slug) {
+      return res.status(400).json({
+        success: false,
+        error: "ValidationError",
+        message: "Provide either name or slug to update",
+      });
+    }
+
+    const tagRef = db.collection("tags").doc(tagId);
+    const tagDoc = await tagRef.get();
+
+    if (!tagDoc.exists) {
+      return res.status(404).json({
+        success: false,
+        error: "NotFound",
+        message: "Tag not found",
+      });
+    }
+
+    const updateData = { updatedAt: new Date().toISOString(), updatedBy: authenticatedUid };
+
+    if (name) {
+      updateData.name = name.trim();
+    }
+
+    if (slug) {
+      const normalizedSlug = slug.toLowerCase().trim();
+      const slugRegex = /^[a-z0-9\-]+$/;
+      if (!slugRegex.test(normalizedSlug)) {
+        return res.status(400).json({
+          success: false,
+          error: "ValidationError",
+          message: "Slug must contain only lowercase letters, numbers, and hyphens",
+        });
+      }
+
+      // Check for conflicts
+      if (normalizedSlug !== tagDoc.data().slug) {
+        const existingTag = await db.collection("tags").where("slug", "==", normalizedSlug).get();
+        if (!existingTag.empty) {
+          return res.status(409).json({
+            success: false,
+            error: "Conflict",
+            message: "A tag with this slug already exists",
+          });
+        }
+      }
+      updateData.slug = normalizedSlug;
+    }
+
+    await tagRef.update(updateData);
+    
+    // Fetch updated tag
+    const updatedTagDoc = await tagRef.get();
+
+    return res.status(200).json({
+      success: true,
+      message: "Tag updated successfully",
+      tag: {
+        id: updatedTagDoc.id,
+        ...updatedTagDoc.data(),
+      },
+    });
+  } catch (error) {
+    console.error("Update tag error:", error.message);
+
+    return res.status(500).json({
+      success: false,
+      error: "InternalServerError",
+      message: "Failed to update tag",
+    });
+  }
+});
+
+/**
  * DELETE /api/v1/tags/:tagId
  *
  * Deletes a tag (admin only).

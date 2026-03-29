@@ -1,0 +1,192 @@
+version: "3.8"
+
+services:
+  # ============================================================
+  # Microservices
+  # ============================================================
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: ./services/auth-service/Dockerfile
+    container_name: auth-service
+    ports:
+      - "50051:50051"
+    environment:
+      - NODE_ENV=production
+      - AUTH_SERVICE_PORT=50051
+      - FIREBASE_API_KEY=${FIREBASE_API_KEY}
+      - FIREBASE_AUTH_DOMAIN=${FIREBASE_AUTH_DOMAIN}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_STORAGE_BUCKET=${FIREBASE_STORAGE_BUCKET}
+      - FIREBASE_MESSAGING_SENDER_ID=${FIREBASE_MESSAGING_SENDER_ID}
+      - FIREBASE_APP_ID=${FIREBASE_APP_ID}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
+    depends_on:
+      - firebase
+    restart: unless-stopped
+    networks:
+      - acm-network
+
+  user-service:
+    build:
+      context: .
+      dockerfile: ./services/user-service/Dockerfile
+    container_name: user-service
+    ports:
+      - "50052:50052"
+    environment:
+      - NODE_ENV=production
+      - USER_SERVICE_PORT=50052
+      - FIREBASE_API_KEY=${FIREBASE_API_KEY}
+      - FIREBASE_AUTH_DOMAIN=${FIREBASE_AUTH_DOMAIN}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_STORAGE_BUCKET=${FIREBASE_STORAGE_BUCKET}
+      - FIREBASE_MESSAGING_SENDER_ID=${FIREBASE_MESSAGING_SENDER_ID}
+      - FIREBASE_APP_ID=${FIREBASE_APP_ID}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
+    depends_on:
+      - firebase
+    restart: unless-stopped
+    networks:
+      - acm-network
+
+  project-service:
+    build:
+      context: .
+      dockerfile: ./services/project-service/Dockerfile
+    container_name: project-service
+    ports:
+      - "50053:50053"
+    environment:
+      - NODE_ENV=production
+      - PROJECT_SERVICE_PORT=50053
+      - USER_SERVICE_ADDR=user-service:50052
+      - FIREBASE_API_KEY=${FIREBASE_API_KEY}
+      - FIREBASE_AUTH_DOMAIN=${FIREBASE_AUTH_DOMAIN}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_STORAGE_BUCKET=${FIREBASE_STORAGE_BUCKET}
+      - FIREBASE_MESSAGING_SENDER_ID=${FIREBASE_MESSAGING_SENDER_ID}
+      - FIREBASE_APP_ID=${FIREBASE_APP_ID}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
+    depends_on:
+      - user-service
+      - firebase
+    restart: unless-stopped
+    networks:
+      - acm-network
+
+  asset-service:
+    build:
+      context: .
+      dockerfile: ./services/asset-service/Dockerfile
+    container_name: asset-service
+    ports:
+      - "50054:50054"
+    environment:
+      - NODE_ENV=production
+      - ASSET_SERVICE_PORT=50054
+      - FIREBASE_API_KEY=${FIREBASE_API_KEY}
+      - FIREBASE_AUTH_DOMAIN=${FIREBASE_AUTH_DOMAIN}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_STORAGE_BUCKET=${FIREBASE_STORAGE_BUCKET}
+      - FIREBASE_MESSAGING_SENDER_ID=${FIREBASE_MESSAGING_SENDER_ID}
+      - FIREBASE_APP_ID=${FIREBASE_APP_ID}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
+      - CLOUDINARY_NAME=${CLOUDINARY_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+    depends_on:
+      - firebase
+    restart: unless-stopped
+    networks:
+      - acm-network
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: ./services/notification-service/Dockerfile
+    container_name: notification-service
+    ports:
+      - "50055:50055"
+    environment:
+      - NODE_ENV=production
+      - NOTIFICATION_SERVICE_PORT=50055
+      - FIREBASE_API_KEY=${FIREBASE_API_KEY}
+      - FIREBASE_AUTH_DOMAIN=${FIREBASE_AUTH_DOMAIN}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_STORAGE_BUCKET=${FIREBASE_STORAGE_BUCKET}
+      - FIREBASE_MESSAGING_SENDER_ID=${FIREBASE_MESSAGING_SENDER_ID}
+      - FIREBASE_APP_ID=${FIREBASE_APP_ID}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
+    depends_on:
+      - firebase
+    restart: unless-stopped
+    networks:
+      - acm-network
+
+  # ============================================================
+  # API Gateway
+  # ============================================================
+
+  gateway:
+    build:
+      context: .
+      dockerfile: ./gateway/Dockerfile
+    container_name: api-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - GATEWAY_PORT=3000
+      - AUTH_SERVICE_ADDR=auth-service:50051
+      - USER_SERVICE_ADDR=user-service:50052
+      - PROJECT_SERVICE_ADDR=project-service:50053
+      - ASSET_SERVICE_ADDR=asset-service:50054
+      - NOTIFICATION_SERVICE_ADDR=notification-service:50055
+    depends_on:
+      - auth-service
+      - user-service
+      - project-service
+      - asset-service
+      - notification-service
+    restart: unless-stopped
+    networks:
+      - acm-network
+
+  # ============================================================
+  # Frontend (Optional - for full stack)
+  # ============================================================
+
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: frontend
+  #   ports:
+  #     - "3001:3001"
+  #   environment:
+  #     - VITE_API_URL=http://gateway:3000
+  #   depends_on:
+  #     - gateway
+  #   restart: unless-stopped
+  #   networks:
+  #     - acm-network
+
+  # ============================================================
+  # External Services (Placeholders)
+  # ============================================================
+
+  # firebase:
+  #   # Firebase is cloud-based, not containerized
+  #   # This is a placeholder to show dependency
+  # The actual Firebase services are accessed via cloud API
+
+networks:
+  acm-network:
+    driver: bridge

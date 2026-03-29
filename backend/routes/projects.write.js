@@ -2,7 +2,7 @@
  * Project Write Operations Routes
  * 
  * Handles project creation, update, and deletion (all protected by authentication):
- * - POST /api/v1/projects - Create a new project
+ * - POST /api/v1/projects - Create a new project (contributor or admin only)
  * - PUT /api/v1/projects/:projectId - Update an existing project
  * - DELETE /api/v1/projects/:projectId - Archive/soft-delete a project
  */
@@ -10,12 +10,14 @@
 const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middleware/auth');
+const { requireContributor } = require('../middleware/admin');
 const { db } = require('../firebase');
 
 /**
  * POST /api/v1/projects
  * 
- * Creates a new project. Only authenticated users can create projects.
+ * Creates a new project. Only contributors or admins can create projects.
+ * Viewers must be upgraded to contributor role first.
  * The ownerId is automatically set from the authenticated user's uid.
  * 
  * Required fields: title, description
@@ -24,8 +26,9 @@ const { db } = require('../firebase');
  * Response:
  *   201: { success: true, project: {...} }
  *   400: { success: false, error: 'ValidationError', message: '...' }
+ *   403: { success: false, error: 'Forbidden', message: 'Contributor access required' }
  */
-router.post('/', verifyToken, async (req, res) => {
+router.post('/', verifyToken, requireContributor, async (req, res) => {
   try {
     const { title, description, techStack, contributors, status, repoUrl, githubUrl, demoUrl } = req.body;
 

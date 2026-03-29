@@ -1,106 +1,105 @@
-import axios from 'axios'
-import { useAuthStore } from '../store/authStore'
+/**
+ * API Service - Production Mode
+ *
+ * Real backend API calls using axiosInstance.
+ */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+import axiosInstance from '@/api/axiosInstance';
 
-// Create axios instance
-const api = axios.create({
-  baseURL: `${API_BASE_URL}/api/v1`,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-})
+// ── Projects ──────────────────────────────────────────────────────────────────
 
-// Request interceptor to add auth token
-api.interceptors.request.use(
-  async (config) => {
-    const token = useAuthStore.getState().token
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
-    return config
-  },
-  (error) => {
-    return Promise.reject(error)
-  }
-)
-
-// Response interceptor for error handling
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid
-      useAuthStore.getState().logout()
-    }
-    return Promise.reject(error)
-  }
-)
-
-// ============ Auth API ============
-export const authAPI = {
-  verify: () => api.post('/auth/verify'),
-  register: (data) => api.post('/auth/verify', data),
-}
-
-// ============ Users API ============
-export const usersAPI = {
-  getAll: (params = {}) => api.get('/users', { params }),
-  getById: (userId) => api.get(`/users/${userId}`),
-  update: (userId, data) => api.put(`/users/${userId}`, data),
-}
-
-// ============ Projects API ============
 export const projectsAPI = {
-  // READ
-  getAll: (params = {}) => api.get('/projects', { params }),
-  getById: (projectId) => api.get(`/projects/${projectId}`),
+    getAll: (params = {}) => axiosInstance.get('/projects', { params }),
+    getById: (id) => axiosInstance.get(`/projects/${id}`),
+    create: (data) => axiosInstance.post('/projects', data),
+    update: (id, data) => axiosInstance.put(`/projects/${id}`, data),
+    delete: (id) => axiosInstance.delete(`/projects/${id}`),
+};
 
-  // WRITE
-  create: (data) => api.post('/projects', data),
-  update: (projectId, data) => api.put(`/projects/${projectId}`, data),
-  delete: (projectId) => api.delete(`/projects/${projectId}`),
-}
+// ── Auth ──────────────────────────────────────────────────────────────────────
 
-// ============ Search API ============
-export const searchAPI = {
-  search: (params) => api.get('/search', { params }),
-}
+export const authAPI = {
+    verify: () => axiosInstance.post('/auth/verify'),
+    syncUser: (data) => axiosInstance.post('/auth/sync', data),
+};
 
-// ============ Tags API ============
-export const tagsAPI = {
-  getAll: () => api.get('/tags'),
-  create: (data) => api.post('/tags', data),
-  update: (tagId, data) => api.put(`/tags/${tagId}`, data),
-  delete: (tagId) => api.delete(`/tags/${tagId}`),
-}
+// ── Users ─────────────────────────────────────────────────────────────────────
 
-// ============ Admin API ============
-// ============ Admin API ============
+export const usersAPI = {
+    getById: (uid) => axiosInstance.get(`/users/${uid}`),
+    getAll: (params = {}) => axiosInstance.get('/users', { params }),
+    create: (data) => axiosInstance.post('/users', data),
+    update: (uid, data) => axiosInstance.put(`/users/${uid}`, data),
+    delete: (uid) => axiosInstance.delete(`/users/${uid}`),
+};
+
+// ── Admin ─────────────────────────────────────────────────────────────────────
+
 export const adminAPI = {
-  getStats: () => api.get('/admin/analytics'),
-  getPendingProjects: () => api.get('/projects', { params: { status: 'pending' } }),
-  getAnalytics: () => api.get('/admin/analytics'),
+    getAnalytics: () => axiosInstance.get('/admin/analytics'),
+    getUsers: (params = {}) => axiosInstance.get('/users', { params }),
+    createUser: (uid, data) => axiosInstance.post('/users', { uid, ...data }),
+    updateUser: (uid, data) => axiosInstance.put(`/users/${uid}`, data),
+    deleteUser: (uid) => axiosInstance.delete(`/users/${uid}`),
+    approveProject: (id) => axiosInstance.post(`/admin/projects/${id}/review`, { action: 'approve' }),
+    rejectProject: (id) => axiosInstance.post(`/admin/projects/${id}/review`, { action: 'reject' }),
+    resetProject: (id) => axiosInstance.post(`/admin/projects/${id}/review`, { action: 'pending' }),
+};
 
-  // Review actions
-  approveProject: (projectId) => api.post(`/admin/projects/${projectId}/review`, { action: 'approve' }),
-  rejectProject: (projectId, reason) => api.post(`/admin/projects/${projectId}/review`, { action: 'reject', notes: reason }),
-  reviewProject: (projectId, data) => api.post(`/admin/projects/${projectId}/review`, data),
+// ── Tags / Domains ────────────────────────────────────────────────────────────
 
-  // Feature action - wrap boolean in object
-  featureProject: (projectId, featured) => api.post(`/admin/projects/${projectId}/feature`, { featured }),
-}
+export const tagsAPI = {
+    getAll: () => axiosInstance.get('/tags'),
+    create: (data) => axiosInstance.post('/tags', data),
+    update: (id, data) => axiosInstance.put(`/tags/${id}`, data),
+    delete: (id) => axiosInstance.delete(`/tags/${id}`),
+};
 
-// ============ Assets API ============
+// ── Assets ────────────────────────────────────────────────────────────────────
+
 export const assetsAPI = {
-  uploadAsset: (formData, onUploadProgress) => api.post('/assets/upload', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-    onUploadProgress,
-  }),
-  listProjectAssets: (projectId) => api.get(`/projects/${projectId}/assets`),
-  delete: (assetId) => api.delete(`/assets/${assetId}`),
-}
+    upload: (projectId, formData) => 
+        axiosInstance.post(`/projects/${projectId}/assets`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        }),
+    uploadAsset: (formData, onUploadProgress) =>
+        axiosInstance.post('/assets/upload', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            onUploadProgress,
+        }),
+    getUploadUrl: (data) => axiosInstance.post('/assets/upload-url', data),
+    listProjectAssets: (projectId) => axiosInstance.get(`/projects/${projectId}/assets`),
+    delete: (assetId) => axiosInstance.delete(`/assets/${assetId}`),
+    deleteFromProject: (projectId, assetId) => 
+        axiosInstance.delete(`/projects/${projectId}/assets/${assetId}`),
+};
 
-export default api
+// ── Events ────────────────────────────────────────────────────────────────────
+
+export const eventsAPI = {
+    getAll: () => axiosInstance.get('/events'),
+    getById: (id) => axiosInstance.get(`/events/${id}`),
+    create: (data) => axiosInstance.post('/events', data),
+    update: (id, data) => axiosInstance.put(`/events/${id}`, data),
+    delete: (id) => axiosInstance.delete(`/events/${id}`),
+};
+
+// ── Search ────────────────────────────────────────────────────────────────────
+
+export const searchAPI = {
+    search: (params = {}) => axiosInstance.get('/search', { params }),
+};
+
+// ── Default Export (Axios-like interface for backward compatibility) ──────────
+
+const api = {
+    get: (url, config = {}) => axiosInstance.get(url, config),
+    post: (url, data = {}, config = {}) => axiosInstance.post(url, data, config),
+    put: (url, data = {}, config = {}) => axiosInstance.put(url, data, config),
+    delete: (url, config = {}) => axiosInstance.delete(url, config),
+};
+
+export default api;
+
+console.log('%c[API] Connected to backend:', 'color: #4CAF50; font-weight: bold;', 
+    import.meta.env.VITE_API_URL || 'http://localhost:3000');

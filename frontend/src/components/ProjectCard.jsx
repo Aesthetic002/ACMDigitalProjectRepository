@@ -1,117 +1,93 @@
-import { Link } from 'react-router-dom'
-import { formatDistanceToNow } from 'date-fns'
-import { Users, Calendar, ArrowUpRight, Star } from 'lucide-react'
-import { GlowingEffect } from './ui/glowing-effect'
+import { Link } from "react-router-dom";
+import { formatDistanceToNow } from "date-fns";
+import { Users, Calendar, ArrowUpRight, Star } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+
+// Helper to parse dates (handles Firestore timestamps and ISO strings)
+const parseDate = (date) => {
+    if (!date) return null;
+    if (date._seconds) return new Date(date._seconds * 1000);
+    return new Date(date);
+};
 
 export default function ProjectCard({ project }) {
-  const statusColors = {
-    pending: 'badge-warning',
-    approved: 'badge-success',
-    rejected: 'badge-error',
-  }
+    const statusColors = {
+        pending: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+        approved: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+        rejected: "bg-red-500/10 text-red-500 border-red-500/20",
+    };
 
-  return (
-    <div className="relative rounded-[1.25rem] border-[0.75px] border-zinc-700/40 p-1.5 group">
-      <GlowingEffect
-        spread={40}
-        glow={true}
-        disabled={false}
-        proximity={64}
-        inactiveZone={0.01}
-        borderWidth={2}
-      />
-      <div className="relative bg-zinc-800/60 rounded-[1rem] overflow-hidden backdrop-blur-sm card-hover">
-        {/* Project Image/Preview */}
-        <div className="relative h-48 bg-gradient-to-br from-zinc-700/50 to-zinc-800 overflow-hidden">
-          {project.thumbnail ? (
-            <img
-              src={project.thumbnail}
-              alt={project.title}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary-500/5 to-accent-500/5">
-              <div className="text-6xl opacity-20">
-                {project.techStack?.[0]?.charAt(0) || '🚀'}
-              </div>
-            </div>
-          )}
+    const createdDate = parseDate(project.createdAt);
 
-          {/* Featured badge */}
-          {project.isFeatured && (
-            <div className="absolute top-3 left-3 flex items-center space-x-1 bg-amber-500 text-amber-950 px-2.5 py-1 rounded-full text-xs font-semibold shadow-lg">
-              <Star className="w-3 h-3" />
-              <span>Featured</span>
-            </div>
-          )}
-
-          {/* Status badge */}
-          <div className={`absolute top-3 right-3 badge ${statusColors[project.status] || 'badge-info'}`}>
-            {project.status}
-          </div>
-
-          {/* Hover overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        </div>
-
-        {/* Content */}
-        <div className="p-5">
-          <Link to={`/projects/${project.id}`}>
-            <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-primary-400 transition-colors line-clamp-1">
-              {project.title}
-            </h3>
-          </Link>
-
-          <p className="text-zinc-400 text-sm mb-4 line-clamp-2 leading-relaxed">
-            {project.description}
-          </p>
-
-          {/* Tech Stack */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            {project.techStack?.slice(0, 3).map((tech, index) => (
-              <span
-                key={index}
-                className="px-2 py-1 bg-zinc-700/40 text-zinc-300 rounded-md text-xs border border-zinc-600/30"
-              >
-                {tech}
-              </span>
-            ))}
-            {project.techStack?.length > 3 && (
-              <span className="px-2 py-1 text-zinc-500 text-xs">
-                +{project.techStack.length - 3} more
-              </span>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="flex items-center justify-between pt-4 border-t border-zinc-700/30">
-            <div className="flex items-center space-x-4 text-xs text-zinc-400">
-              {project.contributors?.length > 0 && (
-                <span className="flex items-center space-x-1">
-                  <Users className="w-3.5 h-3.5" />
-                  <span>{project.contributors.length}</span>
-                </span>
-              )}
-              <span className="flex items-center space-x-1">
-                <Calendar className="w-3.5 h-3.5" />
-                <span>
-                  {project.createdAt
-                    ? formatDistanceToNow(new Date(project.createdAt), { addSuffix: true })
-                    : 'Recently'}
-                </span>
-              </span>
+    return (
+        <Card className="group overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm transition-all duration-300 hover:shadow-acm-glow hover:border-acm-blue/50">
+            <div className="relative h-48 overflow-hidden bg-muted">
+                {project.thumbnail ? (
+                    <img src={project.thumbnail} alt={project.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-acm-blue/20 to-acm-blue/5">
+                        <div className="text-6xl opacity-20 transform transition-transform duration-500 group-hover:scale-125">
+                            {project.techStack?.[0]?.charAt(0) || "🚀"}
+                        </div>
+                    </div>
+                )}
+                {project.isFeatured && (
+                    <div className="absolute top-3 left-3 z-10">
+                        <Badge className="bg-amber-500 text-amber-950 hover:bg-amber-500/90 gap-1 border-none px-2 py-0.5">
+                            <Star className="h-3 w-3 fill-current" />
+                            <span className="text-[10px] font-bold uppercase tracking-wider">Featured</span>
+                        </Badge>
+                    </div>
+                )}
+                <div className="absolute top-3 right-3 z-10">
+                    <Badge variant="outline" className={`${statusColors[project.status] || "bg-blue-500/10 text-blue-500 border-blue-500/20"} capitalize text-[10px] font-medium`}>
+                        {project.status}
+                    </Badge>
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-60 transition-opacity duration-300 group-hover:opacity-40" />
             </div>
 
-            <Link
-              to={`/projects/${project.id}`}
-              className="flex items-center space-x-1 text-primary-400 text-sm font-medium hover:text-primary-300 transition-colors"
-            >
-              <span>View</span>
-              <ArrowUpRight className="w-4 h-4" />
-            </Link>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+            <CardHeader className="p-5 pb-0">
+                <Link to={`/projects/${project.id}`}>
+                    <h3 className="line-clamp-1 text-lg font-bold tracking-tight text-foreground transition-colors group-hover:text-acm-blue">
+                        {project.title}
+                    </h3>
+                </Link>
+                <p className="mt-2 line-clamp-2 text-sm text-muted-foreground leading-relaxed">{project.description}</p>
+            </CardHeader>
+
+            <CardContent className="p-5 pt-4">
+                <div className="flex flex-wrap gap-1.5">
+                    {project.techStack?.slice(0, 3).map((tech, index) => (
+                        <Badge key={index} variant="secondary" className="bg-acm-blue/10 text-acm-blue hover:bg-acm-blue/20 border-none text-[10px] py-0 h-5">
+                            {tech}
+                        </Badge>
+                    ))}
+                    {project.techStack?.length > 3 && (
+                        <span className="text-[10px] text-muted-foreground self-center ml-1">+{project.techStack.length - 3} more</span>
+                    )}
+                </div>
+            </CardContent>
+
+            <CardFooter className="flex items-center justify-between p-5 pt-0 mt-auto border-t border-border/50">
+                <div className="flex items-center space-x-3 text-[10px] text-muted-foreground">
+                    {project.contributors?.length > 0 && (
+                        <span className="flex items-center gap-1 font-medium">
+                            <Users className="h-3 w-3 text-acm-blue/70" />
+                            <span>{project.contributors.length}</span>
+                        </span>
+                    )}
+                    <span className="flex items-center gap-1 font-medium">
+                        <Calendar className="h-3 w-3 text-acm-blue/70" />
+                        <span>{createdDate ? formatDistanceToNow(createdDate, { addSuffix: true }) : "Recently"}</span>
+                    </span>
+                </div>
+                <Link to={`/projects/${project.id}`} className="flex items-center gap-1 text-[11px] font-bold text-acm-blue transition-colors hover:text-acm-blue-dark">
+                    <span>VIEW</span>
+                    <ArrowUpRight className="h-3 w-3" />
+                </Link>
+            </CardFooter>
+        </Card>
+    );
 }

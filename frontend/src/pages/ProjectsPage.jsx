@@ -1,177 +1,153 @@
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { useSearchParams } from 'react-router-dom'
-import { projectsAPI, tagsAPI } from '../services/api'
-import ProjectCard from '../components/ProjectCard'
-import { Search, Filter, X, FolderOpen, Loader2 } from 'lucide-react'
+import { Suspense } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { projectsAPI, tagsAPI } from "@/services/api";
+import ProjectCard from "@/components/ProjectCard";
+import Layout from "@/components/Layout";
+import Loader from "@/components/common/Loader";
+import { X, FolderOpen, Loader2 } from "lucide-react";
+import {
+    Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+
+function ProjectsContent() {
+    const [searchParams, setSearchParams] = useSearchParams();
+    const navigate = useNavigate();
+    const status = searchParams.get("status") || "";
+    const techStack = searchParams.get("tech") || "";
+    const limit = parseInt(searchParams.get("limit")) || 20;
+
+    const { data: projectsData, isLoading, isError, refetch } = useQuery({
+        queryKey: ["projects", { status, techStack, limit }],
+        queryFn: () => projectsAPI.getAll({ status: status || undefined, techStack: techStack || undefined, limit }),
+    });
+
+    const { data: tagsData } = useQuery({
+        queryKey: ["tags"],
+        queryFn: () => tagsAPI.getAll(),
+    });
+
+    const projects = projectsData?.data?.projects || [];
+    const tags = tagsData?.data?.tags || [];
+
+    const handleFilterChange = (key, value) => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (value && value !== "all") params.set(key, value);
+        else params.delete(key);
+        setSearchParams(params);
+    };
+
+    const clearFilters = () => setSearchParams({});
+    const hasActiveFilters = status || techStack;
+
+    return (
+        <div className="min-h-screen bg-background/50">
+            <section className="relative overflow-hidden bg-slate-950 py-20 lg:py-32">
+                <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]" />
+                <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-primary/10 to-transparent" />
+                <div className="container relative mx-auto px-4">
+                    <div className="max-w-3xl">
+                        <Badge variant="outline" className="mb-4 border-acm-blue/20 bg-acm-blue/10 text-acm-blue font-black uppercase tracking-widest text-[10px] italic">REPOS ARCHIVE</Badge>
+                        <h1 className="mb-6 text-4xl font-black tracking-tighter text-white sm:text-6xl uppercase italic">
+                            Innovation <span className="text-acm-blue">Archived.</span>
+                        </h1>
+                        <p className="text-lg text-slate-400 font-medium">
+                            Explore the repository of projects built by ACM members. From web apps to AI models, discover what's happening in our digital creative space.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <div className="container mx-auto px-4 py-12">
+                <div className="mb-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between border-b border-border/50 pb-8">
+                    <div className="flex flex-wrap items-center gap-4">
+                        <div className="w-full sm:w-64">
+                            <Select value={status || "all"} onValueChange={(v) => handleFilterChange("status", v)}>
+                                <SelectTrigger className="w-full bg-card/50 backdrop-blur-md border-border/50 focus:ring-acm-blue h-12 rounded-xl font-bold text-xs uppercase tracking-widest italic">
+                                    <SelectValue placeholder="STATUS BUFFER" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-card border-border/50 backdrop-blur-xl">
+                                    <SelectItem value="all">ALL ENTITIES</SelectItem>
+                                    <SelectItem value="approved">APPROVED</SelectItem>
+                                    <SelectItem value="pending">PENDING</SelectItem>
+                                    <SelectItem value="rejected">REJECTED</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="w-full sm:w-64">
+                            <Select value={techStack || "all"} onValueChange={(v) => handleFilterChange("tech", v)}>
+                                <SelectTrigger className="w-full bg-card/50 backdrop-blur-md border-border/50 focus:ring-acm-blue h-12 rounded-xl font-bold text-xs uppercase tracking-widest italic">
+                                    <SelectValue placeholder="STACK FILTER" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-card border-border/50 backdrop-blur-xl">
+                                    <SelectItem value="all">ALL TECHNOLOGIES</SelectItem>
+                                    {tags.map((tag) => (
+                                        <SelectItem key={tag.id} value={tag.name}>{tag.name.toUpperCase()}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        {hasActiveFilters && (
+                            <Button variant="ghost" onClick={clearFilters} className="text-muted-foreground hover:text-red-500 font-black uppercase tracking-widest text-[10px] italic">
+                                <X className="mr-2 h-4 w-4" /> RESET FILTERS
+                            </Button>
+                        )}
+                    </div>
+                    <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground italic">
+                        DISPLAYING <span className="text-white text-base ml-1 mr-1">{projects.length}</span> PROJECTS
+                    </div>
+                </div>
+
+                {isLoading ? (
+                    <div className="flex min-h-[400px] flex-col items-center justify-center">
+                        <Loader size={1.2} />
+                        <p className="mt-8 text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground animate-pulse italic">Initializing Buffer...</p>
+                    </div>
+                ) : (isError || projects.length === 0) ? (
+                    <div className="flex min-h-[400px] flex-col items-center justify-center rounded-[3rem] border border-dashed border-border/30 p-12 text-center bg-white/2">
+                        <div className="mb-4 rounded-3xl bg-muted/50 p-6 shadow-inner"><FolderOpen className="h-10 w-10 text-muted-foreground" /></div>
+                        <h3 className="text-2xl font-black tracking-tight text-white uppercase italic">No valid matches found.</h3>
+                        <p className="mt-2 text-muted-foreground font-medium max-w-sm mx-auto">
+                            {isError
+                                ? "The repository node is currently offline. Please attempt reconnection."
+                                : hasActiveFilters
+                                    ? "Your filter parameters returned no matching entities."
+                                    : "The archive is currently empty. Be the first to initialize a project."}
+                        </p>
+                        {(hasActiveFilters || isError) && (
+                            <Button
+                                onClick={isError ? () => refetch() : clearFilters}
+                                variant="outline"
+                                className="mt-10 rounded-xl px-10 font-black uppercase tracking-widest text-xs italic"
+                            >
+                                {isError ? "RETRY CONNECTION" : "RESET PARAMETERS"}
+                            </Button>
+                        )}
+                    </div>
+                ) : (
+                    <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                        {projects.map((project) => <ProjectCard key={project.id} project={project} />)}
+                    </div>
+                )}
+
+                {projectsData?.data?.nextPageToken && (
+                    <div className="mt-16 flex justify-center">
+                        <Button size="lg" className="rounded-2xl px-12 h-14 bg-white text-slate-950 hover:bg-slate-200 font-black uppercase tracking-widest italic shadow-2xl">LOAD MORE DATA</Button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
 
 export default function ProjectsPage() {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const [showFilters, setShowFilters] = useState(false)
-
-  const status = searchParams.get('status') || ''
-  const techStack = searchParams.get('tech') || ''
-  const limit = parseInt(searchParams.get('limit')) || 20
-
-  const { data: projectsData, isLoading, isError, refetch } = useQuery({
-    queryKey: ['projects', { status, techStack, limit }],
-    queryFn: () => projectsAPI.getAll({ status: status || undefined, techStack: techStack || undefined, limit }),
-  })
-
-  const { data: tagsData } = useQuery({
-    queryKey: ['tags'],
-    queryFn: () => tagsAPI.getAll(),
-  })
-
-  const projects = projectsData?.data?.projects || []
-  const tags = tagsData?.data?.tags || []
-
-  const handleFilterChange = (key, value) => {
-    const newParams = new URLSearchParams(searchParams)
-    if (value) {
-      newParams.set(key, value)
-    } else {
-      newParams.delete(key)
-    }
-    setSearchParams(newParams)
-  }
-
-  const clearFilters = () => {
-    setSearchParams({})
-  }
-
-  const hasActiveFilters = status || techStack
-
-  return (
-    <div className="min-h-screen animate-fade-in">
-      {/* Header */}
-      <div className="relative py-16 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-primary-500/5 via-transparent to-transparent" />
-        <div className="absolute top-10 left-1/4 w-72 h-72 bg-primary-500/10 rounded-full blur-[100px]" />
-        <div className="absolute top-10 right-1/4 w-72 h-72 bg-accent-500/10 rounded-full blur-[100px]" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4">
-            Browse Projects
-          </h1>
-          <p className="text-lg text-zinc-400 max-w-2xl">
-            Discover innovative projects from ACM club members. Filter by status or technology.
-          </p>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-        {/* Filters */}
-        <div className="mb-8">
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="flex items-center gap-3 flex-wrap">
-              <select
-                value={status}
-                onChange={(e) => handleFilterChange('status', e.target.value)}
-                className="px-4 py-2.5 input-glow cursor-pointer"
-              >
-                <option value="">All Status</option>
-                <option value="approved">Approved</option>
-                <option value="pending">Pending</option>
-                <option value="rejected">Rejected</option>
-              </select>
-
-              <select
-                value={techStack}
-                onChange={(e) => handleFilterChange('tech', e.target.value)}
-                className="px-4 py-2.5 input-glow cursor-pointer"
-              >
-                <option value="">All Technologies</option>
-                {tags.map((tag) => (
-                  <option key={tag.id} value={tag.name}>
-                    {tag.name}
-                  </option>
-                ))}
-              </select>
-
-              {hasActiveFilters && (
-                <button
-                  onClick={clearFilters}
-                  className="flex items-center space-x-1 px-3 py-2 text-zinc-400 hover:text-white transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                  <span>Clear filters</span>
-                </button>
-              )}
-            </div>
-
-            <div className="text-zinc-400 text-sm">
-              {projects.length} project{projects.length !== 1 ? 's' : ''} found
-            </div>
-          </div>
-
-          {/* Active Filters */}
-          {hasActiveFilters && (
-            <div className="flex flex-wrap gap-2 mt-4">
-              {status && (
-                <span className="inline-flex items-center gap-1 px-3 py-1 bg-primary-500/15 text-primary-400 rounded-full text-sm border border-primary-500/20">
-                  Status: {status}
-                  <button onClick={() => handleFilterChange('status', '')}>
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              )}
-              {techStack && (
-                <span className="inline-flex items-center gap-1 px-3 py-1 bg-primary-500/15 text-primary-400 rounded-full text-sm border border-primary-500/20">
-                  Tech: {techStack}
-                  <button onClick={() => handleFilterChange('tech', '')}>
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Projects Grid */}
-        {isLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-10 h-10 text-primary-500 animate-spin" />
-          </div>
-        ) : isError ? (
-          <div className="text-center py-20">
-            <div className="text-red-400 mb-4">Failed to load projects</div>
-            <button onClick={() => refetch()} className="btn-secondary">
-              Try Again
-            </button>
-          </div>
-        ) : projects.length > 0 ? (
-          <>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {projects.map((project) => (
-                <ProjectCard key={project.id} project={project} />
-              ))}
-            </div>
-
-            {projectsData?.data?.nextPageToken && (
-              <div className="mt-12 text-center">
-                <button className="btn-secondary">
-                  Load More Projects
-                </button>
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="text-center py-20">
-            <FolderOpen className="w-16 h-16 text-zinc-600 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-2">No projects found</h3>
-            <p className="text-zinc-400 mb-6">
-              {hasActiveFilters
-                ? 'Try adjusting your filters to find more projects.'
-                : 'Be the first to submit a project!'}
-            </p>
-            {hasActiveFilters && (
-              <button onClick={clearFilters} className="btn-secondary">
-                Clear Filters
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  )
+    return (
+        <Layout>
+            <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-slate-950"><div className="w-12 h-12 border-4 border-acm-blue border-t-transparent rounded-full animate-spin"></div></div>}>
+                <ProjectsContent />
+            </Suspense>
+        </Layout>
+    );
 }
