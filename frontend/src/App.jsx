@@ -74,7 +74,7 @@ function RootApp() {
                         <Route path="/login" element={<LoginPage />} />
                         <Route path="/register" element={<RegisterPage />} />
                         <Route path="/submit" element={
-                            <ProtectedRoute><CreateProjectPage /></ProtectedRoute>
+                            <ProtectedRoute contributorOnly><CreateProjectPage /></ProtectedRoute>
                         } />
                         <Route path="/profile" element={
                             <ProtectedRoute><ProfilePage /></ProtectedRoute>

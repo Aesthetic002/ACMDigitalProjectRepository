@@ -25,7 +25,7 @@ const { db } = require("../firebase");
  */
 router.get("/", async (req, res) => {
   try {
-    const { q, type = "all", limit = 20 } = req.query;
+    const { q, type = "projects", limit = 20, techStack, status } = req.query;
 
     // Validate query
     if (!q || q.trim() === "") {
@@ -63,27 +63,36 @@ router.get("/", async (req, res) => {
     // Search projects
     if (type === "projects" || type === "all") {
       try {
+        // Get all projects (filter isDeleted in code since field may not exist)
         const projectsSnapshot = await db
           .collection("projects")
-          .where("isDeleted", "==", false)
           .get();
 
         projectsSnapshot.forEach((doc) => {
           const project = doc.data();
+          
+          // Skip deleted projects
+          if (project.isDeleted === true) return;
+          
+          // Filter by status if provided
+          if (status && project.status !== status) return;
+          
+          // Filter by techStack if provided
+          if (techStack) {
+            const techLower = techStack.toLowerCase();
+            const projectTech = (project.techStack || []).map(t => t.toLowerCase());
+            if (!projectTech.some(t => t.includes(techLower))) return;
+          }
+          
           const searchableText =
-            `${project.title} ${project.description} ${(project.techStack || []).join(" ")}`.toLowerCase();
+            `${project.title || ''} ${project.description || ''} ${(project.techStack || []).join(" ")} ${project.authorName || ''}`.toLowerCase();
 
           // Simple substring search
           if (searchableText.includes(query)) {
             results.push({
               id: doc.id,
               type: "project",
-              title: project.title,
-              description: project.description,
-              techStack: project.techStack,
-              ownerId: project.ownerId,
-              status: project.status,
-              createdAt: project.createdAt,
+              ...project, // Include all project fields for ProjectCard
             });
           }
         });
@@ -100,17 +109,14 @@ router.get("/", async (req, res) => {
         usersSnapshot.forEach((doc) => {
           const user = doc.data();
           const searchableText =
-            `${user.name || ""} ${user.email || ""}`.toLowerCase();
+            `${user.name || ""} ${user.email || ""} ${(user.skills || []).join(" ")}`.toLowerCase();
 
           // Simple substring search
           if (searchableText.includes(query)) {
             results.push({
               id: doc.id,
               type: "user",
-              name: user.name,
-              email: user.email,
-              role: user.role,
-              createdAt: user.createdAt,
+              ...user, // Include all user fields
             });
           }
         });

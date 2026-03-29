@@ -5,12 +5,14 @@
  * - GET /api/v1/users/:userId - Get a specific user
  * - PUT /api/v1/users/:userId - Update a specific user
  * - GET /api/v1/users - Get all users (with optional filtering)
+ * 
+ * Roles: viewer (default), contributor, admin
  */
 
 const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middleware/auth');
-const { requireAdmin } = require('../middleware/admin');
+const { requireAdmin, VALID_ROLES } = require('../middleware/admin');
 const { db, auth } = require('../firebase');
 
 /**
@@ -115,7 +117,18 @@ router.put('/:userId', verifyToken, async (req, res) => {
     };
 
     if (name !== undefined) updateData.name = name;
-    if (role !== undefined) updateData.role = role;
+    
+    // Validate role if provided
+    if (role !== undefined) {
+      if (!VALID_ROLES.includes(role)) {
+        return res.status(400).json({
+          success: false,
+          error: 'ValidationError',
+          message: `Invalid role. Must be one of: ${VALID_ROLES.join(', ')}`
+        });
+      }
+      updateData.role = role;
+    }
 
     // Allow other profile fields
     Object.keys(otherFields).forEach(key => {

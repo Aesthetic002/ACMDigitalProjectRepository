@@ -1,39 +1,39 @@
 /**
- * Firebase Configuration - Mock Mode
+ * Firebase Configuration - Production Mode
  *
- * This version provides mock Firebase objects for frontend-only development.
- * No actual Firebase connection is established.
+ * Real Firebase connection using environment variables.
  */
 
-// Mock Firebase Auth
-export const auth = {
-    currentUser: null,
-    onAuthStateChanged: (callback) => {
-        // Immediately call with null user (no authenticated user)
-        setTimeout(() => callback(null), 0);
-        return () => {}; // Unsubscribe function
-    },
+import { initializeApp } from 'firebase/app';
+import { getAuth, GoogleAuthProvider, GithubAuthProvider, browserLocalPersistence, setPersistence } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+
+const firebaseConfig = {
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-// Mock Firestore Database
-export const db = {
-    // Mock db object - actual operations handled by firebaseService.js
-};
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
 
-// Mock Auth Providers
-export const googleProvider = { providerId: 'google.com' };
-export const githubProvider = { providerId: 'github.com' };
+// Initialize services
+export const auth = getAuth(app);
 
-// Mock Firebase App
-const mockApp = {
-    name: '[MOCK]',
-    options: {},
-};
+// Set persistence to local (survives browser refresh)
+setPersistence(auth, browserLocalPersistence).catch((error) => {
+    console.error('[Firebase] Failed to set persistence:', error);
+});
 
-export default mockApp;
+export const db = getFirestore(app);
 
-// Console notification
-console.log('%c[MOCK FIREBASE] Firebase is mocked - no real connection established',
-    'color: #EF4444; font-weight: bold; font-size: 12px;');
-console.log('%c Use mock authentication methods (loginAsDemo, loginAsMockUser) for testing',
-    'color: #9CA3AF; font-size: 11px;');
+// Auth providers
+export const googleProvider = new GoogleAuthProvider();
+export const githubProvider = new GithubAuthProvider();
+
+export default app;
+
+console.log('%c[Firebase] Connected to:', 'color: #4CAF50; font-weight: bold;', firebaseConfig.projectId);

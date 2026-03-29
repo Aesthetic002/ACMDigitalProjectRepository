@@ -1,247 +1,357 @@
 /**
- * Auth Store - Mock Data Mode
+ * Auth Store - Production Mode
  *
- * This version provides mock authentication for frontend-only development.
- * No Firebase connection required.
+ * Real Firebase authentication with backend API sync.
+ * 
+ * Roles: viewer (default), contributor, admin
  */
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { toast } from 'sonner'
-import { mockUsers } from '@/data/mockData'
+import {
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    signInWithPopup,
+    signOut,
+    onAuthStateChanged,
+    updateProfile,
+} from 'firebase/auth'
+import { auth, googleProvider, githubProvider } from '@/config/firebase'
+import axiosInstance from '@/api/axiosInstance'
 
-// Mock user database (in-memory)
-let registeredUsers = [...mockUsers];
+// Valid roles
+const VALID_ROLES = ['viewer', 'contributor', 'admin'];
+const DEFAULT_ROLE = 'viewer';
+
+// Track if auth listener is already set up
+let authListenerUnsubscribe = null;
 
 export const useAuthStore = create(
     persist(
         (set, get) => ({
             user: null,
             token: null,
-            isLoading: false,
+            isLoading: true,
             isAuthenticated: false,
 
             initAuth: () => {
-                // Check if already authenticated from persisted state
-                const currentState = get();
-                if (currentState.isAuthenticated && currentState.user) {
-                    console.log('[Mock Auth] Restored session for:', currentState.user.email);
-                    set({ isLoading: false });
-                    return;
+                // Prevent multiple listeners
+                if (authListenerUnsubscribe) {
+                    return authListenerUnsubscribe;
                 }
-                set({ isLoading: false });
+
+                console.log('[Auth] Initializing auth listener...');
+                
+                // Listen to Firebase auth state changes
+                authListenerUnsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+                    console.log('[Auth] State changed:', firebaseUser?.email || 'No user');
+                    
+                    if (firebaseUser) {
+                        try {
+                            // Get the ID token
+                            const token = await firebaseUser.getIdToken(true); // Force refresh
+                            
+                            // Set token immediately so axios can use it
+                            set({ token });
+                            
+                            // Sync user with backend using /auth/verify endpoint
+                            // This will create the user in Firestore if they don't exist
+                            let backendUser = null;
+                            const authHeader = { headers: { Authorization: `Bearer ${token}` } };
+                            
+                            try {
+                                // Use auth/verify endpoint which creates user if not exists
+                                const response = await axiosInstance.post('/auth/verify', {}, authHeader);
+                                backendUser = response.data.user;
+                                console.log('[Auth] User synced via /auth/verify:', backendUser?.email);
+                            } catch (err) {
+                                console.error('[Auth] Failed to sync user with backend:', err);
+                                // Still continue - user can use Firebase auth even if backend sync fails
+                            }
+
+                            const user = {
+                                uid: firebaseUser.uid,
+                                email: firebaseUser.email,
+                                name: backendUser?.name || firebaseUser.displayName || firebaseUser.email?.split('@')[0],
+                                photoURL: backendUser?.photoURL || firebaseUser.photoURL,
+                                role: backendUser?.role || DEFAULT_ROLE,
+                                ...backendUser,
+                            };
+
+                            set({
+                                user,
+                                token,
+                                isAuthenticated: true,
+                                isLoading: false,
+                            });
+                            console.log('[Auth] User authenticated:', user.email, 'Role:', user.role);
+                        } catch (error) {
+                            console.error('[Auth] Error syncing user:', error);
+                            // Still set user from Firebase even if backend sync fails
+                            set({
+                                user: {
+                                    uid: firebaseUser.uid,
+                                    email: firebaseUser.email,
+                                    name: firebaseUser.displayName || firebaseUser.email?.split('@')[0],
+                                    photoURL: firebaseUser.photoURL,
+                                    role: DEFAULT_ROLE,
+                                },
+                                token: await firebaseUser.getIdToken(),
+                                isAuthenticated: true,
+                                isLoading: false,
+                            });
+                        }
+                    } else {
+                        set({
+                            user: null,
+                            token: null,
+                            isAuthenticated: false,
+                            isLoading: false,
+                        });
+                    }
+                });
+
+                return authListenerUnsubscribe;
             },
 
-            login: async (email, password, role = 'member') => {
+            login: async (email, password) => {
                 set({ isLoading: true });
+                try {
+                    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                    const token = await userCredential.user.getIdToken();
+                    
+                    // Fetch user from backend
+                    const response = await axiosInstance.get(`/users/${userCredential.user.uid}`);
+                    const backendUser = response.data.user;
 
-                // Simulate network delay
-                await new Promise(resolve => setTimeout(resolve, 500));
+                    const user = {
+                        uid: userCredential.user.uid,
+                        email: userCredential.user.email,
+                        name: backendUser?.name || userCredential.user.displayName,
+                        photoURL: backendUser?.photoURL || userCredential.user.photoURL,
+                        role: backendUser?.role || DEFAULT_ROLE,
+                        ...backendUser,
+                    };
 
-                // Find user in mock database
-                const existingUser = registeredUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
-
-                if (existingUser) {
-                    const token = `mock-token-${Date.now()}`;
                     set({
-                        user: {
-                            ...existingUser,
-                            role: existingUser.role || role,
-                        },
+                        user,
                         token,
                         isAuthenticated: true,
                         isLoading: false,
                     });
 
-                    toast.success(existingUser.role === 'admin' ? 'Welcome, Admin!' : 'Welcome back!');
-                    console.log('[Mock Auth] Login successful:', email);
+                    const welcomeMsg = user.role === 'admin' ? 'Welcome, Admin!' : 
+                                       user.role === 'contributor' ? 'Welcome, Contributor!' : 'Welcome!';
+                    toast.success(welcomeMsg);
                     return { success: true };
+                } catch (error) {
+                    set({ isLoading: false });
+                    const message = getAuthErrorMessage(error.code);
+                    toast.error(message);
+                    return { success: false, error: message };
                 }
-
-                // Auto-create user if not found (for demo purposes)
-                const newUser = {
-                    uid: `user-${Date.now()}`,
-                    email,
-                    name: email.split('@')[0],
-                    role,
-                    photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
-                    createdAt: { _seconds: Math.floor(Date.now() / 1000) },
-                };
-                registeredUsers.push(newUser);
-
-                const token = `mock-token-${Date.now()}`;
-                set({
-                    user: newUser,
-                    token,
-                    isAuthenticated: true,
-                    isLoading: false,
-                });
-
-                toast.success('Welcome! Account created automatically.');
-                console.log('[Mock Auth] New user created and logged in:', email);
-                return { success: true };
             },
 
-            register: async (email, password, name, role = 'member') => {
+            register: async (email, password, name, role = DEFAULT_ROLE) => {
                 set({ isLoading: true });
+                try {
+                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                    
+                    // Update Firebase profile
+                    await updateProfile(userCredential.user, { displayName: name });
+                    
+                    const token = await userCredential.user.getIdToken();
+                    
+                    // Set token first for axios
+                    set({ token });
 
-                // Simulate network delay
-                await new Promise(resolve => setTimeout(resolve, 500));
+                    // Sync user with backend via /auth/verify (creates if not exists)
+                    let backendUser = null;
+                    try {
+                        const response = await axiosInstance.post('/auth/verify', {}, {
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+                        backendUser = response.data.user;
+                        console.log('[Auth] Registered user synced:', backendUser?.email);
+                    } catch (err) {
+                        console.error('[Auth] Failed to sync registered user:', err);
+                    }
 
-                // Check if user already exists
-                if (registeredUsers.find(u => u.email.toLowerCase() === email.toLowerCase())) {
+                    const user = {
+                        uid: userCredential.user.uid,
+                        email,
+                        name,
+                        role: backendUser?.role || DEFAULT_ROLE,
+                        photoURL: backendUser?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`,
+                        ...backendUser,
+                    };
+
+                    set({
+                        user,
+                        token,
+                        isAuthenticated: true,
+                        isLoading: false,
+                    });
+
+                    toast.success('Account created successfully!');
+                    return { success: true };
+                } catch (error) {
                     set({ isLoading: false });
-                    toast.error('This email is already registered');
-                    return { success: false, error: 'Email already in use' };
+                    const message = getAuthErrorMessage(error.code);
+                    toast.error(message);
+                    return { success: false, error: message };
                 }
-
-                // Create new user
-                const newUser = {
-                    uid: `user-${Date.now()}`,
-                    email,
-                    name,
-                    role,
-                    photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`,
-                    createdAt: { _seconds: Math.floor(Date.now() / 1000) },
-                    updatedAt: { _seconds: Math.floor(Date.now() / 1000) },
-                };
-                registeredUsers.push(newUser);
-
-                const token = `mock-token-${Date.now()}`;
-                set({
-                    user: newUser,
-                    token,
-                    isAuthenticated: true,
-                    isLoading: false,
-                });
-
-                toast.success('Account created successfully!');
-                console.log('[Mock Auth] Registration successful:', email);
-                return { success: true };
             },
 
             loginWithGoogle: async () => {
                 set({ isLoading: true });
-                await new Promise(resolve => setTimeout(resolve, 500));
+                try {
+                    const result = await signInWithPopup(auth, googleProvider);
+                    const token = await result.user.getIdToken();
+                    
+                    // Set token first for axios
+                    set({ token });
 
-                // Create mock Google user
-                const mockGoogleUser = {
-                    uid: `google-${Date.now()}`,
-                    email: 'demo.google@gmail.com',
-                    name: 'Google Demo User',
-                    role: 'member',
-                    photoURL: 'https://api.dicebear.com/7.x/avataaars/svg?seed=GoogleUser',
-                    provider: 'google',
-                    createdAt: { _seconds: Math.floor(Date.now() / 1000) },
-                };
+                    // Sync user with backend via /auth/verify (creates if not exists)
+                    let backendUser = null;
+                    try {
+                        const response = await axiosInstance.post('/auth/verify', {}, {
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+                        backendUser = response.data.user;
+                        console.log('[Auth] Google user synced:', backendUser?.email);
+                    } catch (err) {
+                        console.error('[Auth] Failed to sync Google user:', err);
+                    }
 
-                const token = `mock-google-token-${Date.now()}`;
-                set({
-                    user: mockGoogleUser,
-                    token,
-                    isAuthenticated: true,
-                    isLoading: false,
-                });
+                    const user = {
+                        uid: result.user.uid,
+                        email: result.user.email,
+                        name: backendUser?.name || result.user.displayName,
+                        photoURL: backendUser?.photoURL || result.user.photoURL,
+                        role: backendUser?.role || DEFAULT_ROLE,
+                        ...backendUser,
+                    };
 
-                toast.success('Welcome! (Mock Google login)');
-                console.log('[Mock Auth] Google login simulated');
-                return { success: true };
+                    set({
+                        user,
+                        token,
+                        isAuthenticated: true,
+                        isLoading: false,
+                    });
+
+                    toast.success('Welcome!');
+                    return { success: true };
+                } catch (error) {
+                    set({ isLoading: false });
+                    if (error.code !== 'auth/popup-closed-by-user') {
+                        toast.error('Google sign-in failed');
+                    }
+                    return { success: false, error: error.message };
+                }
             },
 
             loginWithGithub: async () => {
                 set({ isLoading: true });
-                await new Promise(resolve => setTimeout(resolve, 500));
+                try {
+                    const result = await signInWithPopup(auth, githubProvider);
+                    const token = await result.user.getIdToken();
+                    
+                    // Set token first for axios
+                    set({ token });
 
-                // Create mock GitHub user
-                const mockGithubUser = {
-                    uid: `github-${Date.now()}`,
-                    email: 'demo.github@github.com',
-                    name: 'GitHub Demo User',
-                    role: 'member',
-                    photoURL: 'https://api.dicebear.com/7.x/avataaars/svg?seed=GithubUser',
-                    provider: 'github',
-                    createdAt: { _seconds: Math.floor(Date.now() / 1000) },
-                };
+                    // Sync user with backend via /auth/verify (creates if not exists)
+                    let backendUser = null;
+                    try {
+                        const response = await axiosInstance.post('/auth/verify', {}, {
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+                        backendUser = response.data.user;
+                        console.log('[Auth] GitHub user synced:', backendUser?.email);
+                    } catch (err) {
+                        console.error('[Auth] Failed to sync GitHub user:', err);
+                    }
 
-                const token = `mock-github-token-${Date.now()}`;
-                set({
-                    user: mockGithubUser,
-                    token,
-                    isAuthenticated: true,
-                    isLoading: false,
-                });
+                    const user = {
+                        uid: result.user.uid,
+                        email: result.user.email,
+                        name: backendUser?.name || result.user.displayName,
+                        photoURL: backendUser?.photoURL || result.user.photoURL,
+                        role: backendUser?.role || DEFAULT_ROLE,
+                        ...backendUser,
+                    };
 
-                toast.success('Welcome! (Mock GitHub login)');
-                console.log('[Mock Auth] GitHub login simulated');
-                return { success: true };
+                    set({
+                        user,
+                        token,
+                        isAuthenticated: true,
+                        isLoading: false,
+                    });
+
+                    toast.success('Welcome!');
+                    return { success: true };
+                } catch (error) {
+                    set({ isLoading: false });
+                    if (error.code !== 'auth/popup-closed-by-user') {
+                        toast.error('GitHub sign-in failed');
+                    }
+                    return { success: false, error: error.message };
+                }
             },
 
             logout: async (showToast = true) => {
-                set({ user: null, token: null, isAuthenticated: false });
-                if (showToast) {
-                    toast.success('Logged out successfully');
+                try {
+                    await signOut(auth);
+                    set({ user: null, token: null, isAuthenticated: false });
+                    if (showToast) {
+                        toast.success('Logged out successfully');
+                    }
+                } catch (error) {
+                    console.error('[Auth] Logout error:', error);
                 }
-                console.log('[Mock Auth] User logged out');
             },
 
             updateUser: async (data) => {
-                const { user } = get();
+                const { user, token } = get();
                 if (!user) return { success: false };
 
-                await new Promise(resolve => setTimeout(resolve, 300));
-
-                const updatedUser = { ...user, ...data };
-                set({ user: updatedUser });
-
-                // Update in mock database
-                const index = registeredUsers.findIndex(u => u.uid === user.uid);
-                if (index !== -1) {
-                    registeredUsers[index] = updatedUser;
+                try {
+                    const response = await axiosInstance.put(`/users/${user.uid}`, data);
+                    const updatedUser = { ...user, ...response.data.user };
+                    set({ user: updatedUser });
+                    toast.success('Profile updated successfully');
+                    return { success: true };
+                } catch (error) {
+                    toast.error('Failed to update profile');
+                    return { success: false, error: error.message };
                 }
+            },
 
-                toast.success('Profile updated successfully');
-                console.log('[Mock Auth] User profile updated');
-                return { success: true };
+            // Helper to check if user can create projects
+            canCreateProjects: () => {
+                const { user } = get();
+                return user && (user.role === 'contributor' || user.role === 'admin');
+            },
+
+            // Helper to check if user is admin
+            isAdmin: () => {
+                const { user } = get();
+                return user?.role === 'admin';
             },
 
             setUser: (user) => set({ user }),
             setToken: (token) => set({ token }),
 
-            // Demo/Quick login methods
-            loginAsDemo: (role = 'admin') => {
-                const demoUser = {
-                    uid: role === 'admin' ? 'demo-admin-001' : 'demo-member-001',
-                    email: role === 'admin' ? 'admin@acm-demo.local' : 'member@acm-demo.local',
-                    name: role === 'admin' ? 'Demo Admin' : 'Demo Member',
-                    photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${role}Demo`,
-                    role,
-                    isDemoUser: true,
-                    year: '4th Year',
-                    graduationYear: '2025',
-                };
-                set({
-                    user: demoUser,
-                    token: 'demo-token',
-                    isAuthenticated: true,
-                    isLoading: false,
-                });
-                toast.success(`Demo ${role} session started!`);
-                console.log('[Mock Auth] Demo login:', role);
-            },
-
-            // Quick login as existing mock user
-            loginAsMockUser: (userIndex = 0) => {
-                const user = mockUsers[userIndex];
-                if (user) {
-                    set({
-                        user,
-                        token: `mock-token-${user.uid}`,
-                        isAuthenticated: true,
-                        isLoading: false,
-                    });
-                    toast.success(`Logged in as ${user.name}`);
-                    console.log('[Mock Auth] Quick login as:', user.name);
+            // Refresh token (called by axios interceptor if needed)
+            refreshToken: async () => {
+                const currentUser = auth.currentUser;
+                if (currentUser) {
+                    const token = await currentUser.getIdToken(true);
+                    set({ token });
+                    return token;
                 }
+                return null;
             },
         }),
         {
@@ -255,6 +365,23 @@ export const useAuthStore = create(
     )
 );
 
-// Console notification
-console.log('%c[MOCK AUTH] Running in mock authentication mode - no Firebase required',
-    'color: #F59E0B; font-weight: bold; font-size: 12px;');
+// Export role constants for use in components
+export { VALID_ROLES, DEFAULT_ROLE };
+
+// Helper function to get user-friendly error messages
+function getAuthErrorMessage(errorCode) {
+    const errorMessages = {
+        'auth/email-already-in-use': 'This email is already registered',
+        'auth/invalid-email': 'Invalid email address',
+        'auth/operation-not-allowed': 'Operation not allowed',
+        'auth/weak-password': 'Password is too weak',
+        'auth/user-disabled': 'This account has been disabled',
+        'auth/user-not-found': 'No account found with this email',
+        'auth/wrong-password': 'Incorrect password',
+        'auth/invalid-credential': 'Invalid email or password',
+        'auth/too-many-requests': 'Too many attempts. Please try again later',
+    };
+    return errorMessages[errorCode] || 'Authentication failed';
+}
+
+console.log('%c[Auth] Firebase Authentication initialized', 'color: #4CAF50; font-weight: bold;');

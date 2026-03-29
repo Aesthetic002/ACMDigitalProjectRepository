@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+package acm.asset;
+
+service AssetService {
+  // Get a signed upload URL
+  rpc GetUploadUrl(GetUploadUrlRequest) returns (UploadUrlResponse);
+
+  // Upload asset with streaming (client sends chunks)
+  rpc UploadAsset(stream UploadAssetRequest) returns (UploadAssetResponse);
+
+  // List assets for a project
+  rpc ListAssets(ListAssetsRequest) returns (ListAssetsResponse);
+
+  // Delete an asset
+  rpc DeleteAsset(DeleteAssetRequest) returns (DeleteAssetResponse);
+
+  // Generate a signed download URL
+  rpc GenerateSignedUrl(GenerateSignedUrlRequest) returns (SignedUrlResponse);
+}
+
+message AssetResponse {
+  string id = 1;
+  string name = 2;
+  string url = 3;
+  string type = 4;
+  int64 size = 5;
+  int64 created_at = 6;
+  int64 updated_at = 7;
+}
+
+message GetUploadUrlRequest {
+  string project_id = 1;
+  string user_id = 2;
+  string file_name = 3;
+  string file_type = 4;
+}
+
+message UploadUrlResponse {
+  string upload_url = 1;
+  string asset_id = 2;
+  string public_id = 3;
+}
+
+message UploadAssetRequest {
+  bytes chunk = 1;
+  string asset_id = 2;
+  string project_id = 3;
+  string user_id = 4;
+}
+
+message UploadAssetResponse {
+  bool success = 1;
+  string asset_id = 2;
+  string url = 3;
+  string message = 4;
+}
+
+message ListAssetsRequest {
+  string project_id = 1;
+}
+
+message ListAssetsResponse {
+  repeated AssetResponse assets = 1;
+}
+
+message DeleteAssetRequest {
+  string asset_id = 1;
+  string project_id = 2;
+  string user_id = 3;
+}
+
+message DeleteAssetResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GenerateSignedUrlRequest {
+  string file_path = 1;
+  int32 expiration = 2;
+}
+
+message SignedUrlResponse {
+  string signed_url = 1;
+  int64 expires_at = 2;
+}

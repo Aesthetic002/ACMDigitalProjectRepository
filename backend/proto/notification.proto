@@ -1,0 +1,110 @@
+syntax = "proto3";
+
+package acm.notification;
+
+service NotificationService {
+  // Send a notification (fire-and-forget)
+  rpc SendNotification(SendNotificationRequest) returns (SendNotificationResponse);
+
+  // List all events
+  rpc ListEvents(ListEventsRequest) returns (ListEventsResponse);
+
+  // Get a single event
+  rpc GetEvent(GetEventRequest) returns (EventResponse);
+
+  // Create an event (admin only)
+  rpc CreateEvent(CreateEventRequest) returns (EventResponse);
+
+  // Update an event (admin only)
+  rpc UpdateEvent(UpdateEventRequest) returns (EventResponse);
+
+  // Delete an event (admin only)
+  rpc DeleteEvent(DeleteEventRequest) returns (DeleteEventResponse);
+
+  // Get platform analytics
+  rpc GetAnalytics(GetAnalyticsRequest) returns (AnalyticsResponse);
+}
+
+message NotificationMessage {
+  string title = 1;
+  string body = 2;
+  string type = 3;
+  map<string, string> data = 4;
+}
+
+message SendNotificationRequest {
+  string user_id = 1;
+  NotificationMessage message = 2;
+}
+
+message SendNotificationResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message EventResponse {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  int64 start_date = 4;
+  int64 end_date = 5;
+  string type = 6;
+  int64 created_at = 7;
+  int64 updated_at = 8;
+}
+
+message ListEventsRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+}
+
+message ListEventsResponse {
+  repeated EventResponse events = 1;
+  int32 total = 2;
+}
+
+message GetEventRequest {
+  string event_id = 1;
+}
+
+message CreateEventRequest {
+  string title = 1;
+  string description = 2;
+  int64 start_date = 3;
+  int64 end_date = 4;
+  string type = 5;
+}
+
+message UpdateEventRequest {
+  string event_id = 1;
+  string title = 2;
+  string description = 3;
+  int64 start_date = 4;
+  int64 end_date = 5;
+  string type = 6;
+}
+
+message DeleteEventRequest {
+  string event_id = 1;
+}
+
+message DeleteEventResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetAnalyticsRequest {
+  int64 start_date = 1;
+  int64 end_date = 2;
+}
+
+message AnalyticsResponse {
+  int32 total_projects = 1;
+  int32 total_users = 2;
+  int32 total_admins = 3;
+  int32 featured_projects = 4;
+  map<string, int32> projects_by_status = 5;
+  map<string, int32> tech_stack_distribution = 6;
+  int32 total_assets = 7;
+  int64 total_storage_used = 8;
+}

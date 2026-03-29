@@ -1,76 +1,69 @@
 /**
- * Firebase Service - Mock Data Mode
+ * Firebase Service - Production Mode
  *
- * This version provides mock Firestore operations for frontend-only development.
- * No Firebase connection required.
+ * Real Firestore operations for direct database access.
+ * Note: Most operations should go through the backend API.
+ * This is for cases where direct Firestore access is needed.
  */
 
+import { db } from '@/config/firebase';
 import {
-    mockUsers,
-    mockProjects,
-    mockTags,
-} from '@/data/mockData';
-
-// In-memory stores (shared with api.js through imports)
-let usersStore = [...mockUsers];
-let projectsStore = [...mockProjects];
-let tagsStore = [...mockTags];
-
-const generateId = () => `mock-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-const serverTimestamp = () => ({ _seconds: Math.floor(Date.now() / 1000) });
+    collection,
+    doc,
+    getDoc,
+    getDocs,
+    setDoc,
+    updateDoc,
+    deleteDoc,
+    query,
+    where,
+    orderBy,
+    limit,
+    serverTimestamp,
+} from 'firebase/firestore';
 
 // ─── USERS / MEMBERS ──────────────────────────────────────────────────────────
 
 export const fsUsers = {
     /** Get all users */
     getAll: async () => {
-        return usersStore.map(u => ({ ...u }));
+        const snapshot = await getDocs(collection(db, 'users'));
+        return snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
     },
 
     /** Get a single user by UID */
     getById: async (uid) => {
-        const user = usersStore.find(u => u.uid === uid);
-        return user ? { ...user } : null;
+        const docRef = doc(db, 'users', uid);
+        const docSnap = await getDoc(docRef);
+        return docSnap.exists() ? { uid: docSnap.id, ...docSnap.data() } : null;
     },
 
     /** Create or overwrite a user document */
     create: async (uid, data) => {
-        const existingIndex = usersStore.findIndex(u => u.uid === uid);
-        const userData = {
-            uid,
+        const docRef = doc(db, 'users', uid);
+        await setDoc(docRef, {
             ...data,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
-        };
-
-        if (existingIndex !== -1) {
-            usersStore[existingIndex] = userData;
-        } else {
-            usersStore.push(userData);
-        }
-        console.log('[Mock Firestore] User created/updated:', uid);
+        });
+        console.log('[Firestore] User created/updated:', uid);
     },
 
     /** Update fields on an existing user document */
     update: async (uid, data) => {
-        const index = usersStore.findIndex(u => u.uid === uid);
-        if (index !== -1) {
-            usersStore[index] = {
-                ...usersStore[index],
-                ...data,
-                updatedAt: serverTimestamp(),
-            };
-            console.log('[Mock Firestore] User updated:', uid);
-        }
+        const docRef = doc(db, 'users', uid);
+        await updateDoc(docRef, {
+            ...data,
+            updatedAt: serverTimestamp(),
+        });
+        console.log('[Firestore] User updated:', uid);
     },
 
     /** Delete a user document */
     delete: async (uid) => {
-        const index = usersStore.findIndex(u => u.uid === uid);
-        if (index !== -1) {
-            usersStore.splice(index, 1);
-            console.log('[Mock Firestore] User deleted:', uid);
-        }
+        const docRef = doc(db, 'users', uid);
+        await deleteDoc(docRef);
+        console.log('[Firestore] User deleted:', uid);
     },
 };
 
@@ -79,53 +72,49 @@ export const fsUsers = {
 export const fsProjects = {
     /** Get all projects, optionally filter by status */
     getAll: async (status = null) => {
-        let projects = projectsStore.map(p => ({ ...p }));
+        let q = collection(db, 'projects');
         if (status) {
-            projects = projects.filter(p => p.status === status);
+            q = query(q, where('status', '==', status));
         }
-        return projects;
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     },
 
     /** Get a single project */
     getById: async (id) => {
-        const project = projectsStore.find(p => p.id === id);
-        return project ? { ...project } : null;
+        const docRef = doc(db, 'projects', id);
+        const docSnap = await getDoc(docRef);
+        return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
     },
 
     /** Create a new project */
     create: async (data) => {
-        const newProject = {
-            id: generateId(),
+        const docRef = doc(collection(db, 'projects'));
+        await setDoc(docRef, {
             ...data,
             status: 'pending',
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
-        };
-        projectsStore.unshift(newProject);
-        console.log('[Mock Firestore] Project created:', newProject.id);
-        return newProject.id;
+        });
+        console.log('[Firestore] Project created:', docRef.id);
+        return docRef.id;
     },
 
     /** Update project fields */
     update: async (id, data) => {
-        const index = projectsStore.findIndex(p => p.id === id);
-        if (index !== -1) {
-            projectsStore[index] = {
-                ...projectsStore[index],
-                ...data,
-                updatedAt: serverTimestamp(),
-            };
-            console.log('[Mock Firestore] Project updated:', id);
-        }
+        const docRef = doc(db, 'projects', id);
+        await updateDoc(docRef, {
+            ...data,
+            updatedAt: serverTimestamp(),
+        });
+        console.log('[Firestore] Project updated:', id);
     },
 
     /** Delete a project permanently */
     delete: async (id) => {
-        const index = projectsStore.findIndex(p => p.id === id);
-        if (index !== -1) {
-            projectsStore.splice(index, 1);
-            console.log('[Mock Firestore] Project deleted:', id);
-        }
+        const docRef = doc(db, 'projects', id);
+        await deleteDoc(docRef);
+        console.log('[Firestore] Project deleted:', id);
     },
 };
 
@@ -134,64 +123,57 @@ export const fsProjects = {
 export const fsDomains = {
     /** Get all domains */
     getAll: async () => {
-        return tagsStore.map(t => ({ ...t }));
+        const snapshot = await getDocs(collection(db, 'tags'));
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     },
 
     /** Create a new domain */
     create: async (name) => {
-        const newTag = {
-            id: generateId(),
+        const docRef = doc(collection(db, 'tags'));
+        await setDoc(docRef, {
             name: typeof name === 'string' ? name : name.name,
             projectCount: 0,
             createdAt: serverTimestamp(),
-        };
-        tagsStore.push(newTag);
-        console.log('[Mock Firestore] Domain created:', newTag.name);
-        return newTag.id;
+        });
+        console.log('[Firestore] Domain created:', docRef.id);
+        return docRef.id;
     },
 
     /** Update a domain */
     update: async (id, data) => {
-        const index = tagsStore.findIndex(t => t.id === id);
-        if (index !== -1) {
-            tagsStore[index] = { ...tagsStore[index], ...data };
-            console.log('[Mock Firestore] Domain updated:', id);
-        }
+        const docRef = doc(db, 'tags', id);
+        await updateDoc(docRef, data);
+        console.log('[Firestore] Domain updated:', id);
     },
 
     /** Delete a domain */
     delete: async (id) => {
-        const index = tagsStore.findIndex(t => t.id === id);
-        if (index !== -1) {
-            tagsStore.splice(index, 1);
-            console.log('[Mock Firestore] Domain deleted:', id);
-        }
+        const docRef = doc(db, 'tags', id);
+        await deleteDoc(docRef);
+        console.log('[Firestore] Domain deleted:', id);
     },
 };
 
-// ─── ADMIN ACCOUNT CREATION (Mock) ────────────────────────────────────────────
+// ─── ADMIN ACCOUNT CREATION ────────────────────────────────────────────────────
 
 export const createAdminAccount = async ({ email, password, name }) => {
-    const newAdmin = {
-        uid: `admin-${Date.now()}`,
+    // Note: Admin creation should be done through backend for security
+    // This is just a placeholder for Firestore user document creation
+    const uid = `admin-${Date.now()}`;
+    await fsUsers.create(uid, {
         email,
         name,
         role: 'admin',
         photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-    };
-    usersStore.push(newAdmin);
-    console.log('[Mock Firestore] Admin account created:', email);
-    return newAdmin;
+    });
+    console.log('[Firestore] Admin account created:', email);
+    return { uid, email, name, role: 'admin' };
 };
 
-// ─── SEED DEMO DATA (No-op in mock mode) ──────────────────────────────────────
+// ─── SEED DEMO DATA ──────────────────────────────────────────────────────────
 
 export const seedDemoData = async () => {
-    console.log('[Mock Firestore] Demo data already seeded from mockData.js');
+    console.log('[Firestore] Seeding should be done through backend API');
 };
 
-// Console notification
-console.log('%c[MOCK FIRESTORE] Running with mock Firestore operations',
-    'color: #06B6D4; font-weight: bold; font-size: 12px;');
+console.log('%c[Firestore] Firebase Firestore initialized', 'color: #4CAF50; font-weight: bold;');
