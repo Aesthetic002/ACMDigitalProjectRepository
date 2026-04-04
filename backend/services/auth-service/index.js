@@ -13,8 +13,17 @@ require("dotenv").config();
 
 const { admin, db, auth } = require("../firebase");
 
-// Load auth proto
-const authProtoPath = path.join(__dirname, "../proto/auth.proto");
+// Helper to convert Firestore timestamps to milliseconds
+function toTimestamp(value) {
+  if (!value) return 0;
+  if (typeof value === 'number') return value;
+  if (value.toMillis) return value.toMillis();
+  if (value._seconds) return value._seconds * 1000;
+  return 0;
+}
+
+// Load auth proto - go up two levels from services/auth-service to backend/proto
+const authProtoPath = path.join(__dirname, "../../proto/auth.proto");
 const authPackageDef = protoLoader.loadSync(authProtoPath, {
   keepCase: true,
   longs: String,
@@ -150,8 +159,8 @@ async function verifyIdToken(call, callback) {
       role: userData.role || "viewer",
       avatar: userData.avatar || "",
       email_verified: userData.emailVerified || false,
-      created_at: userData.createdAt || Date.now(),
-      updated_at: userData.updatedAt || Date.now(),
+      created_at: toTimestamp(userData.createdAt) || Date.now(),
+      updated_at: toTimestamp(userData.updatedAt) || Date.now(),
     });
   } catch (error) {
     console.error("VerifyIdToken error:", error);

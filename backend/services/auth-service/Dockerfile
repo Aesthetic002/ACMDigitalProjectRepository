@@ -2,14 +2,18 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-COPY backend/package.json .
-COPY backend/services/auth-service/package.json ./services/auth-service/
-COPY backend/firebase.js .
-COPY backend/proto ./proto
-COPY backend/services/auth-service ./
+# Copy shared files
+COPY serviceAccountKey.json ./serviceAccountKey.json
+COPY firebase.js ./firebase.js
+COPY proto ./proto
+COPY services/firebase.js ./services/firebase.js
 
-RUN npm install --cwd . && \
-    npm install --cwd ./services/auth-service
+# Copy service files
+COPY services/auth-service ./services/auth-service
+
+# Install dependencies
+WORKDIR /app/services/auth-service
+RUN npm install
 
 EXPOSE 50051
 

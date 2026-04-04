@@ -22,6 +22,7 @@ import AdminModerationPage from '@/pages/AdminModerationPage';
 import AdminPreAddPage from '@/pages/AdminPreAddPage';
 import AdminMembersPage from '@/pages/AdminMembersPage';
 import AdminMemberProfilePage from '@/pages/AdminMemberProfilePage';
+import MemberProfilePage from '@/pages/MemberProfilePage';
 import AdminProjectsPage from '@/pages/AdminProjectsPage';
 import AdminProjectDetailPage from '@/pages/AdminProjectDetailPage';
 import AdminDomainsPage from '@/pages/AdminDomainsPage';
@@ -64,6 +65,9 @@ function RootApp() {
                         } />
                         <Route path="/members" element={
                             <ProtectedRoute><MembersPage /></ProtectedRoute>
+                        } />
+                        <Route path="/members/:uid" element={
+                            <ProtectedRoute><MemberProfilePage /></ProtectedRoute>
                         } />
                         <Route path="/domains" element={
                             <ProtectedRoute><DomainsPage /></ProtectedRoute>

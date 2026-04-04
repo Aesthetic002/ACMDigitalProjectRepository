@@ -19,6 +19,45 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { useAuthStore } from "@/store/authStore";
 
+// Helper to safely format dates from various formats
+function safeFormatDate(dateValue, formatString = "MMM d, h:mm a") {
+  if (!dateValue) return "Unknown date";
+  
+  try {
+    let date;
+    
+    // Handle Firestore Timestamp object
+    if (dateValue._seconds) {
+      date = new Date(dateValue._seconds * 1000);
+    }
+    // Handle numeric timestamp (milliseconds)
+    else if (typeof dateValue === 'number') {
+      date = new Date(dateValue);
+    }
+    // Handle ISO string or other string formats
+    else if (typeof dateValue === 'string') {
+      date = new Date(dateValue);
+    }
+    // Handle Date object
+    else if (dateValue instanceof Date) {
+      date = dateValue;
+    }
+    else {
+      return "Unknown date";
+    }
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      return "Unknown date";
+    }
+    
+    return format(date, formatString);
+  } catch (error) {
+    console.error("Date formatting error:", error);
+    return "Unknown date";
+  }
+}
+
 // ── Stat Card ───────────────────────────────────────────────
 function StatCard({ icon, label, value, delay, index = 0 }) {
   const { count, ref } = useCountUp(value, 2000);
@@ -238,8 +277,8 @@ export function AdminAnalytics() {
                           </span>
                         </td>
                         <td className="py-3 px-4 text-sm text-muted-foreground">
-                          {user.createdAt
-                            ? format(new Date(user.createdAt._seconds ? user.createdAt._seconds * 1000 : user.createdAt), "MMM d, yyyy")
+                          {safeFormatDate(user.createdAt, "MMM d, yyyy") !== "Unknown date" 
+                            ? safeFormatDate(user.createdAt, "MMM d, yyyy") 
                             : "—"}
                         </td>
                       </tr>
@@ -285,9 +324,7 @@ export function AdminAnalytics() {
                       <div className="min-w-0">
                         <p className="font-medium text-foreground text-sm truncate">{project.title}</p>
                         <p className="text-xs text-muted-foreground">
-                          {project.createdAt
-                            ? format(new Date(project.createdAt._seconds ? project.createdAt._seconds * 1000 : project.createdAt), "MMM d, h:mm a")
-                            : "Unknown date"}
+                          {safeFormatDate(project.createdAt)}
                         </p>
                       </div>
                       <AlertCircle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" />

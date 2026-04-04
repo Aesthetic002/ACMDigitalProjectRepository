@@ -13,8 +13,17 @@ require("dotenv").config();
 
 const { admin, db, auth } = require("../firebase");
 
-// Load user proto
-const userProtoPath = path.join(__dirname, "../proto/user.proto");
+// Helper to convert Firestore timestamps to milliseconds
+function toTimestamp(value) {
+  if (!value) return 0;
+  if (typeof value === 'number') return value;
+  if (value.toMillis) return value.toMillis();
+  if (value._seconds) return value._seconds * 1000;
+  return 0;
+}
+
+// Load user proto - go up two levels from services/user-service to backend/proto
+const userProtoPath = path.join(__dirname, "../../proto/user.proto");
 const userPackageDef = protoLoader.loadSync(userProtoPath, {
   keepCase: true,
   longs: String,
@@ -57,8 +66,8 @@ async function getUser(call, callback) {
       role: userData.role || "viewer",
       avatar: userData.avatar || "",
       email_verified: userData.emailVerified || false,
-      created_at: userData.createdAt || 0,
-      updated_at: userData.updatedAt || 0,
+      created_at: toTimestamp(userData.createdAt),
+      updated_at: toTimestamp(userData.updatedAt),
       projects: userData.projects || [],
     });
   } catch (error) {
@@ -77,40 +86,39 @@ async function listUsers(call, callback) {
   try {
     const { limit = 50, offset = 0, role, exclude_ids } = call.request;
 
-    let query = db.collection("users");
+    // Simple query - filter in memory to avoid index issues
+    const snapshot = await db.collection("users").get();
 
-    // Filter by role if provided
-    if (role) {
-      query = query.where("role", "==", role);
-    }
-
-    const snapshot = await query.limit(limit).offset(offset).get();
-
-    const users = [];
+    let users = [];
     snapshot.forEach((doc) => {
       const userData = doc.data();
 
+      // Filter by role if provided
+      if (role && userData.role !== role) {
+        return;
+      }
+
       // Exclude specific users if requested
-      if (exclude_ids && exclude_ids.includes(userData.uid)) {
+      if (exclude_ids && exclude_ids.includes(userData.uid || doc.id)) {
         return;
       }
 
       users.push({
-        uid: userData.uid,
-        email: userData.email,
-        name: userData.name,
+        uid: userData.uid || doc.id,
+        email: userData.email || "",
+        name: userData.name || "",
         role: userData.role || "viewer",
         avatar: userData.avatar || "",
         email_verified: userData.emailVerified || false,
-        created_at: userData.createdAt || 0,
-        updated_at: userData.updatedAt || 0,
+        created_at: toTimestamp(userData.createdAt),
+        updated_at: toTimestamp(userData.updatedAt),
         projects: userData.projects || [],
       });
     });
 
-    // Get total count
-    const totalSnapshot = await db.collection("users").get();
-    const total = totalSnapshot.size;
+    // Apply pagination in memory
+    const total = users.length;
+    users = users.slice(offset, offset + limit);
 
     callback(null, {
       users,
@@ -225,8 +233,8 @@ async function updateUser(call, callback) {
       role: userData.role || "viewer",
       avatar: userData.avatar || "",
       email_verified: userData.emailVerified || false,
-      created_at: userData.createdAt || 0,
-      updated_at: userData.updatedAt || 0,
+      created_at: toTimestamp(userData.createdAt),
+      updated_at: toTimestamp(userData.updatedAt),
       projects: userData.projects || [],
     });
   } catch (error) {
@@ -306,8 +314,8 @@ async function getUsersByRole(call, callback) {
         role: userData.role || "viewer",
         avatar: userData.avatar || "",
         email_verified: userData.emailVerified || false,
-        created_at: userData.createdAt || 0,
-        updated_at: userData.updatedAt || 0,
+        created_at: toTimestamp(userData.createdAt),
+        updated_at: toTimestamp(userData.updatedAt),
         projects: userData.projects || [],
       });
     });
