@@ -2,14 +2,18 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-COPY backend/package.json .
-COPY backend/services/notification-service/package.json ./services/notification-service/
-COPY backend/firebase.js .
-COPY backend/proto ./proto
-COPY backend/services/notification-service ./
+# Copy shared files
+COPY serviceAccountKey.json ./serviceAccountKey.json
+COPY firebase.js ./firebase.js
+COPY proto ./proto
+COPY services/firebase.js ./services/firebase.js
 
-RUN npm install --cwd . && \
-    npm install --cwd ./services/notification-service
+# Copy service files
+COPY services/notification-service ./services/notification-service
+
+# Install dependencies
+WORKDIR /app/services/notification-service
+RUN npm install
 
 EXPOSE 50055
 

@@ -25,6 +25,8 @@ const cloudinary = require("../utils/cloudinary");
  *   - status: Filter by status ('pending', 'approved', 'rejected')
  *   - techStack: Filter by technology (e.g., 'React', 'Node.js')
  *   - ownerId: Filter by project owner
+ *   - contributorId: Filter by user who is owner OR contributor
+ *   - domain: Filter by domain (e.g., 'web', 'ai', 'mobile')
  *
  * Response:
  *   200: { success: true, projects: [...], nextPageToken?: "...", count: number }
@@ -32,7 +34,7 @@ const cloudinary = require("../utils/cloudinary");
  */
 router.get("/", async (req, res) => {
   try {
-    const { limit = 20, pageToken, status, techStack, ownerId } = req.query;
+        const { limit = 20, pageToken, status, techStack, ownerId, domain, contributorId } = req.query;
 
     // Validate limit
     const limitNum = parseInt(limit);
@@ -98,8 +100,22 @@ router.get("/", async (req, res) => {
         return;
       }
 
+      // Filter by contributorId - shows projects where user is owner OR contributor
+      if (contributorId) {
+        const isOwner = projectData.ownerId === contributorId;
+        const isContributor = (projectData.contributors || []).includes(contributorId);
+        if (!isOwner && !isContributor) {
+          return;
+        }
+      }
+
       // Filter by techStack if provided
       if (techStack && !projectData.techStack.includes(techStack)) {
+        return;
+      }
+
+      // Filter by domain if provided
+      if (domain && projectData.domain !== domain) {
         return;
       }
 
@@ -235,11 +251,37 @@ router.get("/:projectId", async (req, res) => {
       console.log("Assets not available for project:", projectId);
     }
 
+    // Enrich contributors with user data
+    let contributorsList = [];
+    if (projectData.contributors && projectData.contributors.length > 0) {
+      try {
+        const contributorPromises = projectData.contributors.map(async (uid) => {
+          if (!uid) return null;
+          const userDoc = await db.collection("users").doc(uid).get();
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            return {
+              uid,
+              name: userData.name || "Unknown",
+              avatar: userData.avatar || "",
+              role: userData.role || "contributor",
+            };
+          }
+          return null;
+        });
+        const results = await Promise.all(contributorPromises);
+        contributorsList = results.filter(Boolean);
+      } catch (error) {
+        console.error("Failed to fetch contributor details:", error.message);
+      }
+    }
+
     return res.status(200).json({
       success: true,
       project: {
         id: projectId,
         ...projectData,
+        contributorsList,
         assets: assets.length > 0 ? assets : undefined,
       },
     });

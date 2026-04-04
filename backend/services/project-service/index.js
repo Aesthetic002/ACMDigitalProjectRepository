@@ -14,9 +14,18 @@ require("dotenv").config();
 
 const { db } = require("../firebase");
 
-// Load protos
-const projectProtoPath = path.join(__dirname, "../proto/project.proto");
-const userProtoPath = path.join(__dirname, "../proto/user.proto");
+// Helper to convert Firestore timestamps to milliseconds
+function toTimestamp(value) {
+  if (!value) return 0;
+  if (typeof value === 'number') return value;
+  if (value.toMillis) return value.toMillis();
+  if (value._seconds) return value._seconds * 1000;
+  return 0;
+}
+
+// Load protos - go up two levels from services/project-service to backend/proto
+const projectProtoPath = path.join(__dirname, "../../proto/project.proto");
+const userProtoPath = path.join(__dirname, "../../proto/user.proto");
 
 const projectPackageDef = protoLoader.loadSync(projectProtoPath, {
   keepCase: true,
@@ -38,7 +47,7 @@ const projectProto = grpc.loadPackageDefinition(projectPackageDef);
 const userProto = grpc.loadPackageDefinition(userPackageDef);
 
 // Create User Service client
-const userServiceAddr = process.env.USER_SERVICE_ADDR || "localhost:50052";
+const userServiceAddr = process.env.USER_SERVICE_ADDR || "127.0.0.1:50052";
 const userServiceClient = new userProto.acm.user.UserService(
   userServiceAddr,
   grpc.credentials.createInsecure()
@@ -58,23 +67,29 @@ async function listProjects(call, callback) {
       tag_ids,
     } = call.request;
 
-    let query = db
-      .collection("projects")
-      .where("isDeleted", "==", false);
+    // Simple query - filter in memory to avoid composite index issues
+    let query = db.collection("projects");
 
-    if (status) {
-      query = query.where("status", "==", status);
-    }
+    const snapshot = await query.get();
 
-    if (owner_id) {
-      query = query.where("ownerId", "==", owner_id);
-    }
-
-    const snapshot = await query.limit(limit).offset(offset).get();
-
-    const projects = [];
+    let projects = [];
     snapshot.forEach((doc) => {
       const projectData = doc.data();
+
+      // Skip deleted projects
+      if (projectData.isDeleted === true) {
+        return;
+      }
+
+      // Filter by status if provided
+      if (status && projectData.status !== status) {
+        return;
+      }
+
+      // Filter by owner if provided
+      if (owner_id && projectData.ownerId !== owner_id) {
+        return;
+      }
 
       // Filter by tech stack if provided
       if (
@@ -98,9 +113,9 @@ async function listProjects(call, callback) {
 
       projects.push({
         id: doc.id,
-        title: projectData.title,
-        description: projectData.description,
-        owner_id: projectData.ownerId,
+        title: projectData.title || "",
+        description: projectData.description || "",
+        owner_id: projectData.ownerId || "",
         owner_name: projectData.ownerName || "Unknown",
         status: projectData.status || "draft",
         tags: projectData.tags || [],
@@ -115,21 +130,19 @@ async function listProjects(call, callback) {
           type: a.type || "",
           size: a.size || 0,
         })),
-        created_at: projectData.createdAt || 0,
-        updated_at: projectData.updatedAt || 0,
+        created_at: toTimestamp(projectData.createdAt),
+        updated_at: toTimestamp(projectData.updatedAt),
         is_approved: projectData.isApproved || false,
       });
     });
 
-    // Get total count
-    const totalSnapshot = await db
-      .collection("projects")
-      .where("isDeleted", "==", false)
-      .get();
+    // Apply pagination in memory
+    const total = projects.length;
+    projects = projects.slice(offset, offset + limit);
 
     callback(null, {
       projects,
-      total: totalSnapshot.size,
+      total,
     });
   } catch (error) {
     console.error("ListProjects error:", error);
@@ -191,8 +204,8 @@ async function getProject(call, callback) {
         type: a.type || "",
         size: a.size || 0,
       })),
-      created_at: projectData.createdAt || 0,
-      updated_at: projectData.updatedAt || 0,
+      created_at: toTimestamp(projectData.createdAt),
+      updated_at: toTimestamp(projectData.updatedAt),
       is_approved: projectData.isApproved || false,
     });
   } catch (error) {
@@ -261,8 +274,8 @@ async function createProject(call, callback) {
             is_featured: projectData.isFeatured,
             is_deleted: projectData.isDeleted,
             assets: [],
-            created_at: projectData.createdAt,
-            updated_at: projectData.updatedAt,
+            created_at: toTimestamp(projectData.createdAt),
+            updated_at: toTimestamp(projectData.updatedAt),
             is_approved: projectData.isApproved,
           });
         })
@@ -354,8 +367,8 @@ async function updateProject(call, callback) {
         type: a.type || "",
         size: a.size || 0,
       })),
-      created_at: updatedData.createdAt || 0,
-      updated_at: updatedData.updatedAt || 0,
+      created_at: toTimestamp(updatedData.createdAt),
+      updated_at: toTimestamp(updatedData.updatedAt),
       is_approved: updatedData.isApproved || false,
     });
   } catch (error) {
@@ -472,8 +485,8 @@ async function searchProjects(call, callback) {
             is_featured: projectData.isFeatured || false,
             is_deleted: projectData.isDeleted || false,
             assets: [],
-            created_at: projectData.createdAt || 0,
-            updated_at: projectData.updatedAt || 0,
+            created_at: toTimestamp(projectData.createdAt),
+            updated_at: toTimestamp(projectData.updatedAt),
             is_approved: projectData.isApproved || false,
           },
           rank,

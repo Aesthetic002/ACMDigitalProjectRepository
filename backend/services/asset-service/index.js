@@ -22,8 +22,8 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Load asset proto
-const assetProtoPath = path.join(__dirname, "../proto/asset.proto");
+// Load asset proto - go up two levels from services/asset-service to backend/proto
+const assetProtoPath = path.join(__dirname, "../../proto/asset.proto");
 const assetPackageDef = protoLoader.loadSync(assetProtoPath, {
   keepCase: true,
   longs: String,

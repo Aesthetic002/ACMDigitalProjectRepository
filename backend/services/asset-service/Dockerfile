@@ -2,14 +2,18 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-COPY backend/package.json .
-COPY backend/services/asset-service/package.json ./services/asset-service/
-COPY backend/firebase.js .
-COPY backend/proto ./proto
-COPY backend/services/asset-service ./
+# Copy shared files
+COPY serviceAccountKey.json ./serviceAccountKey.json
+COPY firebase.js ./firebase.js
+COPY proto ./proto
+COPY services/firebase.js ./services/firebase.js
 
-RUN npm install --cwd . && \
-    npm install --cwd ./services/asset-service
+# Copy service files
+COPY services/asset-service ./services/asset-service
+
+# Install dependencies
+WORKDIR /app/services/asset-service
+RUN npm install
 
 EXPOSE 50054
 

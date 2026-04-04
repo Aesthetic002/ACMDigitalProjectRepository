@@ -13,8 +13,17 @@ require("dotenv").config();
 
 const { db } = require("../firebase");
 
-// Load notification proto
-const notificationProtoPath = path.join(__dirname, "../proto/notification.proto");
+// Helper to convert Firestore timestamps to milliseconds
+function toTimestamp(value) {
+  if (!value) return 0;
+  if (typeof value === 'number') return value;
+  if (value.toMillis) return value.toMillis();
+  if (value._seconds) return value._seconds * 1000;
+  return 0;
+}
+
+// Load notification proto - go up two levels from services/notification-service to backend/proto
+const notificationProtoPath = path.join(__dirname, "../../proto/notification.proto");
 const notificationPackageDef = protoLoader.loadSync(notificationProtoPath, {
   keepCase: true,
   longs: String,
@@ -80,34 +89,34 @@ async function listEvents(call, callback) {
   try {
     const { limit = 50, offset = 0 } = call.request;
 
-    const snapshot = await db
-      .collection("events")
-      .orderBy("startDate", "desc")
-      .limit(limit)
-      .offset(offset)
-      .get();
+    // Simple query without orderBy to avoid index requirements
+    const snapshot = await db.collection("events").get();
 
-    const events = [];
+    let events = [];
     snapshot.forEach((doc) => {
       const eventData = doc.data();
       events.push({
         id: doc.id,
-        title: eventData.title,
-        description: eventData.description,
-        start_date: eventData.startDate || 0,
-        end_date: eventData.endDate || 0,
+        title: eventData.title || "",
+        description: eventData.description || "",
+        start_date: toTimestamp(eventData.startDate),
+        end_date: toTimestamp(eventData.endDate),
         type: eventData.type || "general",
-        created_at: eventData.createdAt || 0,
-        updated_at: eventData.updatedAt || 0,
+        created_at: toTimestamp(eventData.createdAt),
+        updated_at: toTimestamp(eventData.updatedAt),
       });
     });
 
-    // Get total
-    const totalSnapshot = await db.collection("events").get();
+    // Sort by start_date descending in memory
+    events.sort((a, b) => b.start_date - a.start_date);
+
+    // Apply pagination
+    const total = events.length;
+    events = events.slice(offset, offset + limit);
 
     callback(null, {
       events,
-      total: totalSnapshot.size,
+      total,
     });
   } catch (error) {
     console.error("ListEvents error:", error);
@@ -147,11 +156,11 @@ async function getEvent(call, callback) {
       id: eventDoc.id,
       title: eventData.title,
       description: eventData.description,
-      start_date: eventData.startDate || 0,
-      end_date: eventData.endDate || 0,
+      start_date: toTimestamp(eventData.startDate),
+      end_date: toTimestamp(eventData.endDate),
       type: eventData.type || "general",
-      created_at: eventData.createdAt || 0,
-      updated_at: eventData.updatedAt || 0,
+      created_at: toTimestamp(eventData.createdAt),
+      updated_at: toTimestamp(eventData.updatedAt),
     });
   } catch (error) {
     console.error("GetEvent error:", error);
@@ -250,11 +259,11 @@ async function updateEvent(call, callback) {
       id: updatedDoc.id,
       title: eventData.title,
       description: eventData.description,
-      start_date: eventData.startDate,
-      end_date: eventData.endDate,
+      start_date: toTimestamp(eventData.startDate),
+      end_date: toTimestamp(eventData.endDate),
       type: eventData.type,
-      created_at: eventData.createdAt,
-      updated_at: eventData.updatedAt,
+      created_at: toTimestamp(eventData.createdAt),
+      updated_at: toTimestamp(eventData.updatedAt),
     });
   } catch (error) {
     console.error("UpdateEvent error:", error);
