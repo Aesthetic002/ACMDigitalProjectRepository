@@ -2,19 +2,64 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usersAPI, projectsAPI, adminAPI } from "@/services/api";
+import { VALID_ROLES, DEFAULT_ROLE } from "@/store/authStore";
 import Loader from "@/components/common/Loader";
 import {
     GraduationCap, Calendar, Shield, ShieldCheck,
     UserMinus, UserCheck, ArrowLeft, FolderGit2,
-    Github, MessageSquare, AlertCircle
+    Github, MessageSquare, AlertCircle, Eye, Edit3
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import {
+    Select, SelectContent, SelectItem,
+    SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { format } from "date-fns";
+
+// Role styling configurations
+const ROLE_STYLES = {
+    admin: {
+        color: "amber",
+        accentBar: "bg-gradient-to-r from-amber-500 via-orange-400 to-amber-500",
+        border: "border-amber-500/30",
+        shadow: "shadow-amber-500/20",
+        bg: "bg-amber-500",
+        bgLight: "bg-amber-500/10",
+        text: "text-amber-500",
+        textLight: "text-amber-400",
+        icon: ShieldCheck,
+        label: "Administrator"
+    },
+    contributor: {
+        color: "green",
+        accentBar: "bg-gradient-to-r from-green-500 via-emerald-400 to-green-500",
+        border: "border-green-500/30",
+        shadow: "shadow-green-500/20",
+        bg: "bg-green-500",
+        bgLight: "bg-green-500/10",
+        text: "text-green-500",
+        textLight: "text-green-400",
+        icon: Edit3,
+        label: "Contributor"
+    },
+    viewer: {
+        color: "blue",
+        accentBar: "bg-gradient-to-r from-acm-blue via-cyan-400 to-acm-blue",
+        border: "border-acm-blue/30",
+        shadow: "shadow-acm-blue/20",
+        bg: "bg-acm-blue",
+        bgLight: "bg-acm-blue/10",
+        text: "text-acm-blue",
+        textLight: "text-acm-blue",
+        icon: Eye,
+        label: "Viewer"
+    }
+};
 
 export default function AdminMemberProfilePage() {
     const { uid } = useParams();
@@ -37,7 +82,7 @@ export default function AdminMemberProfilePage() {
 
     const projects = projectsData?.data?.projects || [];
 
-    // Mutation for role/status toggle (In a real app, you'd use a server mutation)
+    // Mutation for role/status update
     const updateMutation = useMutation({
         mutationFn: (data) => usersAPI.update(uid, data),
         onSuccess: () => {
@@ -62,8 +107,7 @@ export default function AdminMemberProfilePage() {
         );
     }
 
-    const toggleRole = () => {
-        const newRole = user.role === "admin" ? "member" : "admin";
+    const handleRoleChange = (newRole) => {
         updateMutation.mutate({ role: newRole });
     };
 
@@ -72,7 +116,9 @@ export default function AdminMemberProfilePage() {
         updateMutation.mutate({ disabled: newDisabled });
     };
 
-    const isAdmin = user.role === "admin";
+    // Get current role style (fallback to viewer if unknown role)
+    const roleStyle = ROLE_STYLES[user.role] || ROLE_STYLES.viewer;
+    const RoleIcon = roleStyle.icon;
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -92,29 +138,26 @@ export default function AdminMemberProfilePage() {
                 <div className="lg:col-span-1 space-y-4">
                     <Card className="rounded-[2.5rem] border-border/50 bg-card/30 backdrop-blur-xl overflow-hidden shadow-2xl relative">
                         {/* Top accent bar */}
-                        <div className={`absolute top-0 left-0 w-full h-2 ${isAdmin ? 'bg-gradient-to-r from-amber-500 via-orange-400 to-amber-500' : 'bg-gradient-to-r from-acm-blue via-cyan-400 to-acm-blue'}`} />
+                        <div className={`absolute top-0 left-0 w-full h-2 ${roleStyle.accentBar}`} />
 
                         <CardHeader className="pt-12 items-center text-center space-y-4">
-                            <Avatar className={`h-32 w-32 rounded-[2.5rem] border-4 shadow-xl ${isAdmin ? 'border-amber-500/30 shadow-amber-500/20' : 'border-background'}`}>
+                            <Avatar className={`h-32 w-32 rounded-[2.5rem] border-4 shadow-xl ${roleStyle.border} ${roleStyle.shadow}`}>
                                 <AvatarImage src={user.photoURL} />
-                                <AvatarFallback className={`${isAdmin ? 'bg-amber-500' : 'bg-acm-blue'} text-white font-black text-4xl italic`}>
+                                <AvatarFallback className={`${roleStyle.bg} text-white font-black text-4xl italic`}>
                                     {user.name?.charAt(0) || "U"}
                                 </AvatarFallback>
                             </Avatar>
 
                             <div className="space-y-1">
                                 <CardTitle className="text-2xl font-black uppercase italic tracking-tight">{user.name}</CardTitle>
-                                <CardDescription className={`font-bold ${isAdmin ? 'text-amber-400' : 'text-acm-blue'}`}>{user.email}</CardDescription>
+                                <CardDescription className={`font-bold ${roleStyle.textLight}`}>{user.email}</CardDescription>
                             </div>
 
-                            {/* ROLE — prominently displayed */}
-                            <div className={`w-full py-3 px-4 rounded-2xl border flex items-center justify-center gap-3 ${isAdmin ? 'bg-amber-500/10 border-amber-500/30' : 'bg-acm-blue/10 border-acm-blue/30'}`}>
-                                {isAdmin
-                                    ? <ShieldCheck className="h-5 w-5 text-amber-500" />
-                                    : <Shield className="h-5 w-5 text-acm-blue" />
-                                }
-                                <span className={`text-lg font-black uppercase tracking-widest italic ${isAdmin ? 'text-amber-400' : 'text-acm-blue'}`}>
-                                    {user.role.toUpperCase()}
+                            {/* ROLE — prominently displayed with dropdown */}
+                            <div className={`w-full py-3 px-4 rounded-2xl border flex items-center justify-center gap-3 ${roleStyle.bgLight} ${roleStyle.border}`}>
+                                <RoleIcon className={`h-5 w-5 ${roleStyle.text}`} />
+                                <span className={`text-lg font-black uppercase tracking-widest italic ${roleStyle.textLight}`}>
+                                    {user.role?.toUpperCase() || 'VIEWER'}
                                 </span>
                             </div>
 
@@ -131,14 +174,14 @@ export default function AdminMemberProfilePage() {
                             <div className="space-y-3">
                                 <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Attributes</h3>
                                 <div className="flex items-center gap-3 bg-white/5 p-3 rounded-2xl border border-white/5">
-                                    <GraduationCap className={`h-4 w-4 ${isAdmin ? 'text-amber-500' : 'text-acm-blue'}`} />
+                                    <GraduationCap className={`h-4 w-4 ${roleStyle.text}`} />
                                     <div className="flex flex-col">
                                         <span className="text-[10px] font-bold text-muted-foreground uppercase leading-none">Class Of</span>
                                         <span className="text-sm font-black">{user.graduationYear || "Not Specified"}</span>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3 bg-white/5 p-3 rounded-2xl border border-white/5">
-                                    <Calendar className={`h-4 w-4 ${isAdmin ? 'text-amber-500' : 'text-acm-blue'}`} />
+                                    <Calendar className={`h-4 w-4 ${roleStyle.text}`} />
                                     <div className="flex flex-col">
                                         <span className="text-[10px] font-bold text-muted-foreground uppercase leading-none">Joined</span>
                                         <span className="text-sm font-black">
@@ -150,20 +193,52 @@ export default function AdminMemberProfilePage() {
 
                             <Separator className="bg-border/30" />
 
-                            {/* Controls */}
+                            {/* Role Selection */}
                             <div className="space-y-3">
-                                <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Access Control</h3>
-                                <Button
-                                    variant="outline"
-                                    onClick={toggleRole}
-                                    className={`w-full justify-start rounded-xl font-bold text-xs h-11 border-border/50 gap-2 transition-all ${isAdmin ? 'hover:bg-amber-500/10 hover:text-amber-500 hover:border-amber-500/30' : 'hover:bg-acm-blue/10 hover:text-acm-blue hover:border-acm-blue/30'}`}
+                                <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Role Management</h3>
+                                <Select 
+                                    value={user.role || DEFAULT_ROLE} 
+                                    onValueChange={handleRoleChange}
+                                    disabled={updateMutation.isPending}
                                 >
-                                    {isAdmin ? <Shield className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
-                                    {isAdmin ? "Restrict to Member" : "Grant Admin Access"}
-                                </Button>
+                                    <SelectTrigger className="h-12 rounded-xl border-border/50 bg-muted/20 font-bold">
+                                        <SelectValue placeholder="Select Role" />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-xl border-border/50 bg-card/95 backdrop-blur-xl">
+                                        <SelectItem value="viewer" className="font-bold py-3">
+                                            <span className="flex items-center gap-2">
+                                                <Eye className="h-4 w-4 text-acm-blue" />
+                                                <span>Viewer</span>
+                                                <span className="text-[9px] text-muted-foreground ml-2">Can only view projects</span>
+                                            </span>
+                                        </SelectItem>
+                                        <SelectItem value="contributor" className="font-bold py-3">
+                                            <span className="flex items-center gap-2">
+                                                <Edit3 className="h-4 w-4 text-green-500" />
+                                                <span>Contributor</span>
+                                                <span className="text-[9px] text-muted-foreground ml-2">Can create projects</span>
+                                            </span>
+                                        </SelectItem>
+                                        <SelectItem value="admin" className="font-bold py-3">
+                                            <span className="flex items-center gap-2">
+                                                <ShieldCheck className="h-4 w-4 text-amber-500" />
+                                                <span>Admin</span>
+                                                <span className="text-[9px] text-muted-foreground ml-2">Full access</span>
+                                            </span>
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <Separator className="bg-border/30" />
+
+                            {/* Status Control */}
+                            <div className="space-y-3">
+                                <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Account Status</h3>
                                 <Button
                                     variant="outline"
                                     onClick={toggleStatus}
+                                    disabled={updateMutation.isPending}
                                     className={`w-full justify-start rounded-xl font-bold text-xs h-11 border-border/50 gap-2 transition-all ${user.disabled ? 'hover:bg-emerald-500/10 hover:text-emerald-500 hover:border-emerald-500/30' : 'hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30'}`}
                                 >
                                     {user.disabled ? <UserCheck className="h-4 w-4" /> : <UserMinus className="h-4 w-4" />}
@@ -180,7 +255,7 @@ export default function AdminMemberProfilePage() {
                     <Card className="rounded-[2.5rem] border-border/50 bg-card/30 backdrop-blur-xl shadow-xl overflow-hidden">
                         <CardHeader className="pb-3">
                             <CardTitle className="text-sm font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-                                <MessageSquare className={`h-4 w-4 ${isAdmin ? 'text-amber-500' : 'text-acm-blue'}`} /> Bio & Skills
+                                <MessageSquare className={`h-4 w-4 ${roleStyle.text}`} /> Bio & Skills
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="px-8 pb-8 space-y-5">
@@ -189,7 +264,7 @@ export default function AdminMemberProfilePage() {
                             </p>
                             <div className="flex flex-wrap gap-2">
                                 {user.skills?.map(skill => (
-                                    <Badge key={skill} variant="secondary" className={`rounded-lg border-none font-bold uppercase text-[9px] tracking-widest px-3 py-1 ${isAdmin ? 'bg-amber-500/10 text-amber-400' : 'bg-acm-blue/10 text-acm-blue'}`}>
+                                    <Badge key={skill} variant="secondary" className={`rounded-lg border-none font-bold uppercase text-[9px] tracking-widest px-3 py-1 ${roleStyle.bgLight} ${roleStyle.textLight}`}>
                                         {skill}
                                     </Badge>
                                 ))}

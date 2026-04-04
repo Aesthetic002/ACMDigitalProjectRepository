@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package acm.auth;
+
+service AuthService {
+  // Validate a user's token
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+
+  // Verify Firebase ID token and get user profile
+  rpc VerifyIdToken(VerifyIdTokenRequest) returns (UserProfile);
+
+  // Check if user has admin role
+  rpc CheckAdmin(CheckAdminRequest) returns (CheckAdminResponse);
+}
+
+message ValidateTokenRequest {
+  string token = 1;
+}
+
+message ValidateTokenResponse {
+  string user_id = 1;
+  string email = 2;
+  string role = 3;
+  bool email_verified = 4;
+}
+
+message VerifyIdTokenRequest {
+  string token = 1;
+}
+
+message UserProfile {
+  string uid = 1;
+  string email = 2;
+  string name = 3;
+  string role = 4;
+  string avatar = 5;
+  bool email_verified = 6;
+  int64 created_at = 7;
+  int64 updated_at = 8;
+}
+
+message CheckAdminRequest {
+  string user_id = 1;
+}
+
+message CheckAdminResponse {
+  bool is_admin = 1;
+  string role = 2;
+}

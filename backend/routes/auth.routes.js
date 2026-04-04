@@ -47,9 +47,7 @@ router.post("/verify", verifyToken, async (req, res) => {
         email,
         name: name || "",
         photoURL: picture || "",
-        role: userRole,
-        viewerOnly: userRole === "viewer",
-        canComment: true, // All users can comment
+        role: "viewer", // Default role - can only view projects
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };

@@ -15,6 +15,7 @@ import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem,
     DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 
 const navItems = [
     { label: "Home", href: "/", icon: Home },
@@ -24,9 +25,16 @@ const navItems = [
     { label: "Search", href: "/search", icon: Search },
 ];
 
+// Role badge colors
+const ROLE_BADGE_STYLES = {
+    admin: 'border-amber-500/50 text-amber-500 bg-amber-500/10',
+    contributor: 'border-green-500/50 text-green-500 bg-green-500/10',
+    viewer: 'border-muted-foreground/50 text-muted-foreground bg-muted/10',
+};
+
 export default function Navbar() {
     const { theme, toggleTheme } = useTheme();
-    const { user, logout, isAuthenticated } = useAuthStore();
+    const { user, logout, isAuthenticated, canCreateProjects } = useAuthStore();
     const navigate = useNavigate();
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -41,6 +49,9 @@ export default function Navbar() {
         await logout();
         navigate("/");
     };
+
+    // Check if user can submit projects (contributor or admin)
+    const showSubmitProject = canCreateProjects();
 
     return (
         <>
@@ -104,18 +115,16 @@ export default function Navbar() {
                                         <span className="text-[10px] font-black uppercase tracking-tighter text-white italic truncate max-w-[120px]">
                                             {user?.name || "Member"}
                                         </span>
-                                        {user?.role === 'admin' && (
-                                            <Badge variant="outline" className="h-4 px-1.5 border-amber-500/50 text-amber-500 bg-amber-500/10 text-[8px] font-black uppercase italic tracking-widest whitespace-nowrap">
-                                                ADMIN CONSOLE
-                                            </Badge>
-                                        )}
+                                        <Badge variant="outline" className={`h-4 px-1.5 text-[8px] font-black uppercase italic tracking-widest whitespace-nowrap ${ROLE_BADGE_STYLES[user?.role] || ROLE_BADGE_STYLES.viewer}`}>
+                                            {user?.role?.toUpperCase() || 'VIEWER'}
+                                        </Badge>
                                     </div>
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" className={`relative h-10 w-10 rounded-xl bg-white/5 border transition-all ${user?.role === 'admin' ? 'border-amber-500/50 p-0.5 shadow-[0_0_10px_rgba(245,158,11,0.2)]' : 'border-white/10 hover:bg-white/10'}`}>
+                                            <Button variant="ghost" className={`relative h-10 w-10 rounded-xl bg-white/5 border transition-all ${user?.role === 'admin' ? 'border-amber-500/50 p-0.5 shadow-[0_0_10px_rgba(245,158,11,0.2)]' : user?.role === 'contributor' ? 'border-green-500/50' : 'border-white/10 hover:bg-white/10'}`}>
                                                 <Avatar className="h-full w-full rounded-lg">
                                                     <AvatarImage src={user?.photoURL} />
-                                                    <AvatarFallback className={`${user?.role === 'admin' ? 'bg-amber-500' : 'bg-acm-blue'} text-white font-black text-xs italic`}>
+                                                    <AvatarFallback className={`${user?.role === 'admin' ? 'bg-amber-500' : user?.role === 'contributor' ? 'bg-green-500' : 'bg-acm-blue'} text-white font-black text-xs italic`}>
                                                         {(user?.name || user?.email || "?").charAt(0).toUpperCase()}
                                                     </AvatarFallback>
                                                 </Avatar>
@@ -126,15 +135,20 @@ export default function Navbar() {
                                                 <div className="flex flex-col space-y-1">
                                                     <p className="text-sm font-bold leading-none">{user.name}</p>
                                                     <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                                                    <Badge variant="outline" className={`w-fit mt-1 h-4 px-1.5 text-[8px] font-black uppercase tracking-widest ${ROLE_BADGE_STYLES[user?.role] || ROLE_BADGE_STYLES.viewer}`}>
+                                                        {user?.role?.toUpperCase() || 'VIEWER'}
+                                                    </Badge>
                                                 </div>
                                             </DropdownMenuLabel>
                                             <DropdownMenuSeparator className="bg-border/50" />
                                             <DropdownMenuItem asChild className="rounded-xl focus:bg-acm-blue/10 cursor-pointer">
                                                 <Link to="/profile" className="w-full flex items-center"><UserIcon className="mr-2 h-4 w-4" /> Profile</Link>
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem asChild className="rounded-xl focus:bg-acm-blue/10 cursor-pointer">
-                                                <Link to="/submit" className="w-full flex items-center"><PlusCircle className="mr-2 h-4 w-4" /> Submit Project</Link>
-                                            </DropdownMenuItem>
+                                            {showSubmitProject && (
+                                                <DropdownMenuItem asChild className="rounded-xl focus:bg-acm-blue/10 cursor-pointer">
+                                                    <Link to="/submit" className="w-full flex items-center"><PlusCircle className="mr-2 h-4 w-4" /> Submit Project</Link>
+                                                </DropdownMenuItem>
+                                            )}
                                             {user?.role === 'admin' && (
                                                 <>
                                                     <DropdownMenuSeparator className="bg-border/50" />
@@ -202,6 +216,16 @@ export default function Navbar() {
                                         {item.label}
                                     </Link>
                                 ))}
+                                {showSubmitProject && (
+                                    <Link
+                                        to="/submit"
+                                        onClick={() => setIsMobileMenuOpen(false)}
+                                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-foreground hover:bg-muted transition-colors font-bold text-sm"
+                                    >
+                                        <PlusCircle className="h-5 w-5 text-green-500" />
+                                        Submit Project
+                                    </Link>
+                                )}
                                 {!user && (
                                     <Link
                                         to="/login"

@@ -2,10 +2,11 @@ import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usersAPI, adminAPI } from "@/services/api";
+import { VALID_ROLES, DEFAULT_ROLE } from "@/store/authStore";
 import {
     Plus, Search, MoreVertical, Shield, ShieldCheck,
     UserMinus, UserCheck, ExternalLink, GraduationCap, Loader2,
-    Mail, Lock, User, Users
+    Mail, Lock, User, Users, Eye, Edit3
 } from "lucide-react";
 import Loader from "@/components/common/Loader";
 import {
@@ -30,6 +31,28 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
+
+// Role styling configurations
+const ROLE_STYLES = {
+    admin: {
+        badge: "border-amber-500/30 text-amber-500 bg-amber-500/5",
+        avatar: "bg-amber-500/20 text-amber-500",
+        icon: ShieldCheck,
+        label: "ADMIN"
+    },
+    contributor: {
+        badge: "border-green-500/30 text-green-500 bg-green-500/5",
+        avatar: "bg-green-500/20 text-green-500",
+        icon: Edit3,
+        label: "CONTRIBUTOR"
+    },
+    viewer: {
+        badge: "border-acm-blue/30 text-acm-blue bg-acm-blue/5",
+        avatar: "bg-acm-blue/10 text-acm-blue",
+        icon: Eye,
+        label: "VIEWER"
+    }
+};
 
 // Mock Firebase auth for frontend-only mode
 const mockCreateUser = async (email, password) => {
@@ -56,7 +79,7 @@ export default function AdminMembersPage() {
         name: "",
         email: "",
         password: "",
-        role: "member",
+        role: DEFAULT_ROLE,
         graduationYear: new Date().getFullYear().toString()
     });
 
@@ -75,10 +98,10 @@ export default function AdminMembersPage() {
         ), [members, searchTerm]);
 
     // Mutations
-    const toggleRoleMutation = useMutation({
+    const updateRoleMutation = useMutation({
         mutationFn: async ({ uid, newRole }) => adminAPI.updateUser(uid, { role: newRole }),
         onSuccess: (_, variables) => {
-            toast.success(`Role updated successfully`);
+            toast.success(`Role updated to ${variables.newRole}`);
             queryClient.invalidateQueries(["admin-users"]);
         },
         onError: (err) => toast.error(err.response?.data?.message || "Failed to update role")
@@ -134,7 +157,7 @@ export default function AdminMembersPage() {
         onSuccess: (user) => {
             toast.success(`${newMember.name} added successfully`);
             setIsAddDialogOpen(false);
-            setNewMember({ name: "", email: "", password: "", role: "member", graduationYear: new Date().getFullYear().toString() });
+            setNewMember({ name: "", email: "", password: "", role: DEFAULT_ROLE, graduationYear: new Date().getFullYear().toString() });
             queryClient.invalidateQueries(["admin-users"]);
         },
         onError: (err) => {
@@ -156,6 +179,9 @@ export default function AdminMembersPage() {
         if (!window.confirm(`Are you sure you want to PERMANENTLY delete ${member?.name || 'this member'}? This action cannot be undone.`)) return;
         deleteMutation.mutate(uid);
     };
+
+    // Get role style config
+    const getRoleStyle = (role) => ROLE_STYLES[role] || ROLE_STYLES.viewer;
 
     return (
         <div className="space-y-8">
@@ -232,8 +258,21 @@ export default function AdminMembersPage() {
                                                     <SelectValue placeholder="Role" />
                                                 </SelectTrigger>
                                                 <SelectContent className="rounded-xl border-border/50 bg-card/95 backdrop-blur-xl">
-                                                    <SelectItem value="member" className="font-bold">MEMBER</SelectItem>
-                                                    <SelectItem value="admin" className="font-bold">ADMIN</SelectItem>
+                                                    <SelectItem value="viewer" className="font-bold">
+                                                        <span className="flex items-center gap-2">
+                                                            <Eye className="h-3.5 w-3.5 text-acm-blue" /> VIEWER
+                                                        </span>
+                                                    </SelectItem>
+                                                    <SelectItem value="contributor" className="font-bold">
+                                                        <span className="flex items-center gap-2">
+                                                            <Edit3 className="h-3.5 w-3.5 text-green-500" /> CONTRIBUTOR
+                                                        </span>
+                                                    </SelectItem>
+                                                    <SelectItem value="admin" className="font-bold">
+                                                        <span className="flex items-center gap-2">
+                                                            <ShieldCheck className="h-3.5 w-3.5 text-amber-500" /> ADMIN
+                                                        </span>
+                                                    </SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
@@ -304,7 +343,7 @@ export default function AdminMembersPage() {
                                         <div className="flex items-center gap-3">
                                             <Avatar className="h-9 w-9 rounded-lg border border-border/50 group-hover/member:border-amber-500/50 transition-colors">
                                                 <AvatarImage src={member.photoURL} />
-                                                <AvatarFallback className={`${member.role === 'admin' ? 'bg-amber-500/20 text-amber-500' : 'bg-acm-blue/10 text-acm-blue'} font-bold text-xs uppercase italic`}>
+                                                <AvatarFallback className={`${getRoleStyle(member.role).avatar} font-bold text-xs uppercase italic`}>
                                                     {(member.name || "?").charAt(0)}
                                                 </AvatarFallback>
                                             </Avatar>
@@ -321,9 +360,12 @@ export default function AdminMembersPage() {
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        <Badge variant="outline" className={`font-black uppercase italic text-[9px] tracking-widest ${member.role === 'admin' ? "border-amber-500/30 text-amber-500 bg-amber-500/5" : "border-acm-blue/30 text-acm-blue bg-acm-blue/5"}`}>
-                                            {member.role === 'admin' ? <ShieldCheck className="h-2.5 w-2.5 mr-1" /> : null}
-                                            {member.role || 'member'}
+                                        <Badge variant="outline" className={`font-black uppercase italic text-[9px] tracking-widest ${getRoleStyle(member.role).badge}`}>
+                                            {(() => {
+                                                const RoleIcon = getRoleStyle(member.role).icon;
+                                                return <RoleIcon className="h-2.5 w-2.5 mr-1" />;
+                                            })()}
+                                            {getRoleStyle(member.role).label}
                                         </Badge>
                                     </TableCell>
                                     <TableCell>
@@ -342,14 +384,27 @@ export default function AdminMembersPage() {
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end" className="w-52 rounded-xl border-border/50 bg-card/90 backdrop-blur-xl shadow-2xl">
-                                                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Management Options</DropdownMenuLabel>
-                                                <DropdownMenuItem onClick={() => toggleRoleMutation.mutate({ uid: member.uid, newRole: member.role === 'admin' ? 'member' : 'admin' })} 
-                                                    className="gap-2 focus:bg-amber-500/10 focus:text-amber-500 cursor-pointer font-bold text-xs py-2.5"
-                                                    disabled={toggleRoleMutation.isPending}
-                                                >
-                                                    {member.role === 'admin' ? <Shield className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />}
-                                                    {member.role === 'admin' ? "Demote to Member" : "Promote to Admin"}
-                                                </DropdownMenuItem>
+                                                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Change Role</DropdownMenuLabel>
+                                                {VALID_ROLES.map((role) => (
+                                                    <DropdownMenuItem 
+                                                        key={role}
+                                                        onClick={() => updateRoleMutation.mutate({ uid: member.uid, newRole: role })} 
+                                                        className={`gap-2 cursor-pointer font-bold text-xs py-2.5 ${member.role === role ? 'bg-white/5' : ''} ${
+                                                            role === 'admin' ? 'focus:bg-amber-500/10 focus:text-amber-500' :
+                                                            role === 'contributor' ? 'focus:bg-green-500/10 focus:text-green-500' :
+                                                            'focus:bg-acm-blue/10 focus:text-acm-blue'
+                                                        }`}
+                                                        disabled={updateRoleMutation.isPending || member.role === role}
+                                                    >
+                                                        {role === 'admin' ? <ShieldCheck className="h-3.5 w-3.5" /> : 
+                                                         role === 'contributor' ? <Edit3 className="h-3.5 w-3.5" /> : 
+                                                         <Eye className="h-3.5 w-3.5" />}
+                                                        {role.charAt(0).toUpperCase() + role.slice(1)}
+                                                        {member.role === role && <span className="ml-auto text-[8px] opacity-60">CURRENT</span>}
+                                                    </DropdownMenuItem>
+                                                ))}
+                                                <DropdownMenuSeparator className="bg-border/50" />
+                                                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Account Status</DropdownMenuLabel>
                                                 <DropdownMenuItem onClick={() => toggleStatusMutation.mutate({ uid: member.uid, disabled: !member.disabled })} 
                                                     className={`gap-2 cursor-pointer font-bold text-xs py-2.5 ${member.disabled ? 'focus:bg-emerald-500/10 focus:text-emerald-500' : 'focus:bg-orange-500/10 focus:text-orange-500'}`}
                                                     disabled={toggleStatusMutation.isPending}

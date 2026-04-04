@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { searchAPI } from "@/services/api";
@@ -6,12 +6,22 @@ import ProjectCard from "@/components/ProjectCard";
 import Layout from "@/components/Layout";
 import {
     Search as SearchIcon, Filter, X, FolderOpen,
-    ChevronRight, TrendingUp, Sparkles
+    ChevronRight, TrendingUp, Sparkles, Loader2
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+// Debounce hook for search suggestions
+function useDebounce(value, delay) {
+    const [debouncedValue, setDebouncedValue] = useState(value);
+    useEffect(() => {
+        const handler = setTimeout(() => setDebouncedValue(value), delay);
+        return () => clearTimeout(handler);
+    }, [value, delay]);
+    return debouncedValue;
+}
 
 function SearchContent() {
     const navigate = useNavigate();
@@ -20,11 +30,26 @@ function SearchContent() {
 
     const [searchInput, setSearchInput] = useState(query);
     const [showFilters, setShowFilters] = useState(false);
+    const [showSuggestions, setShowSuggestions] = useState(false);
     const [filters, setFilters] = useState({
         techStack: searchParams.get("tech") || "",
         status: searchParams.get("status") || "",
     });
+    
+    const searchRef = useRef(null);
+    const debouncedInput = useDebounce(searchInput, 300);
 
+    // Suggestions query - triggers as you type
+    const { data: suggestionsData, isLoading: isSuggestionsLoading } = useQuery({
+        queryKey: ["search-suggestions", debouncedInput],
+        queryFn: () => searchAPI.search({ q: debouncedInput, limit: 6 }),
+        enabled: debouncedInput.length >= 2 && showSuggestions,
+        staleTime: 30000, // Cache suggestions for 30 seconds
+    });
+
+    const suggestions = suggestionsData?.data?.results || [];
+
+    // Main search results query
     const { data: searchData, isLoading } = useQuery({
         queryKey: ["search", query, filters],
         queryFn: () => {
@@ -38,13 +63,32 @@ function SearchContent() {
 
     const results = searchData?.data?.results || searchData?.data?.projects || [];
 
+    // Close suggestions when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (searchRef.current && !searchRef.current.contains(e.target)) {
+                setShowSuggestions(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
     const handleSearch = (e) => {
         e.preventDefault();
+        setShowSuggestions(false);
         const params = new URLSearchParams();
         if (searchInput.trim()) params.set("q", searchInput.trim());
         if (filters.techStack) params.set("tech", filters.techStack);
         if (filters.status) params.set("status", filters.status);
         setSearchParams(params);
+    };
+
+    const handleSuggestionClick = (suggestion) => {
+        const term = suggestion.title || suggestion.name;
+        setSearchInput(term);
+        setShowSuggestions(false);
+        setSearchParams({ q: term });
     };
 
     const handleQuickSearch = (term) => {
@@ -68,13 +112,74 @@ function SearchContent() {
                         <h1 className="mb-8 text-3xl font-extrabold tracking-tight text-white sm:text-5xl uppercase italic tracking-tighter">
                             Search the <span className="text-acm-blue">Archive.</span>
                         </h1>
-                        <form onSubmit={handleSearch} className="group relative mx-auto max-w-2xl">
+                        <form onSubmit={handleSearch} className="group relative mx-auto max-w-2xl" ref={searchRef}>
                             <div className="flex flex-col gap-3 sm:flex-row">
                                 <div className="relative flex-1">
                                     <SearchIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-acm-blue" />
-                                    <Input type="text" value={searchInput} onChange={(e) => setSearchInput(e.target.value)}
+                                    <Input 
+                                        type="text" 
+                                        value={searchInput} 
+                                        onChange={(e) => {
+                                            setSearchInput(e.target.value);
+                                            setShowSuggestions(true);
+                                        }}
+                                        onFocus={() => searchInput.length >= 2 && setShowSuggestions(true)}
                                         placeholder="Search by title, stack, or owner..."
-                                        className="h-14 rounded-2xl border-border/50 bg-card pl-12 text-lg focus-visible:ring-acm-blue" />
+                                        className="h-14 rounded-2xl border-border/50 bg-card pl-12 text-lg focus-visible:ring-acm-blue" 
+                                        autoComplete="off"
+                                    />
+                                    
+                                    {/* Suggestions Dropdown */}
+                                    {showSuggestions && debouncedInput.length >= 2 && (
+                                        <div className="absolute top-full left-0 right-0 mt-2 z-50 rounded-2xl border border-border/50 bg-card/95 backdrop-blur-xl shadow-2xl overflow-hidden">
+                                            {isSuggestionsLoading ? (
+                                                <div className="p-4 flex items-center gap-2 text-muted-foreground">
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                    <span className="text-sm font-medium">Finding matches...</span>
+                                                </div>
+                                            ) : suggestions.length === 0 ? (
+                                                <div className="p-4 text-center text-muted-foreground text-sm">
+                                                    No suggestions found
+                                                </div>
+                                            ) : (
+                                                <div className="max-h-96 overflow-y-auto">
+                                                    {suggestions.map((suggestion, idx) => (
+                                                        <button
+                                                            key={idx}
+                                                            type="button"
+                                                            onClick={() => handleSuggestionClick(suggestion)}
+                                                            className="w-full text-left px-4 py-3 hover:bg-white/5 transition-colors border-b border-border/30 last:border-b-0 focus:outline-none focus:bg-acm-blue/10"
+                                                        >
+                                                            <div className="flex items-start justify-between gap-2">
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="font-bold text-sm text-white truncate">
+                                                                        {suggestion.title || suggestion.name}
+                                                                    </p>
+                                                                    {suggestion.description && (
+                                                                        <p className="text-xs text-muted-foreground truncate mt-0.5">
+                                                                            {suggestion.description}
+                                                                        </p>
+                                                                    )}
+                                                                    {suggestion.type === 'project' && suggestion.techStack?.length > 0 && (
+                                                                        <div className="flex flex-wrap gap-1 mt-1">
+                                                                            {suggestion.techStack.slice(0, 3).map((tech, i) => (
+                                                                                <Badge key={i} variant="outline" className="h-4 text-[8px] px-1.5 border-border/50 bg-muted/20">
+                                                                                    {tech}
+                                                                                </Badge>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                <Badge variant="secondary" className="text-[9px] font-black uppercase tracking-wider whitespace-nowrap mt-0.5">
+                                                                    {suggestion.type === 'project' ? 'Project' : 'User'}
+                                                                </Badge>
+                                                            </div>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="flex gap-2">
                                     <Button type="button" variant="outline" onClick={() => setShowFilters(!showFilters)}

@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package acm.user;
+
+service UserService {
+  // Get a user by ID
+  rpc GetUser(GetUserRequest) returns (UserResponse);
+
+  // List users with filters
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+
+  // Create a new user
+  rpc CreateUser(CreateUserRequest) returns (UserResponse);
+
+  // Update existing user
+  rpc UpdateUser(UpdateUserRequest) returns (UserResponse);
+
+  // Delete a user
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
+
+  // Get users by role
+  rpc GetUsersByRole(GetUsersByRoleRequest) returns (ListUsersResponse);
+}
+
+message UserResponse {
+  string uid = 1;
+  string email = 2;
+  string name = 3;
+  string role = 4;
+  string avatar = 5;
+  bool email_verified = 6;
+  int64 created_at = 7;
+  int64 updated_at = 8;
+  repeated string projects = 9;
+}
+
+message GetUserRequest {
+  string user_id = 1;
+}
+
+message ListUsersRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+  string role = 3;
+  repeated string exclude_ids = 4;
+}
+
+message ListUsersResponse {
+  repeated UserResponse users = 1;
+  int32 total = 2;
+}
+
+message CreateUserRequest {
+  string email = 1;
+  string name = 2;
+  string password = 3;
+  string role = 4;
+  string avatar = 5;
+}
+
+message UpdateUserRequest {
+  string user_id = 1;
+  string name = 2;
+  string avatar = 3;
+  string role = 4;
+}
+
+message DeleteUserRequest {
+  string user_id = 1;
+}
+
+message DeleteUserResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetUsersByRoleRequest {
+  string role = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}

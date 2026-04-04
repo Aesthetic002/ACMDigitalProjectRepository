@@ -1,17 +1,31 @@
 /**
- * Auth Store - Mock Data Mode
+ * Auth Store - Production Mode
  *
- * This version provides mock authentication for frontend-only development.
- * No Firebase connection required.
+ * Real Firebase authentication with backend API sync.
+ *
+ * Roles: viewer (default), contributor, admin
  */
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { toast } from "sonner";
-import { mockUsers } from "@/data/mockData";
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged,
+  updateProfile,
+} from "firebase/auth";
+import { auth, googleProvider, githubProvider } from "@/config/firebase";
+import axiosInstance from "@/api/axiosInstance";
 
-// Mock user database (in-memory)
-let registeredUsers = [...mockUsers];
+// Valid roles
+const VALID_ROLES = ["viewer", "contributor", "admin"];
+const DEFAULT_ROLE = "viewer";
+
+// Track if auth listener is already set up
+let authListenerUnsubscribe = null;
 
 export const useAuthStore = create(
   persist(
@@ -20,8 +34,6 @@ export const useAuthStore = create(
       token: null,
       isLoading: false,
       isAuthenticated: false,
-      guestRole: null, // 'viewer' or 'contributor' for guest mode
-      hasSeenRoleDialog: false, // Track if user has seen role selection
 
       initAuth: () => {
         // Check if already authenticated from persisted state
@@ -37,7 +49,7 @@ export const useAuthStore = create(
         set({ isLoading: false });
       },
 
-      login: async (email, password, role = "contributor") => {
+      login: async (email, password, role = "member") => {
         set({ isLoading: true });
 
         // Simulate network delay
@@ -54,8 +66,6 @@ export const useAuthStore = create(
             user: {
               ...existingUser,
               role: existingUser.role || role,
-              viewerOnly: existingUser.role === "viewer",
-              canComment: true,
             },
             token,
             isAuthenticated: true,
@@ -75,8 +85,6 @@ export const useAuthStore = create(
           email,
           name: email.split("@")[0],
           role,
-          viewerOnly: role === "viewer",
-          canComment: true,
           photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
           createdAt: { _seconds: Math.floor(Date.now() / 1000) },
         };
@@ -95,7 +103,7 @@ export const useAuthStore = create(
         return { success: true };
       },
 
-      register: async (email, password, name, role = "contributor") => {
+      register: async (email, password, name, role = "member") => {
         set({ isLoading: true });
 
         // Simulate network delay
@@ -118,8 +126,6 @@ export const useAuthStore = create(
           email,
           name,
           role,
-          viewerOnly: role === "viewer",
-          canComment: true,
           photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`,
           createdAt: { _seconds: Math.floor(Date.now() / 1000) },
           updatedAt: { _seconds: Math.floor(Date.now() / 1000) },
@@ -265,80 +271,6 @@ export const useAuthStore = create(
           console.log("[Mock Auth] Quick login as:", user.name);
         }
       },
-
-      // Role check helpers
-      isViewer: () => {
-        const { user } = get();
-        return user?.role === "viewer";
-      },
-
-      isContributor: () => {
-        const { user } = get();
-        return user?.role === "contributor" || user?.role === "admin";
-      },
-
-      isAdmin: () => {
-        const { user } = get();
-        return user?.role === "admin";
-      },
-
-      // Upgrade viewer to contributor
-      upgradeRole: async (newRole = "contributor") => {
-        const { user } = get();
-        if (!user) return { success: false };
-
-        await new Promise((resolve) => setTimeout(resolve, 300));
-
-        const updatedUser = {
-          ...user,
-          role: newRole,
-          viewerOnly: newRole === "viewer",
-        };
-        set({ user: updatedUser });
-
-        // Update in mock database
-        const index = registeredUsers.findIndex((u) => u.uid === user.uid);
-        if (index !== -1) {
-          registeredUsers[index] = updatedUser;
-        }
-
-        toast.success(`Role upgraded to ${newRole}!`);
-        console.log("[Mock Auth] Role upgraded:", newRole);
-        return { success: true };
-      },
-
-      // Guest role management
-      setGuestRole: (role) => {
-        set({ 
-          guestRole: role, 
-          hasSeenRoleDialog: true 
-        });
-        console.log("[Mock Auth] Guest role set:", role);
-      },
-
-      getEffectiveRole: () => {
-        const { user, guestRole } = get();
-        if (user) return user.role;
-        return guestRole || 'viewer'; // Default to viewer for guests
-      },
-
-      canCreateProjects: () => {
-        const { user, guestRole } = get();
-        if (!user) return guestRole === 'contributor';
-        return user.role === 'contributor' || user.role === 'admin';
-      },
-
-      canComment: () => {
-        const { user, guestRole } = get();
-        // Both viewers and contributors can comment
-        if (user) return true;
-        return !!guestRole; // Guest needs to select a role first
-      },
-
-      requiresLogin: () => {
-        const { user } = get();
-        return !user; // True if not logged in
-      },
     }),
     {
       name: "auth-storage",
@@ -346,8 +278,6 @@ export const useAuthStore = create(
         user: state.user,
         token: state.token,
         isAuthenticated: state.isAuthenticated,
-        guestRole: state.guestRole,
-        hasSeenRoleDialog: state.hasSeenRoleDialog,
       }),
     },
   ),
