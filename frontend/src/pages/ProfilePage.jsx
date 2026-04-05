@@ -7,6 +7,44 @@ import { useAuthStore } from "@/store/authStore";
 const mockUpdateProfile = async () => {};
 import { toast } from "sonner";
 import { format } from "date-fns";
+
+// Helper to safely format dates from various formats
+function safeFormatDate(dateValue, formatString = "MMM d") {
+  if (!dateValue) return "—";
+  
+  try {
+    let date;
+    
+    // Handle Firestore Timestamp object
+    if (dateValue._seconds) {
+      date = new Date(dateValue._seconds * 1000);
+    }
+    // Handle numeric timestamp (milliseconds)
+    else if (typeof dateValue === 'number') {
+      date = new Date(dateValue);
+    }
+    // Handle ISO string or other string formats
+    else if (typeof dateValue === 'string') {
+      date = new Date(dateValue);
+    }
+    // Handle Date object
+    else if (dateValue instanceof Date) {
+      date = dateValue;
+    }
+    else {
+      return "—";
+    }
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      return "—";
+    }
+    
+    return format(date, formatString);
+  } catch (error) {
+    return "—";
+  }
+}
 import {
     Mail, Calendar, Edit3, Save, X, Loader2, ExternalLink,
     FolderOpen, CheckCircle, Clock, XCircle, BarChart3, LogOut, Plus, Trash2
@@ -131,7 +169,7 @@ function ProfileContent() {
                                     <span className="flex items-center gap-2 bg-white/5 border border-white/5 px-3 py-1 rounded-full"><Mail className="h-3 w-3 text-acm-blue" />{user?.email}</span>
                                     <span className="flex items-center gap-2 bg-white/5 border border-white/5 px-3 py-1 rounded-full">
                                         <Calendar className="h-3 w-3 text-acm-blue" />
-                                        {profile?.createdAt ? `MEMBER SINCE ${format(new Date(profile.createdAt._seconds ? profile.createdAt._seconds * 1000 : profile.createdAt), "MMM yyyy")}` : "ACTIVE MEMBER"}
+                                                                                {profile?.createdAt ? `MEMBER SINCE ${safeFormatDate(profile.createdAt, "MMM yyyy")}` : "ACTIVE MEMBER"}
                                     </span>
                                     <Badge variant="outline" className="border-acm-blue/30 text-acm-blue bg-white/5 h-6 font-black uppercase tracking-widest text-[9px] italic">
                                         {user?.role || "MEMBER"}
@@ -253,7 +291,7 @@ function ProfileContent() {
                                                         <Badge key={t} variant="secondary" className="text-[8px] h-5 leading-none bg-white/5 border border-white/5 font-black uppercase tracking-widest italic text-white/40">{t}</Badge>
                                                     ))}
                                                 </div>
-                                                <span className="text-[10px] font-black text-muted-foreground/30 italic uppercase tracking-widest">{format(new Date(project.createdAt), "MMM d")}</span>
+                                                <span className="text-[10px] font-black text-muted-foreground/30 italic uppercase tracking-widest">{safeFormatDate(project.createdAt)}</span>
                                             </div>
                                         </CardContent>
                                     </Card>

@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 export default function MembersPage() {
     const { data: usersData, isLoading, isError, refetch } = useQuery({
@@ -56,30 +57,32 @@ export default function MembersPage() {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: index * 0.05 }}
                             >
-                                <Card className="rounded-[2rem] border-border/50 bg-card/40 backdrop-blur-sm transition-all hover:border-acm-blue/50 hover:shadow-acm-glow overflow-hidden group">
-                                    <CardContent className="p-6">
-                                        <div className="flex items-center gap-4">
-                                            <Avatar className="h-16 w-16 rounded-2xl border-2 border-background shadow-lg">
-                                                <AvatarImage src={member.photoURL} />
-                                                <AvatarFallback className="bg-acm-blue text-white font-bold text-xl">
-                                                    {(member.name || member.email || "?").charAt(0).toUpperCase()}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <div className="flex-1 min-w-0">
-                                                <h3 className="font-bold text-lg truncate group-hover:text-acm-blue transition-colors">
-                                                    {member.name || "Community Member"}
-                                                </h3>
-                                                <p className="text-xs text-muted-foreground truncate mb-2">{member.email}</p>
-                                                <div className="flex items-center gap-2">
-                                                    <Badge variant="outline" className="border-acm-blue/30 text-acm-blue bg-acm-blue/5 h-5 font-bold uppercase tracking-widest text-[8px]">
-                                                        {member.role || "MEMBER"}
-                                                    </Badge>
-                                                    {member.role === 'admin' && <ShieldCheck className="h-3.5 w-3.5 text-acm-blue" />}
+                                <Link to={`/members/${member.uid}`}>
+                                    <Card className="rounded-[2rem] border-border/50 bg-card/40 backdrop-blur-sm transition-all hover:border-acm-blue/50 hover:shadow-acm-glow overflow-hidden group cursor-pointer">
+                                        <CardContent className="p-6">
+                                            <div className="flex items-center gap-4">
+                                                <Avatar className="h-16 w-16 rounded-2xl border-2 border-background shadow-lg">
+                                                    <AvatarImage src={member.photoURL} />
+                                                    <AvatarFallback className="bg-acm-blue text-white font-bold text-xl">
+                                                        {(member.name || member.email || "?").charAt(0).toUpperCase()}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <div className="flex-1 min-w-0">
+                                                    <h3 className="font-bold text-lg truncate group-hover:text-acm-blue transition-colors">
+                                                        {member.name || "Community Member"}
+                                                    </h3>
+                                                    <p className="text-xs text-muted-foreground truncate mb-2">{member.email}</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge variant="outline" className="border-acm-blue/30 text-acm-blue bg-acm-blue/5 h-5 font-bold uppercase tracking-widest text-[8px]">
+                                                            {member.role || "MEMBER"}
+                                                        </Badge>
+                                                        {member.role === 'admin' && <ShieldCheck className="h-3.5 w-3.5 text-acm-blue" />}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
+                                        </CardContent>
+                                    </Card>
+                                </Link>
                             </motion.div>
                         ))}
                     </div>

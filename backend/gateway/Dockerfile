@@ -2,13 +2,15 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-COPY backend/package.json .
-COPY backend/gateway/package.json ./gateway/
-COPY backend/proto ./proto
-COPY backend/gateway ./
+# Copy proto files for gRPC
+COPY proto ./proto
 
-RUN npm install --cwd . && \
-    npm install --cwd ./gateway
+# Copy gateway files
+COPY gateway ./gateway
+
+# Install dependencies
+WORKDIR /app/gateway
+RUN npm install
 
 EXPOSE 3000
 

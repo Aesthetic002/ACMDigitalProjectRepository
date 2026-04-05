@@ -2,9 +2,9 @@
  * User Management Routes
  * 
  * Handles user-related endpoints (all protected by authentication):
+ * - GET /api/v1/users - Get all users (with optional filtering)
  * - GET /api/v1/users/:userId - Get a specific user
  * - PUT /api/v1/users/:userId - Update a specific user
- * - GET /api/v1/users - Get all users (with optional filtering)
  * 
  * Roles: viewer (default), contributor, admin
  */
@@ -14,6 +14,60 @@ const router = express.Router();
 const { verifyToken } = require('../middleware/auth');
 const { requireAdmin, VALID_ROLES } = require('../middleware/admin');
 const { db, auth } = require('../firebase');
+
+/**
+ * GET /api/v1/users
+ * 
+ * Retrieves a list of all users.
+ * Authentication required.
+ * 
+ * Query parameters:
+ *   - role: Filter by role (optional)
+ *   - limit: Maximum number of results (optional, default: 100)
+ * 
+ * Response:
+ *   200: { success: true, users: [...], count: number }
+ */
+router.get('/', verifyToken, async (req, res) => {
+  try {
+    const { role, limit = 100 } = req.query;
+
+    // Build query
+    let query = db.collection('users');
+
+    // Apply role filter if provided
+    if (role) {
+      query = query.where('role', '==', role);
+    }
+
+    // Apply limit
+    query = query.limit(parseInt(limit));
+
+    // Execute query
+    const snapshot = await query.get();
+
+    // Extract user data
+    const users = [];
+    snapshot.forEach(doc => {
+      users.push(doc.data());
+    });
+
+    return res.status(200).json({
+      success: true,
+      users,
+      count: users.length
+    });
+
+  } catch (error) {
+    console.error('Get users error:', error.message);
+
+    return res.status(500).json({
+      success: false,
+      error: 'InternalServerError',
+      message: 'Failed to retrieve users'
+    });
+  }
+});
 
 /**
  * GET /api/v1/users/:userId
@@ -158,60 +212,6 @@ router.put('/:userId', verifyToken, async (req, res) => {
       success: false,
       error: 'InternalServerError',
       message: 'Failed to update user'
-    });
-  }
-});
-
-/**
- * GET /api/v1/users
- * 
- * Retrieves a list of all users.
- * Authentication required.
- * 
- * Query parameters:
- *   - role: Filter by role (optional)
- *   - limit: Maximum number of results (optional, default: 100)
- * 
- * Response:
- *   200: { success: true, users: [...], count: number }
- */
-router.get('/', verifyToken, async (req, res) => {
-  try {
-    const { role, limit = 100 } = req.query;
-
-    // Build query
-    let query = db.collection('users');
-
-    // Apply role filter if provided
-    if (role) {
-      query = query.where('role', '==', role);
-    }
-
-    // Apply limit
-    query = query.limit(parseInt(limit));
-
-    // Execute query
-    const snapshot = await query.get();
-
-    // Extract user data
-    const users = [];
-    snapshot.forEach(doc => {
-      users.push(doc.data());
-    });
-
-    return res.status(200).json({
-      success: true,
-      users,
-      count: users.length
-    });
-
-  } catch (error) {
-    console.error('Get users error:', error.message);
-
-    return res.status(500).json({
-      success: false,
-      error: 'InternalServerError',
-      message: 'Failed to retrieve users'
     });
   }
 });
