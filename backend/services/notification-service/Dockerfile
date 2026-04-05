@@ -17,4 +17,5 @@ RUN npm install
 
 EXPOSE 50055
 
+ENV NODE_PATH=/app/services/notification-service/node_modules
 CMD ["node", "index.js"]

@@ -17,4 +17,5 @@ RUN npm install
 
 EXPOSE 50053
 
+ENV NODE_PATH=/app/services/project-service/node_modules
 CMD ["node", "index.js"]

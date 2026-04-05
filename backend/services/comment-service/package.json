@@ -1,0 +1,15 @@
+{
+  "name": "comment-service",
+  "version": "1.0.0",
+  "description": "Comment and Upvote Management Service",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.9.0",
+    "@grpc/proto-loader": "^0.7.9",
+    "firebase-admin": "^12.0.0",
+    "dotenv": "^17.3.1"
+  }
+}

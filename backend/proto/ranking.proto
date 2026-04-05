@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package acm.ranking;
+
+import "comment.proto";
+
+service RankingService {
+  rpc SortComments (SortCommentsRequest) returns (SortCommentsResponse);
+}
+
+message SortCommentsRequest {
+  repeated acm.comment.Comment comments = 1;
+}
+
+message SortCommentsResponse {
+  repeated acm.comment.Comment sorted_comments = 1;
+}

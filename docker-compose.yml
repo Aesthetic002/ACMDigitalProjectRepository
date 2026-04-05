@@ -106,6 +106,38 @@ services:
     networks:
       - acm-network
 
+  comment-service:
+    build:
+      context: ./backend
+      dockerfile: services/comment-service/Dockerfile
+    container_name: comment-service
+    ports:
+      - "50056:50056"
+    environment:
+      - NODE_ENV=production
+      - COMMENT_SERVICE_PORT=50056
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
+    volumes:
+      - ./backend/serviceAccountKey.json:/app/serviceAccountKey.json:ro
+    restart: unless-stopped
+    networks:
+      - acm-network
+
+  ranking-service:
+    build:
+      context: ./backend
+      dockerfile: services/ranking-service/Dockerfile
+    container_name: ranking-service
+    ports:
+      - "50057:50057"
+    environment:
+      - RANKING_SERVICE_PORT=50057
+    restart: unless-stopped
+    networks:
+      - acm-network
+
   # ============================================================
   # API Gateway
   # ============================================================
@@ -125,12 +157,18 @@ services:
       - PROJECT_SERVICE_ADDR=project-service:50053
       - ASSET_SERVICE_ADDR=asset-service:50054
       - NOTIFICATION_SERVICE_ADDR=notification-service:50055
+      - COMMENT_SERVICE_ADDR=comment-service:50056
+      - RANKING_SERVICE_ADDR=ranking-service:50057
+
+
     depends_on:
       - auth-service
       - user-service
       - project-service
       - asset-service
       - notification-service
+      - comment-service
+      - ranking-service
     restart: unless-stopped
     networks:
       - acm-network
@@ -157,3 +195,6 @@ services:
 networks:
   acm-network:
     driver: bridge
+
+
+

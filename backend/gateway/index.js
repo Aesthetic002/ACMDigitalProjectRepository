@@ -44,23 +44,75 @@ const protoPath = path.join(__dirname, "../proto");
 
 const authPackageDef = protoLoader.loadSync(
   path.join(protoPath, "auth.proto"),
-  { keepCase: true, longs: String, enums: String, defaults: true, oneofs: true }
+  {
+    keepCase: true,
+    longs: String,
+    enums: String,
+    defaults: true,
+    oneofs: true,
+  },
+);
+
+const commentPackageDef = protoLoader.loadSync(
+  path.join(protoPath, "comment.proto"),
+  {
+    keepCase: true,
+    longs: String,
+    enums: String,
+    defaults: true,
+    oneofs: true,
+  },
+);
+
+const rankingPackageDef = protoLoader.loadSync(
+  path.join(protoPath, "ranking.proto"),
+  {
+    keepCase: true,
+    longs: String,
+    enums: String,
+    defaults: true,
+    oneofs: true,
+  },
 );
 const userPackageDef = protoLoader.loadSync(
   path.join(protoPath, "user.proto"),
-  { keepCase: true, longs: String, enums: String, defaults: true, oneofs: true }
+  {
+    keepCase: true,
+    longs: String,
+    enums: String,
+    defaults: true,
+    oneofs: true,
+  },
 );
 const projectPackageDef = protoLoader.loadSync(
   path.join(protoPath, "project.proto"),
-  { keepCase: true, longs: String, enums: String, defaults: true, oneofs: true }
+  {
+    keepCase: true,
+    longs: String,
+    enums: String,
+    defaults: true,
+    oneofs: true,
+  },
 );
 const assetPackageDef = protoLoader.loadSync(
   path.join(protoPath, "asset.proto"),
-  { keepCase: true, longs: String, enums: String, defaults: true, oneofs: true }
+  {
+    keepCase: true,
+    longs: String,
+    enums: String,
+    defaults: true,
+    oneofs: true,
+  },
 );
 const notificationPackageDef = protoLoader.loadSync(
   path.join(protoPath, "notification.proto"),
-  { keepCase: true, longs: String, enums: String, defaults: true, oneofs: true }
+  {
+    keepCase: true,
+    longs: String,
+    enums: String,
+    defaults: true,
+    oneofs: true,
+  },
 );
 
 const authProto = grpc.loadPackageDefinition(authPackageDef);
@@ -68,6 +120,8 @@ const userProto = grpc.loadPackageDefinition(userPackageDef);
 const projectProto = grpc.loadPackageDefinition(projectPackageDef);
 const assetProto = grpc.loadPackageDefinition(assetPackageDef);
 const notificationProto = grpc.loadPackageDefinition(notificationPackageDef);
+const commentProto = grpc.loadPackageDefinition(commentPackageDef);
+const rankingProto = grpc.loadPackageDefinition(rankingPackageDef);
 
 // ============================================================
 // Create gRPC Service Clients
@@ -75,28 +129,39 @@ const notificationProto = grpc.loadPackageDefinition(notificationPackageDef);
 
 const authClient = new authProto.acm.auth.AuthService(
   process.env.AUTH_SERVICE_ADDR || "127.0.0.1:50051",
-  grpc.credentials.createInsecure()
+  grpc.credentials.createInsecure(),
+);
+
+const commentClient = new commentProto.acm.comment.CommentService(
+  process.env.COMMENT_SERVICE_ADDR || "127.0.0.1:50056",
+  grpc.credentials.createInsecure(),
+);
+
+const rankingClient = new rankingProto.acm.ranking.RankingService(
+  process.env.RANKING_SERVICE_ADDR || "127.0.0.1:50057",
+  grpc.credentials.createInsecure(),
 );
 
 const userClient = new userProto.acm.user.UserService(
   process.env.USER_SERVICE_ADDR || "127.0.0.1:50052",
-  grpc.credentials.createInsecure()
+  grpc.credentials.createInsecure(),
 );
 
 const projectClient = new projectProto.acm.project.ProjectService(
   process.env.PROJECT_SERVICE_ADDR || "127.0.0.1:50053",
-  grpc.credentials.createInsecure()
+  grpc.credentials.createInsecure(),
 );
 
 const assetClient = new assetProto.acm.asset.AssetService(
   process.env.ASSET_SERVICE_ADDR || "127.0.0.1:50054",
-  grpc.credentials.createInsecure()
+  grpc.credentials.createInsecure(),
 );
 
-const notificationClient = new notificationProto.acm.notification.NotificationService(
-  process.env.NOTIFICATION_SERVICE_ADDR || "127.0.0.1:50055",
-  grpc.credentials.createInsecure()
-);
+const notificationClient =
+  new notificationProto.acm.notification.NotificationService(
+    process.env.NOTIFICATION_SERVICE_ADDR || "127.0.0.1:50055",
+    grpc.credentials.createInsecure(),
+  );
 
 // ============================================================
 // Middleware: Authentication & Authorization
@@ -290,7 +355,13 @@ app.post("/api/v1/users", verifyToken, requireAdmin, (req, res) => {
   }
 
   userClient.createUser(
-    { email, name: name || "", password, role: role || "viewer", avatar: avatar || "" },
+    {
+      email,
+      name: name || "",
+      password,
+      role: role || "viewer",
+      avatar: avatar || "",
+    },
     (err, response) => {
       if (handleGrpcError(err, res)) return;
 
@@ -305,7 +376,7 @@ app.post("/api/v1/users", verifyToken, requireAdmin, (req, res) => {
           emailVerified: response.email_verified,
         },
       });
-    }
+    },
   );
 });
 
@@ -322,20 +393,23 @@ app.put("/api/v1/users/:userId", verifyToken, (req, res) => {
     });
   }
 
-  userClient.updateUser({ user_id: userId, name, avatar, role }, (err, response) => {
-    if (handleGrpcError(err, res)) return;
+  userClient.updateUser(
+    { user_id: userId, name, avatar, role },
+    (err, response) => {
+      if (handleGrpcError(err, res)) return;
 
-    res.status(200).json({
-      success: true,
-      user: {
-        uid: response.uid,
-        email: response.email,
-        name: response.name,
-        role: response.role,
-        avatar: response.avatar,
-      },
-    });
-  });
+      res.status(200).json({
+        success: true,
+        user: {
+          uid: response.uid,
+          email: response.email,
+          name: response.name,
+          role: response.role,
+          avatar: response.avatar,
+        },
+      });
+    },
+  );
 });
 
 app.delete("/api/v1/users/:userId", verifyToken, requireAdmin, (req, res) => {
@@ -365,7 +439,15 @@ app.get("/api/v1/projects", (req, res) => {
   const tagIds = req.query.tagIds?.split(",") || [];
 
   projectClient.listProjects(
-    { limit, offset, status, domain, tech_stack: techStack, owner_id: ownerId, tag_ids: tagIds },
+    {
+      limit,
+      offset,
+      status,
+      domain,
+      tech_stack: techStack,
+      owner_id: ownerId,
+      tag_ids: tagIds,
+    },
     (err, response) => {
       if (handleGrpcError(err, res)) return;
 
@@ -377,7 +459,7 @@ app.get("/api/v1/projects", (req, res) => {
         ownerId: p.owner_id || "",
         ownerName: p.owner_name || "Unknown",
         authorName: p.owner_name || "Unknown",
-        status: p.status === "draft" ? "pending" : (p.status || "pending"),
+        status: p.status === "draft" ? "pending" : p.status || "pending",
         domain: p.domain || "",
         tags: p.tags || [],
         techStack: p.tech_stack || [],
@@ -401,7 +483,7 @@ app.get("/api/v1/projects", (req, res) => {
         projects,
         total: response.total,
       });
-    }
+    },
   );
 });
 
@@ -418,7 +500,8 @@ app.get("/api/v1/projects/:projectId", async (req, res) => {
       description: response.description || "",
       ownerId: response.owner_id || "",
       ownerName: response.owner_name || "Unknown",
-      status: response.status === "draft" ? "pending" : (response.status || "pending"),
+      status:
+        response.status === "draft" ? "pending" : response.status || "pending",
       domain: response.domain || "",
       tags: response.tags || [],
       techStack: response.tech_stack || [],
@@ -441,7 +524,12 @@ app.get("/api/v1/projects/:projectId", async (req, res) => {
       }
 
       // Fetch assets from subcollection (where upload handler stores them)
-      const assetsSnapshot = await db.collection("projects").doc(projectId).collection("assets").orderBy("createdAt", "desc").get();
+      const assetsSnapshot = await db
+        .collection("projects")
+        .doc(projectId)
+        .collection("assets")
+        .orderBy("createdAt", "desc")
+        .get();
       const assets = [];
       assetsSnapshot.forEach((doc) => {
         const a = doc.data();
@@ -491,7 +579,16 @@ app.get("/api/v1/projects/:projectId", async (req, res) => {
 });
 
 app.post("/api/v1/projects", verifyToken, (req, res) => {
-  const { title, description, tags, techStack, contributors, githubUrl, demoUrl, domain } = req.body;
+  const {
+    title,
+    description,
+    tags,
+    techStack,
+    contributors,
+    githubUrl,
+    demoUrl,
+    domain,
+  } = req.body;
 
   if (!title) {
     return res.status(400).json({
@@ -549,13 +646,23 @@ app.post("/api/v1/projects", verifyToken, (req, res) => {
           assets: [],
         },
       });
-    }
+    },
   );
 });
 
 app.put("/api/v1/projects/:projectId", verifyToken, (req, res) => {
   const { projectId } = req.params;
-  const { title, description, tags, techStack, contributors, status, githubUrl, demoUrl, domain } = req.body;
+  const {
+    title,
+    description,
+    tags,
+    techStack,
+    contributors,
+    status,
+    githubUrl,
+    demoUrl,
+    domain,
+  } = req.body;
 
   projectClient.updateProject(
     {
@@ -606,7 +713,7 @@ app.put("/api/v1/projects/:projectId", verifyToken, (req, res) => {
           demoUrl: demoUrl || "",
         },
       });
-    }
+    },
   );
 });
 
@@ -622,7 +729,7 @@ app.delete("/api/v1/projects/:projectId", verifyToken, (req, res) => {
         success: true,
         message: "Project deleted successfully",
       });
-    }
+    },
   );
 });
 
@@ -653,7 +760,7 @@ app.get("/api/v1/search", (req, res) => {
       ownerId: p.owner_id || p.ownerId || "",
       ownerName: p.owner_name || p.ownerName || "Unknown",
       authorName: p.owner_name || p.ownerName || "Unknown",
-      status: p.status === "draft" ? "pending" : (p.status || "pending"),
+      status: p.status === "draft" ? "pending" : p.status || "pending",
       tags: p.tags || [],
       techStack: p.tech_stack || p.techStack || [],
       contributors: p.contributors || [],
@@ -682,15 +789,17 @@ app.get("/api/v1/search", (req, res) => {
   // Search users only
   if (type === "users") {
     // Fallback to Firestore search for users
-    db.collection("users").get()
-      .then(snapshot => {
+    db.collection("users")
+      .get()
+      .then((snapshot) => {
         const queryLower = query.toLowerCase();
         const userResults = [];
-        
-        snapshot.forEach(doc => {
+
+        snapshot.forEach((doc) => {
           const user = doc.data();
-          const searchableText = `${user.name || ""} ${user.email || ""}`.toLowerCase();
-          
+          const searchableText =
+            `${user.name || ""} ${user.email || ""}`.toLowerCase();
+
           if (searchableText.includes(queryLower)) {
             userResults.push({
               id: doc.id,
@@ -715,7 +824,7 @@ app.get("/api/v1/search", (req, res) => {
           type,
         });
       })
-      .catch(err => {
+      .catch((err) => {
         console.error("User search error:", err);
         res.status(500).json({
           success: false,
@@ -731,12 +840,16 @@ app.get("/api/v1/search", (req, res) => {
     projectClient.searchProjects({ query, limit }, (err, projectResponse) => {
       if (handleGrpcError(err, res)) return;
 
-      const projectResults = (projectResponse.projects || []).map(normalizeProject);
+      const projectResults = (projectResponse.projects || []).map(
+        normalizeProject,
+      );
 
       // Search users if requested
       if (type === "all") {
         projectClient.searchUsers({ query, limit }, (userErr, userResponse) => {
-          const userResults = userErr ? [] : (userResponse.users || []).map(normalizeUser);
+          const userResults = userErr
+            ? []
+            : (userResponse.users || []).map(normalizeUser);
 
           const allResults = [...projectResults, ...userResults];
 
@@ -872,7 +985,13 @@ app.post("/api/v1/events", verifyToken, requireAdmin, (req, res) => {
   }
 
   notificationClient.createEvent(
-    { title, description: description || "", start_date: startDate, end_date: endDate, type: type || "general" },
+    {
+      title,
+      description: description || "",
+      start_date: startDate,
+      end_date: endDate,
+      type: type || "general",
+    },
     (err, response) => {
       if (handleGrpcError(err, res)) return;
 
@@ -880,7 +999,7 @@ app.post("/api/v1/events", verifyToken, requireAdmin, (req, res) => {
         success: true,
         event: response,
       });
-    }
+    },
   );
 });
 
@@ -889,7 +1008,14 @@ app.put("/api/v1/events/:eventId", verifyToken, requireAdmin, (req, res) => {
   const { title, description, startDate, endDate, type } = req.body;
 
   notificationClient.updateEvent(
-    { event_id: eventId, title, description, start_date: startDate, end_date: endDate, type },
+    {
+      event_id: eventId,
+      title,
+      description,
+      start_date: startDate,
+      end_date: endDate,
+      type,
+    },
     (err, response) => {
       if (handleGrpcError(err, res)) return;
 
@@ -897,7 +1023,7 @@ app.put("/api/v1/events/:eventId", verifyToken, requireAdmin, (req, res) => {
         success: true,
         event: response,
       });
-    }
+    },
   );
 });
 
@@ -943,7 +1069,12 @@ app.post("/api/v1/assets/upload-url", verifyToken, (req, res) => {
   }
 
   assetClient.getUploadUrl(
-    { project_id: projectId, user_id: req.user.uid, file_name: fileName, file_type: fileType || "" },
+    {
+      project_id: projectId,
+      user_id: req.user.uid,
+      file_name: fileName,
+      file_type: fileType || "",
+    },
     (err, response) => {
       if (handleGrpcError(err, res)) return;
 
@@ -951,128 +1082,226 @@ app.post("/api/v1/assets/upload-url", verifyToken, (req, res) => {
         success: true,
         data: response,
       });
-    }
+    },
   );
 });
 
 // Direct file upload endpoint (bypasses gRPC - handles multipart form data)
-app.post("/api/v1/assets/upload", (req, res, next) => {
-  // Authenticate first, then parse multipart
-  verifyToken(req, res, () => {
-    upload.single("file")(req, res, next);
-  });
-}, async (req, res) => {
-  try {
-    const { projectId } = req.body;
-    const authenticatedUid = req.user.uid;
+app.post(
+  "/api/v1/assets/upload",
+  (req, res, next) => {
+    // Authenticate first, then parse multipart
+    verifyToken(req, res, () => {
+      upload.single("file")(req, res, next);
+    });
+  },
+  async (req, res) => {
+    try {
+      const { projectId } = req.body;
+      const authenticatedUid = req.user.uid;
 
-    if (!projectId || projectId.trim() === "") {
-      return res.status(400).json({
-        success: false,
-        error: "ValidationError",
-        message: "Project ID is required",
-      });
-    }
-
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        error: "ValidationError",
-        message: "File is required",
-      });
-    }
-
-    // Check project exists
-    const projectRef = db.collection("projects").doc(projectId);
-    const projectDoc = await projectRef.get();
-
-    if (!projectDoc.exists || projectDoc.data().isDeleted) {
-      return res.status(404).json({
-        success: false,
-        error: "NotFound",
-        message: "Project not found",
-      });
-    }
-
-    const projectData = projectDoc.data();
-
-    // Authorization check
-    const isOwner = projectData.ownerId === authenticatedUid;
-    const isContributor = projectData.contributors && projectData.contributors.includes(authenticatedUid);
-    if (!isOwner && !isContributor) {
-      return res.status(403).json({
-        success: false,
-        error: "Forbidden",
-        message: "You do not have permission to upload assets to this project",
-      });
-    }
-
-    // Determine resource type
-    const isImageOrVideo = req.file.mimetype.startsWith('image/') || req.file.mimetype.startsWith('video/');
-    const resourceType = isImageOrVideo ? "auto" : "raw";
-
-    // Upload to Cloudinary
-    const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        folder: `projects/${projectId}`,
-        resource_type: resourceType,
-        use_filename: true,
-        unique_filename: false,
-        format: req.file.originalname.split('.').pop(),
-      },
-      async (error, result) => {
-        if (error) {
-          console.error("Cloudinary upload error:", error);
-          return res.status(500).json({
-            success: false,
-            error: "UploadError",
-            message: "Failed to upload file to Cloudinary",
-          });
-        }
-
-        // Create asset record in Firestore
-        const assetData = {
-          filename: req.file.originalname.trim(),
-          contentType: req.file.mimetype,
-          uploadedBy: authenticatedUid,
-          storagePath: result.public_id,
-          url: result.secure_url,
-          size: result.bytes,
-          status: "active",
-        };
-
-        const assetId = await storageService.createAssetRecord(projectId, assetData);
-
-        // Set project thumbnail if first image
-        if (req.file.mimetype.startsWith('image/')) {
-          try {
-            const pDoc = await projectRef.get();
-            if (pDoc.exists && (!pDoc.data().thumbnail || pDoc.data().thumbnail === '')) {
-              await projectRef.update({ thumbnail: result.secure_url });
-            }
-          } catch(e) {
-            console.error("Failed to set project thumbnail:", e);
-          }
-        }
-
-        return res.status(201).json({
-          success: true,
-          message: "File uploaded successfully",
-          url: result.secure_url,
-          assetId,
+      if (!projectId || projectId.trim() === "") {
+        return res.status(400).json({
+          success: false,
+          error: "ValidationError",
+          message: "Project ID is required",
         });
       }
-    );
 
-    uploadStream.end(req.file.buffer);
-  } catch (error) {
-    console.error("Upload asset error:", error.message);
-    return res.status(500).json({
-      success: false,
-      error: "InternalServerError",
-      message: "Failed to upload asset",
-    });
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          error: "ValidationError",
+          message: "File is required",
+        });
+      }
+
+      // Check project exists
+      const projectRef = db.collection("projects").doc(projectId);
+      const projectDoc = await projectRef.get();
+
+      if (!projectDoc.exists || projectDoc.data().isDeleted) {
+        return res.status(404).json({
+          success: false,
+          error: "NotFound",
+          message: "Project not found",
+        });
+      }
+
+      const projectData = projectDoc.data();
+
+      // Authorization check
+      const isOwner = projectData.ownerId === authenticatedUid;
+      const isContributor =
+        projectData.contributors &&
+        projectData.contributors.includes(authenticatedUid);
+      if (!isOwner && !isContributor) {
+        return res.status(403).json({
+          success: false,
+          error: "Forbidden",
+          message:
+            "You do not have permission to upload assets to this project",
+        });
+      }
+
+      // Determine resource type
+      const isImageOrVideo =
+        req.file.mimetype.startsWith("image/") ||
+        req.file.mimetype.startsWith("video/");
+      const resourceType = isImageOrVideo ? "auto" : "raw";
+
+      // Upload to Cloudinary
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: `projects/${projectId}`,
+          resource_type: resourceType,
+          use_filename: true,
+          unique_filename: false,
+          format: req.file.originalname.split(".").pop(),
+        },
+        async (error, result) => {
+          if (error) {
+            console.error("Cloudinary upload error:", error);
+            return res.status(500).json({
+              success: false,
+              error: "UploadError",
+              message: "Failed to upload file to Cloudinary",
+            });
+          }
+
+          // Create asset record in Firestore
+          const assetData = {
+            filename: req.file.originalname.trim(),
+            contentType: req.file.mimetype,
+            uploadedBy: authenticatedUid,
+            storagePath: result.public_id,
+            url: result.secure_url,
+            size: result.bytes,
+            status: "active",
+          };
+
+          const assetId = await storageService.createAssetRecord(
+            projectId,
+            assetData,
+          );
+
+          // Set project thumbnail if first image
+          if (req.file.mimetype.startsWith("image/")) {
+            try {
+              const pDoc = await projectRef.get();
+              if (
+                pDoc.exists &&
+                (!pDoc.data().thumbnail || pDoc.data().thumbnail === "")
+              ) {
+                await projectRef.update({ thumbnail: result.secure_url });
+              }
+            } catch (e) {
+              console.error("Failed to set project thumbnail:", e);
+            }
+          }
+
+          return res.status(201).json({
+            success: true,
+            message: "File uploaded successfully",
+            url: result.secure_url,
+            assetId,
+          });
+        },
+      );
+
+      uploadStream.end(req.file.buffer);
+    } catch (error) {
+      console.error("Upload asset error:", error.message);
+      return res.status(500).json({
+        success: false,
+        error: "InternalServerError",
+        message: "Failed to upload asset",
+      });
+    }
+  },
+);
+
+// ============================================================
+// Comment and Ranking API Routes
+// ============================================================
+
+app.post("/api/v1/projects/:projectId/comments", verifyToken, (req, res) => {
+  const { projectId } = req.params;
+  const { content } = req.body;
+  const userId = req.user.uid;
+
+  if (!content) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Comment content is required" });
   }
+
+  commentClient.CreateComment(
+    { projectId, userId, content },
+    (err, response) => {
+      if (err) {
+        if (
+          err.code === grpc.status.INVALID_ARGUMENT ||
+          err.code === grpc.status.RESOURCE_EXHAUSTED
+        ) {
+          return res.status(400).json({ success: false, message: err.details });
+        }
+        return res.status(500).json({ success: false, message: err.details });
+      }
+      return res.status(201).json(response);
+    },
+  );
+});
+
+app.delete("/api/v1/comments/:commentId", verifyToken, (req, res) => {
+  const { commentId } = req.params;
+  const userId = req.user.uid;
+  const role = req.user.role || "viewer";
+
+  commentClient.DeleteComment({ commentId, userId, role }, (err, response) => {
+    if (err) {
+      if (err.code === grpc.status.PERMISSION_DENIED) {
+        return res.status(403).json({ success: false, message: err.details });
+      }
+      return res.status(500).json({ success: false, message: err.details });
+    }
+    return res.json(response);
+  });
+});
+
+app.post("/api/v1/comments/:commentId/upvote", verifyToken, (req, res) => {
+  const { commentId } = req.params;
+
+  commentClient.UpvoteComment({ commentId }, (err, response) => {
+    if (err) {
+      if (err.code === grpc.status.NOT_FOUND)
+        return res.status(404).json({ success: false, message: err.details });
+      return res.status(500).json({ success: false, message: err.details });
+    }
+    return res.json(response);
+  });
+});
+
+app.get("/api/v1/projects/:projectId/comments", (req, res) => {
+  const { projectId } = req.params;
+  const sortByRanking = req.query.sort === "true";
+
+  commentClient.GetProjectComments({ projectId }, (err, response) => {
+    if (err)
+      return res.status(500).json({ success: false, message: err.details });
+
+    if (sortByRanking && response.comments && response.comments.length > 0) {
+      rankingClient.SortComments(
+        { comments: response.comments },
+        (rankErr, rankResponse) => {
+          if (rankErr) return res.json(response); // Fallback to unsorted
+          return res.json(rankResponse.sorted_comments || []);
+        },
+      );
+    } else {
+      return res.json(response.comments || []);
+    }
+  });
 });
 
 app.delete("/api/v1/assets/:assetId", verifyToken, (req, res) => {
@@ -1096,7 +1325,7 @@ app.delete("/api/v1/assets/:assetId", verifyToken, (req, res) => {
         success: true,
         message: "Asset deleted successfully",
       });
-    }
+    },
   );
 });
 
@@ -1130,7 +1359,7 @@ app.get("/api/v1/domains/stats", async (req, res) => {
     projectsSnapshot.forEach((doc) => {
       const data = doc.data();
       const domain = data.domain;
-      
+
       if (domain) {
         if (!domainDistribution[domain]) {
           domainDistribution[domain] = { count: 0, members: 0 };
@@ -1234,11 +1463,21 @@ app.listen(PORT, () => {
   console.log(`🏥 Health check: http://localhost:${PORT}/health`);
   console.log(`⏰ Started at ${new Date().toISOString()}`);
   console.log("\n📡 Connected to services:");
-  console.log(`   - Auth Service: ${process.env.AUTH_SERVICE_ADDR || "localhost:50051"}`);
-  console.log(`   - User Service: ${process.env.USER_SERVICE_ADDR || "localhost:50052"}`);
-  console.log(`   - Project Service: ${process.env.PROJECT_SERVICE_ADDR || "localhost:50053"}`);
-  console.log(`   - Asset Service: ${process.env.ASSET_SERVICE_ADDR || "localhost:50054"}`);
-  console.log(`   - Notification Service: ${process.env.NOTIFICATION_SERVICE_ADDR || "localhost:50055"}\n`);
+  console.log(
+    `   - Auth Service: ${process.env.AUTH_SERVICE_ADDR || "localhost:50051"}`,
+  );
+  console.log(
+    `   - User Service: ${process.env.USER_SERVICE_ADDR || "localhost:50052"}`,
+  );
+  console.log(
+    `   - Project Service: ${process.env.PROJECT_SERVICE_ADDR || "localhost:50053"}`,
+  );
+  console.log(
+    `   - Asset Service: ${process.env.ASSET_SERVICE_ADDR || "localhost:50054"}`,
+  );
+  console.log(
+    `   - Notification Service: ${process.env.NOTIFICATION_SERVICE_ADDR || "localhost:50055"}\n`,
+  );
 });
 
 module.exports = app;

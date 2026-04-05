@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package acm.comment;
+
+service CommentService {
+  rpc CreateComment (CreateCommentRequest) returns (Comment);
+  rpc DeleteComment (DeleteCommentRequest) returns (DeleteCommentResponse);
+  rpc GetProjectComments (GetProjectCommentsRequest) returns (GetProjectCommentsResponse);
+  rpc UpvoteComment (UpvoteCommentRequest) returns (Comment);
+}
+
+message CreateCommentRequest {
+  string projectId = 1;
+  string userId = 2;
+  string content = 3;
+}
+
+message DeleteCommentRequest {
+  string commentId = 1;
+  string userId = 2;
+  string role = 3; // To check if admin
+}
+
+message DeleteCommentResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetProjectCommentsRequest {
+  string projectId = 1;
+}
+
+message GetProjectCommentsResponse {
+  repeated Comment comments = 1;
+}
+
+message UpvoteCommentRequest {
+  string commentId = 1;
+}
+
+message Comment {
+  string id = 1;
+  string projectId = 2;
+  string userId = 3;
+  string content = 4;
+  int32 upvotes = 5;
+  string createdAt = 6;
+}

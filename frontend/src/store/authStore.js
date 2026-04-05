@@ -21,8 +21,8 @@ import { auth, googleProvider, githubProvider } from "@/config/firebase";
 import axiosInstance from "@/api/axiosInstance";
 
 // Valid roles
-const VALID_ROLES = ["viewer", "contributor", "admin"];
-const DEFAULT_ROLE = "viewer";
+export const VALID_ROLES = ["viewer", "contributor", "admin"];
+export const DEFAULT_ROLE = "viewer";
 
 // Track if auth listener is already set up
 let authListenerUnsubscribe = null;
