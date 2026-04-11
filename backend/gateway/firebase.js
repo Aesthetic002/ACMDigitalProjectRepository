@@ -28,14 +28,31 @@ const initializeFirebase = () => {
 
       firebaseInitialized = true;
     } catch (error) {
-      console.error("❌ Firebase initialization error:", error.message);
-      console.error(
-        "📝 Make sure serviceAccountKey.json exists in the backend directory",
-      );
-      console.error(
-        "🔗 Download it from: Firebase Console > Project Settings > Service Accounts",
-      );
-      throw error;
+      if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY) {
+        try {
+          admin.initializeApp({
+            credential: admin.credential.cert({
+              projectId: process.env.FIREBASE_PROJECT_ID,
+              privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+              clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+            }),
+            storageBucket: `${process.env.FIREBASE_PROJECT_ID}.appspot.com`,
+          });
+
+          console.log("✅ Firebase Admin SDK initialized from environment variables");
+          console.log(`📁 Project ID: ${process.env.FIREBASE_PROJECT_ID}`);
+
+          firebaseInitialized = true;
+        } catch (envError) {
+          console.error("❌ Firebase initialization from env failed:", envError.message);
+          throw envError;
+        }
+      } else {
+        console.error("❌ Firebase initialization error:", error.message);
+        console.error("📝 Make sure serviceAccountKey.json exists in the backend directory");
+        console.error("🔗 Download it from: Firebase Console > Project Settings > Service Accounts");
+        throw error;
+      }
     }
   }
 };
