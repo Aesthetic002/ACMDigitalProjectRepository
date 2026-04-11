@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { projectsAPI } from "@/services/api";
@@ -9,8 +9,15 @@ import { toast } from "sonner";
 // Helper to parse dates (handles Firestore timestamps and ISO strings)
 const parseDate = (date) => {
     if (!date) return null;
-    if (date._seconds) return new Date(date._seconds * 1000);
-    return new Date(date);
+    let parsed;
+    if (date._seconds) {
+        parsed = new Date(date._seconds * 1000);
+    } else if (typeof date === 'string' && /^\d+$/.test(date)) {
+        parsed = new Date(parseInt(date, 10));
+    } else {
+        parsed = new Date(date);
+    }
+    return isNaN(parsed.getTime()) ? null : parsed;
 };
 import {
     ArrowLeft, Calendar, Users, Github, ExternalLink,
@@ -20,8 +27,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import Layout from "@/components/Layout";
+import ProjectComments from "@/features/projects/components/ProjectComments";
 import Loader from "@/components/common/Loader";
 
 export function ProjectDetailContent({ backUrl = "/projects" }) {
@@ -194,6 +203,48 @@ export function ProjectDetailContent({ backUrl = "/projects" }) {
                             </Card>
                         )}
 
+                        {project.domain && (
+                            <Card className="border-border/50 bg-card/40 backdrop-blur-xl rounded-[2.5rem] shadow-2xl overflow-hidden border-t-2 border-t-white/5">
+                                <CardHeader className="pb-4">
+                                    <CardTitle className="text-xs font-black uppercase tracking-[0.3em] text-acm-blue italic flex items-center gap-3">
+                                        <Globe className="h-4 w-4" /> Project Domain
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <Badge variant="secondary" className="bg-acm-blue/10 text-acm-blue border border-acm-blue/20 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wide italic">
+                                        {project.domain}
+                                    </Badge>
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        {project.contributorsList && project.contributorsList.length > 0 && (
+                            <Card className="border-border/50 bg-card/40 backdrop-blur-xl rounded-[2.5rem] shadow-2xl overflow-hidden border-t-2 border-t-white/5">
+                                <CardHeader className="pb-4">
+                                    <CardTitle className="text-xs font-black uppercase tracking-[0.3em] text-acm-blue italic flex items-center gap-3">
+                                        <Users className="h-4 w-4" /> Core Contributors
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    {project.contributorsList.map(contributor => (
+                                        <Link key={contributor.uid} to={`/members/${contributor.uid}`} className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-acm-blue/50 transition-all group flex-row">
+                                            <div className="h-10 w-10 rounded-full bg-slate-800 overflow-hidden border border-white/10 shrink-0 flex items-center justify-center">
+                                                {contributor.avatar ? (
+                                                    <img src={contributor.avatar} alt={contributor.name} className="h-full w-full object-cover" />
+                                                ) : (
+                                                    <span className="text-white/50 font-black">{contributor.name.charAt(0).toUpperCase()}</span>
+                                                )}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h4 className="text-sm font-bold text-white truncate group-hover:text-acm-blue transition-colors leading-tight">{contributor.name}</h4>
+                                                <p className="text-[10px] uppercase font-black tracking-[0.2em] text-muted-foreground truncate italic">{contributor.role}</p>
+                                            </div>
+                                        </Link>
+                                    ))}
+                                </CardContent>
+                            </Card>
+                        )}
+
                         <Card className="border-border/50 bg-card/40 backdrop-blur-xl rounded-[2.5rem] shadow-2xl overflow-hidden border-t-2 border-t-white/5">
                             <CardHeader className="pb-4">
                                 <CardTitle className="text-xs font-black uppercase tracking-[0.3em] text-acm-blue italic flex items-center gap-3"><Globe className="h-4 w-4" /> Endpoint Links</CardTitle>
@@ -250,6 +301,10 @@ export function ProjectDetailContent({ backUrl = "/projects" }) {
                         </Card>
                     </div>
                 </div>
+
+                {/* --- Bottom Rendered Modules --- */}
+                <ProjectComments projectId={project.id} />
+                
             </div>
         </div>
     );

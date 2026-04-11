@@ -55,6 +55,21 @@ export const tagsAPI = {
     delete: (id) => axiosInstance.delete(`/tags/${id}`),
 };
 
+export const domainsAPI = {
+    getStats: () => axiosInstance.get('/domains/stats'),
+};
+
+// ── Comments ──────────────────────────────────────────────────────────────────
+
+export const commentsAPI = {
+    getSorted: (projectId, params = {}) => axiosInstance.get(`/comments/project/${projectId}/sorted`, { params }),
+    create: (data) => axiosInstance.post('/comments', data),
+    like: (commentId) => axiosInstance.put(`/comments/${commentId}/like`),
+    update: (commentId, data) => axiosInstance.put(`/comments/${commentId}`, data),
+    delete: (commentId) => axiosInstance.delete(`/comments/${commentId}`),
+    adminDelete: (commentId) => axiosInstance.delete(`/comments/${commentId}/admin`),
+};
+
 // ── Assets ────────────────────────────────────────────────────────────────────
 
 export const assetsAPI = {

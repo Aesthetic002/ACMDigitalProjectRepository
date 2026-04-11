@@ -18,8 +18,14 @@ const { db } = require("../firebase");
 function toTimestamp(value) {
   if (!value) return 0;
   if (typeof value === 'number') return value;
+  if (typeof value === 'string') {
+    if (/^\d+$/.test(value)) return parseInt(value, 10);
+    const parsed = new Date(value).getTime();
+    return isNaN(parsed) ? 0 : parsed;
+  }
   if (value.toMillis) return value.toMillis();
   if (value._seconds) return value._seconds * 1000;
+  if (value instanceof Date) return value.getTime();
   return 0;
 }
 
@@ -65,10 +71,12 @@ async function listProjects(call, callback) {
       tech_stack,
       owner_id,
       tag_ids,
+      domain,
+      user_id,
     } = call.request;
 
-    // Simple query - filter in memory to avoid composite index issues
-    let query = db.collection("projects");
+    // Search newest first to ensure new projects are visible
+    let query = db.collection("projects").orderBy("createdAt", "desc");
 
     const snapshot = await query.get();
 
@@ -88,6 +96,16 @@ async function listProjects(call, callback) {
 
       // Filter by owner if provided
       if (owner_id && projectData.ownerId !== owner_id) {
+        return;
+      }
+
+      // Filter by user_id (owner or contributor)
+      if (user_id && projectData.ownerId !== user_id && !(projectData.contributors || []).includes(user_id)) {
+        return;
+      }
+
+      // Filter by domain
+      if (domain && projectData.domain !== domain) {
         return;
       }
 
@@ -133,6 +151,7 @@ async function listProjects(call, callback) {
         created_at: toTimestamp(projectData.createdAt),
         updated_at: toTimestamp(projectData.updatedAt),
         is_approved: projectData.isApproved || false,
+        domain: projectData.domain || "Other",
       });
     });
 
@@ -207,6 +226,7 @@ async function getProject(call, callback) {
       created_at: toTimestamp(projectData.createdAt),
       updated_at: toTimestamp(projectData.updatedAt),
       is_approved: projectData.isApproved || false,
+      domain: projectData.domain || "Other",
     });
   } catch (error) {
     console.error("GetProject error:", error);
@@ -222,7 +242,7 @@ async function getProject(call, callback) {
  */
 async function createProject(call, callback) {
   try {
-    const { title, description, owner_id, tags, tech_stack, contributors } =
+    const { title, description, owner_id, tags, tech_stack, contributors, domain } =
       call.request;
 
     if (!title || !owner_id) {
@@ -256,6 +276,7 @@ async function createProject(call, callback) {
         assets: [],
         createdAt: Date.now(),
         updatedAt: Date.now(),
+        domain: domain || "Other",
       };
 
       db.collection("projects")
@@ -277,6 +298,7 @@ async function createProject(call, callback) {
             created_at: toTimestamp(projectData.createdAt),
             updated_at: toTimestamp(projectData.updatedAt),
             is_approved: projectData.isApproved,
+            domain: projectData.domain,
           });
         })
         .catch((error) => {
@@ -300,7 +322,7 @@ async function createProject(call, callback) {
  */
 async function updateProject(call, callback) {
   try {
-    const { project_id, user_id, title, description, tags, tech_stack, contributors, status } =
+    const { project_id, user_id, title, description, tags, tech_stack, contributors, status, domain } =
       call.request;
 
     if (!project_id || !user_id) {
@@ -342,6 +364,7 @@ async function updateProject(call, callback) {
     if (tech_stack) updateData.techStack = tech_stack;
     if (contributors) updateData.contributors = contributors;
     if (status) updateData.status = status;
+    if (domain) updateData.domain = domain;
 
     await db.collection("projects").doc(project_id).update(updateData);
 
@@ -370,6 +393,7 @@ async function updateProject(call, callback) {
       created_at: toTimestamp(updatedData.createdAt),
       updated_at: toTimestamp(updatedData.updatedAt),
       is_approved: updatedData.isApproved || false,
+      domain: updatedData.domain || "Other",
     });
   } catch (error) {
     console.error("UpdateProject error:", error);
@@ -448,10 +472,10 @@ async function searchProjects(call, callback) {
       });
     }
 
+    // Search all projects ordered by newest (we don't limit initially so we can text-match across the whole repository)
     const snapshot = await db
       .collection("projects")
-      .where("isDeleted", "==", false)
-      .limit(limit * 3)
+      .orderBy("createdAt", "desc")
       .get();
 
     const results = [];
@@ -459,6 +483,8 @@ async function searchProjects(call, callback) {
 
     snapshot.forEach((doc) => {
       const projectData = doc.data();
+      if (projectData.isDeleted === true) return;
+      
       const titleLower = (projectData.title || "").toLowerCase();
       const descLower = (projectData.description || "").toLowerCase();
 
@@ -488,6 +514,7 @@ async function searchProjects(call, callback) {
             created_at: toTimestamp(projectData.createdAt),
             updated_at: toTimestamp(projectData.updatedAt),
             is_approved: projectData.isApproved || false,
+            domain: projectData.domain || "Other",
           },
           rank,
         });

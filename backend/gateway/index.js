@@ -16,9 +16,9 @@ const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 
 // File upload and storage dependencies
-const upload = require("../middleware/upload");
-const cloudinary = require("../utils/cloudinary");
-const { db } = require("../firebase");
+const upload = require("./middleware/upload");
+const cloudinary = require("./utils/cloudinary");
+const { db } = require("./firebase");
 const storageService = require("../services/storage.service");
 
 const app = express();
@@ -363,9 +363,10 @@ app.get("/api/v1/projects", (req, res) => {
   const techStack = req.query.techStack?.split(",") || [];
   const ownerId = req.query.ownerId || "";
   const tagIds = req.query.tagIds?.split(",") || [];
+  const userId = req.query.userId || "";
 
   projectClient.listProjects(
-    { limit, offset, status, domain, tech_stack: techStack, owner_id: ownerId, tag_ids: tagIds },
+    { limit, offset, status, domain, tech_stack: techStack, owner_id: ownerId, tag_ids: tagIds, user_id: userId },
     (err, response) => {
       if (handleGrpcError(err, res)) return;
 
@@ -1169,6 +1170,13 @@ app.get("/api/v1/domains/stats", async (req, res) => {
 });
 
 // ============================================================
+// Routes: Comments (Direct Firestore REST Module)
+// ============================================================
+
+const commentsRoutes = require("./routes/comments.routes");
+app.use("/api/v1/comments", commentsRoutes(db, verifyToken, requireAdmin));
+
+// ============================================================
 // Health Check & Root Endpoint
 // ============================================================
 
@@ -1195,6 +1203,7 @@ app.get("/", (req, res) => {
       events: "/api/v1/events",
       assets: "/api/v1/assets",
       admin: "/api/v1/admin",
+      comments: "/api/v1/comments",
     },
   });
 });

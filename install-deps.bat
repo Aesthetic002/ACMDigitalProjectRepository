@@ -5,7 +5,7 @@ REM Install auth-service
 echo ============================================
 echo Installing auth-service...
 echo ============================================
-cd /d "d:\New folder\ACMDigitalProjectRepository\backend\services\auth-service"
+cd /d "%~dp0.\backend\services\auth-service"
 npm install
 if errorlevel 1 (
     echo First attempt failed, trying with --legacy-peer-deps...
@@ -24,7 +24,7 @@ echo.
 echo ============================================
 echo Installing user-service...
 echo ============================================
-cd /d "d:\New folder\ACMDigitalProjectRepository\backend\services\user-service"
+cd /d "%~dp0.\backend\services\user-service"
 npm install
 if errorlevel 1 (
     echo First attempt failed, trying with --legacy-peer-deps...
@@ -43,7 +43,7 @@ echo.
 echo ============================================
 echo Installing project-service...
 echo ============================================
-cd /d "d:\New folder\ACMDigitalProjectRepository\backend\services\project-service"
+cd /d "%~dp0.\backend\services\project-service"
 npm install
 if errorlevel 1 (
     echo First attempt failed, trying with --legacy-peer-deps...
@@ -62,7 +62,7 @@ echo.
 echo ============================================
 echo Installing asset-service...
 echo ============================================
-cd /d "d:\New folder\ACMDigitalProjectRepository\backend\services\asset-service"
+cd /d "%~dp0.\backend\services\asset-service"
 npm install
 if errorlevel 1 (
     echo First attempt failed, trying with --legacy-peer-deps...
@@ -81,7 +81,7 @@ echo.
 echo ============================================
 echo Installing notification-service...
 echo ============================================
-cd /d "d:\New folder\ACMDigitalProjectRepository\backend\services\notification-service"
+cd /d "%~dp0.\backend\services\notification-service"
 npm install
 if errorlevel 1 (
     echo First attempt failed, trying with --legacy-peer-deps...
@@ -100,7 +100,7 @@ echo.
 echo ============================================
 echo Installing gateway...
 echo ============================================
-cd /d "d:\New folder\ACMDigitalProjectRepository\backend\gateway"
+cd /d "%~dp0.\backend\gateway"
 npm install
 if errorlevel 1 (
     echo First attempt failed, trying with --legacy-peer-deps...

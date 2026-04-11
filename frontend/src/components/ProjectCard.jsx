@@ -7,8 +7,15 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 // Helper to parse dates (handles Firestore timestamps and ISO strings)
 const parseDate = (date) => {
     if (!date) return null;
-    if (date._seconds) return new Date(date._seconds * 1000);
-    return new Date(date);
+    let parsed;
+    if (date._seconds) {
+        parsed = new Date(date._seconds * 1000);
+    } else if (typeof date === 'string' && /^\d+$/.test(date)) {
+        parsed = new Date(parseInt(date, 10));
+    } else {
+        parsed = new Date(date);
+    }
+    return isNaN(parsed.getTime()) ? null : parsed;
 };
 
 export default function ProjectCard({ project }) {

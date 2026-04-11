@@ -65,7 +65,7 @@ export default function MemberProfilePage() {
     // Fetch user projects (where user is owner or contributor)
     const { data: projectsData, isLoading: isProjectsLoading } = useQuery({
         queryKey: ["member-projects", uid],
-        queryFn: () => projectsAPI.getAll({ contributorId: uid, status: "approved" }),
+        queryFn: () => projectsAPI.getAll({ userId: uid, status: "approved" }),
         enabled: !!uid,
     });
 

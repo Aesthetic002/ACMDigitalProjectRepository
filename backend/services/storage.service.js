@@ -5,7 +5,7 @@
  * Generates signed URLs for uploads and downloads.
  */
 
-const { admin, db } = require("../firebase");
+const { admin, db } = require("./firebase");
 
 const storage = admin.storage().bucket();
 
