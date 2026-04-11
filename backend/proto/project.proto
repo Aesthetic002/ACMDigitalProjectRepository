@@ -53,6 +53,7 @@ message ProjectResponse {
   int64 created_at = 13;
   int64 updated_at = 14;
   bool is_approved = 15;
+  string domain = 16;
 }
 
 message Asset {
@@ -70,6 +71,8 @@ message ListProjectsRequest {
   repeated string tech_stack = 4;
   string owner_id = 5;
   repeated string tag_ids = 6;
+  string domain = 7;
+  string user_id = 8;
 }
 
 message ListProjectsResponse {
@@ -88,6 +91,7 @@ message CreateProjectRequest {
   repeated string tags = 4;
   repeated string tech_stack = 5;
   repeated string contributors = 6;
+  string domain = 7;
 }
 
 message UpdateProjectRequest {
@@ -99,6 +103,7 @@ message UpdateProjectRequest {
   repeated string tech_stack = 6;
   repeated string contributors = 7;
   string status = 8;
+  string domain = 9;
 }
 
 message DeleteProjectRequest {

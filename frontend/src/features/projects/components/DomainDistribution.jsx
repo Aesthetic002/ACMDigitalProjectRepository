@@ -3,8 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
-import { Brain, Globe, Shield, Cpu, Code2, ArrowRight } from "lucide-react";
-import { adminAPI } from "@/services/api";
+import { Brain, Globe, Shield, Cpu, Code2, ArrowRight, Smartphone, Database, Cloud, Palette, Blocks, MoreHorizontal } from "lucide-react";
+import { adminAPI, domainsAPI } from "@/services/api";
 import { useAuthStore } from "@/store/authStore";
 
 function DomainCard({
@@ -86,6 +86,7 @@ function DomainCard({
 
           {/* CTA */}
           <button
+            onClick={() => window.location.href = `/projects?domain=${encodeURIComponent(title)}`}
             className="flex items-center gap-2 text-sm font-medium transition-all duration-300 opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0"
             style={{ color }}
           >
@@ -105,63 +106,93 @@ export function DomainDistribution() {
   const isAdmin = isAuthenticated && user?.role === "admin";
 
   const { data: analyticsData } = useQuery({
-    queryKey: ['admin-analytics'],
-    queryFn: () => adminAPI.getAnalytics(),
-    enabled: isAdmin,
+    queryKey: ['domains-stats'],
+    queryFn: () => domainsAPI.getStats(),
   });
 
   const domainStats = analyticsData?.data?.distribution || {};
 
   const domains = [
     {
-      id: "ai-ml",
-      icon: <Brain className="h-7 w-7" />,
-      title: "AI / Machine Learning",
-      description:
-        "Deep learning, computer vision, NLP, and intelligent systems projects pushing the boundaries of AI.",
-      projectCount: domainStats["AI / Machine Learning"]?.count || 0,
-      memberCount: domainStats["AI / Machine Learning"]?.members || 0,
-      color: "#8B5CF6",
-    },
-    {
       id: "web-dev",
       icon: <Globe className="h-7 w-7" />,
       title: "Web Development",
-      description:
-        "Full-stack applications, progressive web apps, and modern web technologies for real-world solutions.",
+      description: "Full-stack applications, progressive web apps, and modern web technologies for real-world solutions.",
       projectCount: domainStats["Web Development"]?.count || 0,
       memberCount: domainStats["Web Development"]?.members || 0,
       color: "#3B82F6",
     },
     {
+      id: "app-dev",
+      icon: <Smartphone className="h-7 w-7" />,
+      title: "App Development",
+      description: "Native and cross-platform mobile applications for iOS and Android ecosystems.",
+      projectCount: domainStats["App Development"]?.count || 0,
+      memberCount: domainStats["App Development"]?.members || 0,
+      color: "#10B981", 
+    },
+    {
+      id: "ml-ai",
+      icon: <Brain className="h-7 w-7" />,
+      title: "Machine Learning / AI",
+      description: "Deep learning, computer vision, NLP, and intelligent systems pushing the boundaries of AI.",
+      projectCount: domainStats["Machine Learning / AI"]?.count || 0,
+      memberCount: domainStats["Machine Learning / AI"]?.members || 0,
+      color: "#8B5CF6",
+    },
+    {
       id: "cybersecurity",
       icon: <Shield className="h-7 w-7" />,
       title: "Cybersecurity",
-      description:
-        "Security audits, penetration testing, cryptography, and defensive security implementations.",
+      description: "Security audits, penetration testing, cryptography, and defensive security implementations.",
       projectCount: domainStats["Cybersecurity"]?.count || 0,
       memberCount: domainStats["Cybersecurity"]?.members || 0,
-      color: "#10B981",
+      color: "#EF4444",
     },
     {
-      id: "robotics",
-      icon: <Cpu className="h-7 w-7" />,
-      title: "Robotics",
-      description:
-        "Autonomous systems, robotic control, sensor integration, and hardware-software interfaces.",
-      projectCount: domainStats["Robotics"]?.count || 0,
-      memberCount: domainStats["Robotics"]?.members || 0,
+      id: "blockchain",
+      icon: <Blocks className="h-7 w-7" />,
+      title: "Blockchain",
+      description: "Smart contracts, decentralized applications (dApps), and distributed ledger technologies.",
+      projectCount: domainStats["Blockchain"]?.count || 0,
+      memberCount: domainStats["Blockchain"]?.members || 0,
       color: "#F59E0B",
     },
     {
-      id: "cp",
-      icon: <Code2 className="h-7 w-7" />,
-      title: "Competitive Programming",
-      description:
-        "Algorithm optimization, data structures, and competitive coding challenge solutions.",
-      projectCount: domainStats["Competitive Programming"]?.count || 0,
-      memberCount: domainStats["Competitive Programming"]?.members || 0,
-      color: "#EF4444",
+      id: "cloud-computing",
+      icon: <Cloud className="h-7 w-7" />,
+      title: "Cloud Computing",
+      description: "Scalable infrastructure, serverless architectures, and distributed systems integration.",
+      projectCount: domainStats["Cloud Computing"]?.count || 0,
+      memberCount: domainStats["Cloud Computing"]?.members || 0,
+      color: "#06B6D4",
+    },
+    {
+      id: "hardware-iot",
+      icon: <Cpu className="h-7 w-7" />,
+      title: "Hardware / IoT",
+      description: "Connected devices, embedded systems, sensor integration, and hardware-software interfaces.",
+      projectCount: domainStats["Hardware / IoT"]?.count || 0,
+      memberCount: domainStats["Hardware / IoT"]?.members || 0,
+      color: "#64748B",
+    },
+    {
+      id: "ui-ux",
+      icon: <Palette className="h-7 w-7" />,
+      title: "UI/UX Design",
+      description: "User research, wireframing, prototyping, and creating intuitive digital experiences.",
+      projectCount: domainStats["UI/UX Design"]?.count || 0,
+      memberCount: domainStats["UI/UX Design"]?.members || 0,
+      color: "#EC4899",
+    },
+    {
+      id: "other",
+      icon: <MoreHorizontal className="h-7 w-7" />,
+      title: "Other",
+      description: "Projects that span multiple disciplines or explore unconventional technical areas.",
+      projectCount: domainStats["Other"]?.count || 0,
+      memberCount: domainStats["Other"]?.members || 0,
+      color: "#9CA3AF",
     },
   ];
 

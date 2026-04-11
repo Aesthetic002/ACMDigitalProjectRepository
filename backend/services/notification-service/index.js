@@ -17,8 +17,14 @@ const { db } = require("../firebase");
 function toTimestamp(value) {
   if (!value) return 0;
   if (typeof value === 'number') return value;
+  if (typeof value === 'string') {
+    if (/^\d+$/.test(value)) return parseInt(value, 10);
+    const parsed = new Date(value).getTime();
+    return isNaN(parsed) ? 0 : parsed;
+  }
   if (value.toMillis) return value.toMillis();
   if (value._seconds) return value._seconds * 1000;
+  if (value instanceof Date) return value.getTime();
   return 0;
 }
 

@@ -2,10 +2,10 @@
   "name": "acm-project-archive-backend",
   "version": "1.0.0",
   "description": "Backend API for ACM Project Archive Platform - Authentication, User Management, and Project Write Operations",
-  "main": "app.js",
+  "main": "start-microservices.js",
   "scripts": {
-    "start": "node app.js",
-    "dev": "nodemon app.js",
+    "start": "node start-microservices.js",
+    "dev": "node start-microservices.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [

@@ -11,6 +11,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+const PREDEFINED_DOMAINS = ["Web Development", "App Development", "Machine Learning / AI", "Cybersecurity", "Blockchain", "Cloud Computing", "Hardware / IoT", "UI/UX Design", "Other"];
 
 export default function ProjectForm({ initialData = null, projectId = null, isAdmin = false }) {
     const isEditing = !!projectId;
@@ -23,6 +26,7 @@ export default function ProjectForm({ initialData = null, projectId = null, isAd
         techStack: initialData?.techStack || [],
         githubUrl: initialData?.githubUrl || '',
         demoUrl: initialData?.demoUrl || '',
+        domain: initialData?.domain || '',
     });
 
     const [techInput, setTechInput] = useState('');
@@ -83,6 +87,10 @@ export default function ProjectForm({ initialData = null, projectId = null, isAd
         setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
+    const handleSelectChange = (name, value) => {
+        setFormData((prev) => ({ ...prev, [name]: value }));
+    };
+
     const addTech = (tech) => {
         const trimmedTech = tech.trim();
         if (trimmedTech && !formData.techStack.includes(trimmedTech)) {
@@ -114,6 +122,7 @@ export default function ProjectForm({ initialData = null, projectId = null, isAd
         if (!formData.title.trim()) return toast.error('Title is required');
         if (!formData.description.trim()) return toast.error('Description is required');
         if (formData.techStack.length === 0) return toast.error('Add at least one technology');
+        if (!formData.domain) return toast.error('Domain is required');
 
         const payload = {
             title: formData.title.trim(),
@@ -121,6 +130,7 @@ export default function ProjectForm({ initialData = null, projectId = null, isAd
             techStack: formData.techStack,
             githubUrl: formData.githubUrl.trim(),
             demoUrl: formData.demoUrl.trim(),
+            domain: formData.domain,
         };
 
         try {
@@ -226,6 +236,20 @@ export default function ProjectForm({ initialData = null, projectId = null, isAd
                                     placeholder="e.g. ACM Member Dashboard"
                                     className="h-12 rounded-2xl border-border/50 bg-muted/20 text-lg focus-visible:ring-acm-blue"
                                 />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-foreground">Project Domain <span className="text-red-500">*</span></label>
+                                <Select value={formData.domain || ""} onValueChange={(v) => handleSelectChange("domain", v)}>
+                                    <SelectTrigger className="w-full h-12 rounded-2xl border-border/50 bg-muted/20 text-lg focus:ring-acm-blue">
+                                        <SelectValue placeholder="Select a Domain" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-card border-border/50 backdrop-blur-xl">
+                                        {PREDEFINED_DOMAINS.map(d => (
+                                            <SelectItem key={d} value={d}>{d}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
 
                             <div className="space-y-2">

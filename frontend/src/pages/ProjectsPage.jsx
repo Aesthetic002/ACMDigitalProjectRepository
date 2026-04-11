@@ -12,16 +12,19 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
+const PREDEFINED_DOMAINS = ["Web Development", "App Development", "Machine Learning / AI", "Cybersecurity", "Blockchain", "Cloud Computing", "Hardware / IoT", "UI/UX Design", "Other"];
+
 function ProjectsContent() {
     const [searchParams, setSearchParams] = useSearchParams();
     const navigate = useNavigate();
     const status = searchParams.get("status") || "";
     const techStack = searchParams.get("tech") || "";
+    const domain = searchParams.get("domain") || "";
     const limit = parseInt(searchParams.get("limit")) || 20;
 
     const { data: projectsData, isLoading, isError, refetch } = useQuery({
-        queryKey: ["projects", { status, techStack, limit }],
-        queryFn: () => projectsAPI.getAll({ status: status || undefined, techStack: techStack || undefined, limit }),
+        queryKey: ["projects", { status, techStack, domain, limit }],
+        queryFn: () => projectsAPI.getAll({ status: status || undefined, techStack: techStack || undefined, domain: domain || undefined, limit }),
     });
 
     const { data: tagsData } = useQuery({
@@ -40,7 +43,7 @@ function ProjectsContent() {
     };
 
     const clearFilters = () => setSearchParams({});
-    const hasActiveFilters = status || techStack;
+    const hasActiveFilters = status || techStack || domain;
 
     return (
         <div className="min-h-screen bg-background/50">
@@ -89,6 +92,19 @@ function ProjectsContent() {
                                 </SelectContent>
                             </Select>
                         </div>
+                        <div className="w-full sm:w-64">
+                            <Select value={domain || "all"} onValueChange={(v) => handleFilterChange("domain", v)}>
+                                <SelectTrigger className="w-full bg-card/50 backdrop-blur-md border-border/50 focus:ring-acm-blue h-12 rounded-xl font-bold text-xs uppercase tracking-widest italic">
+                                    <SelectValue placeholder="DOMAIN FILTER" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-card border-border/50 backdrop-blur-xl">
+                                    <SelectItem value="all">ALL DOMAINS</SelectItem>
+                                    {PREDEFINED_DOMAINS.map((d) => (
+                                        <SelectItem key={d} value={d}>{d.toUpperCase()}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                         {hasActiveFilters && (
                             <Button variant="ghost" onClick={clearFilters} className="text-muted-foreground hover:text-red-500 font-black uppercase tracking-widest text-[10px] italic">
                                 <X className="mr-2 h-4 w-4" /> RESET FILTERS
@@ -96,7 +112,7 @@ function ProjectsContent() {
                         )}
                     </div>
                     <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground italic">
-                        DISPLAYING <span className="text-white text-base ml-1 mr-1">{projects.length}</span> PROJECTS
+                        DISPLAYING <span className="text-white text-base ml-1 mr-1">{projects.length}</span> {projectsData?.data?.total ? `OF ${projectsData.data.total}` : ''} PROJECTS
                     </div>
                 </div>
 
