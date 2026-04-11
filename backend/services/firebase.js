@@ -12,7 +12,7 @@ const path = require("path");
 let firebaseInitialized = false;
 
 const initializeFirebase = () => {
-  if (!firebaseInitialized) {
+  if (admin.apps.length === 0) {
     try {
       // Try to load service account from file (for local development)
       // In production, this might use environment variables
@@ -26,8 +26,6 @@ const initializeFirebase = () => {
 
       console.log("✅ Firebase Admin SDK initialized successfully");
       console.log(`📁 Project ID: ${serviceAccount.project_id}`);
-
-      firebaseInitialized = true;
     } catch (error) {
       // If file not found, try environment variables (for Docker/production)
       if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY) {
@@ -43,8 +41,6 @@ const initializeFirebase = () => {
 
           console.log("✅ Firebase Admin SDK initialized from environment variables");
           console.log(`📁 Project ID: ${process.env.FIREBASE_PROJECT_ID}`);
-
-          firebaseInitialized = true;
         } catch (envError) {
           console.error("❌ Firebase initialization from env failed:", envError.message);
           throw envError;
