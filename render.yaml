@@ -1,0 +1,144 @@
+services:
+  # ============================================================
+  # Auth Service (gRPC :50051)
+  # ============================================================
+  - type: worker
+    name: acm-auth-service
+    runtime: docker
+    dockerfilePath: ./backend/services/auth-service/Dockerfile
+    dockerContext: ./backend
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: AUTH_SERVICE_PORT
+        value: 50051
+      - key: FIREBASE_PROJECT_ID
+        value: acmdigitalprojectrepository
+      - key: FIREBASE_CLIENT_EMAIL
+        value: firebase-adminsdk-fbsvc@acmdigitalprojectrepository.iam.gserviceaccount.com
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
+
+  # ============================================================
+  # User Service (gRPC :50052)
+  # ============================================================
+  - type: worker
+    name: acm-user-service
+    runtime: docker
+    dockerfilePath: ./backend/services/user-service/Dockerfile
+    dockerContext: ./backend
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: USER_SERVICE_PORT
+        value: 50052
+      - key: FIREBASE_PROJECT_ID
+        value: acmdigitalprojectrepository
+      - key: FIREBASE_CLIENT_EMAIL
+        value: firebase-adminsdk-fbsvc@acmdigitalprojectrepository.iam.gserviceaccount.com
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
+
+  # ============================================================
+  # Project Service (gRPC :50053)
+  # ============================================================
+  - type: worker
+    name: acm-project-service
+    runtime: docker
+    dockerfilePath: ./backend/services/project-service/Dockerfile
+    dockerContext: ./backend
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PROJECT_SERVICE_PORT
+        value: 50053
+      - key: USER_SERVICE_ADDR
+        value: acm-user-service:50052
+      - key: FIREBASE_PROJECT_ID
+        value: acmdigitalprojectrepository
+      - key: FIREBASE_CLIENT_EMAIL
+        value: firebase-adminsdk-fbsvc@acmdigitalprojectrepository.iam.gserviceaccount.com
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
+
+  # ============================================================
+  # Asset Service (gRPC :50054)
+  # ============================================================
+  - type: worker
+    name: acm-asset-service
+    runtime: docker
+    dockerfilePath: ./backend/services/asset-service/Dockerfile
+    dockerContext: ./backend
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ASSET_SERVICE_PORT
+        value: 50054
+      - key: FIREBASE_PROJECT_ID
+        value: acmdigitalprojectrepository
+      - key: FIREBASE_CLIENT_EMAIL
+        value: firebase-adminsdk-fbsvc@acmdigitalprojectrepository.iam.gserviceaccount.com
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        value: djgs90vay
+      - key: CLOUDINARY_API_KEY
+        value: "499964857766371"
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+
+  # ============================================================
+  # Notification Service (gRPC :50055)
+  # ============================================================
+  - type: worker
+    name: acm-notification-service
+    runtime: docker
+    dockerfilePath: ./backend/services/notification-service/Dockerfile
+    dockerContext: ./backend
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NOTIFICATION_SERVICE_PORT
+        value: 50055
+      - key: FIREBASE_PROJECT_ID
+        value: acmdigitalprojectrepository
+      - key: FIREBASE_CLIENT_EMAIL
+        value: firebase-adminsdk-fbsvc@acmdigitalprojectrepository.iam.gserviceaccount.com
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
+
+  # ============================================================
+  # API Gateway (REST :3000)
+  # ============================================================
+  - type: web
+    name: acm-gateway
+    runtime: docker
+    dockerfilePath: ./backend/gateway/Dockerfile
+    dockerContext: ./backend
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: GATEWAY_PORT
+        value: 3000
+      - key: AUTH_SERVICE_ADDR
+        value: acm-auth-service:50051
+      - key: USER_SERVICE_ADDR
+        value: acm-user-service:50052
+      - key: PROJECT_SERVICE_ADDR
+        value: acm-project-service:50053
+      - key: ASSET_SERVICE_ADDR
+        value: acm-asset-service:50054
+      - key: NOTIFICATION_SERVICE_ADDR
+        value: acm-notification-service:50055
+      - key: FIREBASE_PROJECT_ID
+        value: acmdigitalprojectrepository
+      - key: FIREBASE_CLIENT_EMAIL
+        value: firebase-adminsdk-fbsvc@acmdigitalprojectrepository.iam.gserviceaccount.com
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        value: djgs90vay
+      - key: CLOUDINARY_API_KEY
+        value: "499964857766371"
+      - key: CLOUDINARY_API_SECRET
+        sync: false
