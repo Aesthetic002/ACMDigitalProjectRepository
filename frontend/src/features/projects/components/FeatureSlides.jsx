@@ -8,14 +8,10 @@ import {
   FolderOpen,
   FileText,
   Users,
-  ShieldCheck,
   Search,
   Filter,
   Plus,
   MoreVertical,
-  CheckCircle,
-  XCircle,
-  Clock,
 } from "lucide-react";
 
 function FeatureSlide({ title, description, children, align, icon, index }) {
@@ -365,73 +361,6 @@ function MemberDashboardMockup() {
   );
 }
 
-function AdminModerationMockup() {
-  const { data: pendingData } = useQuery({
-    queryKey: ['mock-pending'],
-    queryFn: () => projectsAPI.getAll({ status: 'pending', limit: 3 }),
-  });
-
-  const queue = pendingData?.data?.projects || [];
-
-  return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h4 className="text-lg font-semibold text-foreground">
-            Moderation Queue
-          </h4>
-          <p className="text-sm text-muted-foreground">
-            Review and approve pending items
-          </p>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-500/10 text-yellow-500">
-          <Clock className="h-4 w-4" />
-          <span className="text-xs font-medium">{queue.length} pending</span>
-        </div>
-      </div>
-
-      {/* Queue Items */}
-      <div className="space-y-3">
-        {queue.length === 0 ? (
-          <div className="py-12 flex flex-col items-center justify-center border border-dashed border-border rounded-xl">
-            <CheckCircle className="h-8 w-8 text-green-500/30 mb-2" />
-            <p className="text-sm font-bold text-foreground">All Clear</p>
-            <p className="text-[10px] text-muted-foreground">No pending items in queue</p>
-          </div>
-        ) : queue.map((item, i) => (
-          <div
-            key={i}
-            className="p-4 rounded-xl bg-muted/50 border border-border hover:border-primary/30 transition-colors"
-          >
-            <div className="flex items-start justify-between mb-3">
-              <div>
-                <span
-                  className="inline-block px-2 py-0.5 rounded-full text-[9px] font-medium mb-1 bg-blue-500/10 text-blue-500"
-                >
-                  Project Submission
-                </span>
-                <p className="text-sm font-medium text-foreground line-clamp-1">{item.title}</p>
-                <p className="text-[11px] text-muted-foreground">
-                  by {item.ownerName || "Member"}
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button className="flex-1 py-1.5 rounded-lg bg-green-500/10 text-green-500 text-xs font-medium">
-                Approve
-              </button>
-              <button className="flex-1 py-1.5 rounded-lg bg-red-500/10 text-red-500 text-xs font-medium">
-                Reject
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export function FeatureSlides() {
   const slides = [
     {
@@ -457,14 +386,6 @@ export function FeatureSlides() {
       icon: <Users className="h-7 w-7" />,
       align: "left",
       mockup: <MemberDashboardMockup />,
-    },
-    {
-      title: "Admin Moderation Panel",
-      description:
-        "Streamlined approval workflows for project submissions, member requests, and content updates. Maintain quality control effortlessly.",
-      icon: <ShieldCheck className="h-7 w-7" />,
-      align: "right",
-      mockup: <AdminModerationMockup />,
     },
   ];
 

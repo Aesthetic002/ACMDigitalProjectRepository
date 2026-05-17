@@ -90,8 +90,10 @@ async function listProjects(call, callback) {
       }
 
       // Filter by status if provided
-      if (status && projectData.status !== status) {
-        return;
+      // Normalise: treat "draft" and "pending" as the same pending state
+      if (status) {
+        const normalised = (s) => (s === "draft" ? "pending" : s);
+        if (normalised(projectData.status) !== normalised(status)) return;
       }
 
       // Filter by owner if provided
@@ -154,6 +156,9 @@ async function listProjects(call, callback) {
         domain: projectData.domain || "Other",
       });
     });
+
+    // Sort newest first in memory (handles docs missing createdAt in Firestore index)
+    projects.sort((a, b) => (Number(b.created_at) || 0) - (Number(a.created_at) || 0));
 
     // Apply pagination in memory
     const total = projects.length;
@@ -443,7 +448,7 @@ async function deleteProject(call, callback) {
     await db
       .collection("projects")
       .doc(project_id)
-      .update({ isDeleted: true, updatedAt: Date.now() });
+      .delete();
 
     callback(null, {
       success: true,

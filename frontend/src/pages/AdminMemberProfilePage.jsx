@@ -77,7 +77,7 @@ export default function AdminMemberProfilePage() {
     // Fetch user projects
     const { data: projectsData, isLoading: isProjectsLoading } = useQuery({
         queryKey: ["member-projects", uid],
-        queryFn: () => projectsAPI.getAll({ authorUid: uid }),
+        queryFn: () => projectsAPI.getAll({ userId: uid, limit: 100 }),
     });
 
     const projects = projectsData?.data?.projects || [];

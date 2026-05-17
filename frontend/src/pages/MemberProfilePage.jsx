@@ -62,10 +62,10 @@ export default function MemberProfilePage() {
 
     const user = userData?.data?.user;
 
-    // Fetch user projects (where user is owner or contributor)
+    // Fetch user projects (where user is owner or contributor) — all statuses
     const { data: projectsData, isLoading: isProjectsLoading } = useQuery({
         queryKey: ["member-projects", uid],
-        queryFn: () => projectsAPI.getAll({ userId: uid, status: "approved" }),
+        queryFn: () => projectsAPI.getAll({ userId: uid, limit: 100 }),
         enabled: !!uid,
     });
 
@@ -220,7 +220,11 @@ export default function MemberProfilePage() {
                                         <Card className="rounded-3xl border-border/50 bg-card/40 backdrop-blur-sm group hover:border-acm-blue/30 transition-all cursor-pointer h-full">
                                             <CardContent className="p-5">
                                                 <div className="flex items-start justify-between mb-3">
-                                                    <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest py-0.5 h-4 border-none bg-emerald-500/10 text-emerald-500">
+                                                    <Badge variant="outline" className={`text-[8px] font-black uppercase tracking-widest py-0.5 h-4 border-none ${
+                                                        project.status === 'approved' ? 'bg-emerald-500/10 text-emerald-500' :
+                                                        project.status === 'rejected' ? 'bg-red-500/10 text-red-500' :
+                                                        'bg-amber-500/10 text-amber-500'
+                                                    }`}>
                                                         {project.status}
                                                     </Badge>
                                                     {project.githubUrl && (

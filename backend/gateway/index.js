@@ -358,7 +358,9 @@ app.delete("/api/v1/users/:userId", verifyToken, requireAdmin, (req, res) => {
 app.get("/api/v1/projects", (req, res) => {
   const limit = parseInt(req.query.limit) || 50;
   const offset = parseInt(req.query.offset) || 0;
-  const status = req.query.status || "";
+  const rawStatus = req.query.status || "";
+  // Frontend uses "pending"; Firestore stores it as "draft" — translate inbound
+  const status = rawStatus === "pending" ? "draft" : rawStatus;
   const domain = req.query.domain || "";
   const techStack = req.query.techStack?.split(",") || [];
   const ownerId = req.query.ownerId || "";
@@ -611,8 +613,44 @@ app.put("/api/v1/projects/:projectId", verifyToken, (req, res) => {
   );
 });
 
-app.delete("/api/v1/projects/:projectId", verifyToken, (req, res) => {
+// Admin: approve / reject / reset a project
+app.post("/api/v1/admin/projects/:projectId/review", verifyToken, requireAdmin, async (req, res) => {
   const { projectId } = req.params;
+  const { action } = req.body;
+
+  if (!["approve", "reject", "pending"].includes(action)) {
+    return res.status(400).json({ success: false, message: "action must be approve, reject, or pending" });
+  }
+
+  const statusMap = { approve: "approved", reject: "rejected", pending: "draft" };
+  const newStatus = statusMap[action];
+
+  try {
+    await db.collection("projects").doc(projectId).update({
+      status: newStatus,
+      isApproved: newStatus === "approved",
+      updatedAt: Date.now(),
+    });
+    res.status(200).json({ success: true, message: `Project ${action}d successfully` });
+  } catch (error) {
+    console.error("Review project error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.delete("/api/v1/projects/:projectId", verifyToken, async (req, res) => {
+  const { projectId } = req.params;
+
+  // Admins bypass ownership check and delete directly
+  if (req.user.role === "admin") {
+    try {
+      await db.collection("projects").doc(projectId).delete();
+      return res.status(200).json({ success: true, message: "Project deleted successfully" });
+    } catch (error) {
+      console.error("Admin delete project error:", error);
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
 
   projectClient.deleteProject(
     { project_id: projectId, user_id: req.user.uid },
@@ -1114,6 +1152,59 @@ app.get("/api/v1/admin/analytics", verifyToken, requireAdmin, (req, res) => {
       ...response,
     });
   });
+});
+
+// Public platform stats (no auth required) - for homepage statistics
+app.get("/api/v1/stats", async (req, res) => {
+  try {
+    const [projectsSnap, usersSnap, eventsSnap] = await Promise.all([
+      db.collection("projects").where("isDeleted", "==", false).get(),
+      db.collection("users").get(),
+      db.collection("events").get(),
+    ]);
+
+    const activeDomains = new Set();
+    projectsSnap.forEach((doc) => {
+      const domain = doc.data().domain;
+      if (domain) activeDomains.add(domain);
+    });
+
+    res.status(200).json({
+      success: true,
+      summary: {
+        totalProjects: projectsSnap.size,
+        totalUsers: usersSnap.size,
+        activeDomains: activeDomains.size,
+        totalEvents: eventsSnap.size,
+      },
+    });
+  } catch (error) {
+    console.error("Public stats error:", error);
+    res.status(500).json({ success: false, error: "Failed to fetch stats" });
+  }
+});
+
+// Public tech stacks (no auth required) - all unique tech stacks used in projects
+app.get("/api/v1/techstacks", async (req, res) => {
+  try {
+    const projectsSnap = await db
+      .collection("projects")
+      .where("isDeleted", "==", false)
+      .get();
+
+    const techSet = new Set();
+    projectsSnap.forEach((doc) => {
+      (doc.data().techStack || []).forEach((t) => {
+        if (t) techSet.add(t);
+      });
+    });
+
+    const techStacks = Array.from(techSet).sort();
+    res.status(200).json({ success: true, techStacks });
+  } catch (error) {
+    console.error("Tech stacks error:", error);
+    res.status(500).json({ success: false, error: "Failed to fetch tech stacks" });
+  }
 });
 
 // Public domain statistics (no auth required) - calculated directly from Firestore

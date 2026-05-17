@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { projectsAPI, tagsAPI, assetsAPI } from '@/services/api';
+import { projectsAPI, tagsAPI, techStacksAPI, assetsAPI, usersAPI } from '@/services/api';
 import { toast } from 'sonner';
-import { Plus, X, Loader2, Save, Upload, Info, CheckCircle2, Edit } from 'lucide-react';
+import { Plus, X, Loader2, Save, Upload, Info, CheckCircle2, Edit, Search, UserPlus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,7 @@ export default function ProjectForm({ initialData = null, projectId = null, isAd
         title: initialData?.title || '',
         description: initialData?.description || '',
         techStack: initialData?.techStack || [],
+        contributors: initialData?.contributors || [],
         githubUrl: initialData?.githubUrl || '',
         demoUrl: initialData?.demoUrl || '',
         domain: initialData?.domain || '',
@@ -32,32 +33,81 @@ export default function ProjectForm({ initialData = null, projectId = null, isAd
     const [techInput, setTechInput] = useState('');
     const [files, setFiles] = useState([]);
     const [uploadProgress, setUploadProgress] = useState({});
-    const [availableTags, setAvailableTags] = useState([
-        { id: 'default1', name: 'Web Dev' },
-        { id: 'default2', name: 'Machine Learning' },
-        { id: 'default3', name: 'App Dev' },
-        { id: 'default4', name: 'Blockchain' },
-        { id: 'default5', name: 'Cybersecurity' },
-        { id: 'default6', name: 'Cloud Computing' },
-        { id: 'default7', name: 'UI/UX Design' },
-    ]);
+    const [availableTags, setAvailableTags] = useState([]);
     const [mounted, setMounted] = useState(false);
+
+    // Contributor search state
+    const [contributorSearch, setContributorSearch] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [searchLoading, setSearchLoading] = useState(false);
+    const [searchFocused, setSearchFocused] = useState(false);
 
     useEffect(() => {
         setMounted(true);
-        // Fetch tags for suggestions
-        const fetchTags = async () => {
+        const fetchTechStacks = async () => {
             try {
-                const response = await tagsAPI.getAll();
-                if (response?.data?.tags && response.data.tags.length > 0) {
-                    setAvailableTags(response.data.tags);
-                }
+                const [techRes, tagsRes] = await Promise.all([
+                    techStacksAPI.getAll(),
+                    tagsAPI.getAll(),
+                ]);
+                const fromProjects = (techRes?.data?.techStacks || []).map((name, i) => ({ id: `ts-${i}`, name }));
+                const fromTags = tagsRes?.data?.tags || [];
+                const merged = new Map();
+                [...fromProjects, ...fromTags].forEach((t) => merged.set(t.name, t));
+                setAvailableTags(Array.from(merged.values()));
             } catch (err) {
-                console.error('Failed to fetch tags', err);
+                console.error('Failed to fetch tech stacks', err);
             }
         };
-        fetchTags();
+        fetchTechStacks();
     }, []);
+
+    // Search contributors (contributor + admin roles only)
+    useEffect(() => {
+        if (!contributorSearch.trim()) { setSearchResults([]); return; }
+        const timeout = setTimeout(async () => {
+            setSearchLoading(true);
+            try {
+                const [contribRes, adminRes] = await Promise.all([
+                    usersAPI.getAll({ role: 'contributor', limit: 50 }),
+                    usersAPI.getAll({ role: 'admin', limit: 50 }),
+                ]);
+                const all = [
+                    ...(contribRes?.data?.users || []),
+                    ...(adminRes?.data?.users || []),
+                ];
+                const query = contributorSearch.toLowerCase();
+                const filtered = all.filter(u =>
+                    (u.name?.toLowerCase().includes(query) || u.email?.toLowerCase().includes(query)) &&
+                    !formData.contributors.includes(u.uid)
+                );
+                setSearchResults(filtered);
+            } catch (err) {
+                console.error('Failed to search contributors', err);
+            } finally {
+                setSearchLoading(false);
+            }
+        }, 300);
+        return () => clearTimeout(timeout);
+    }, [contributorSearch, formData.contributors]);
+
+    const addContributor = (user) => {
+        setFormData(prev => ({ ...prev, contributors: [...prev.contributors, user.uid] }));
+        setSearchResults(prev => prev.filter(u => u.uid !== user.uid));
+        setContributorSearch('');
+        setSearchFocused(false);
+        // store display info alongside uid
+        setSelectedContributors(prev => [...prev, user]);
+    };
+
+    const removeContributor = (uid) => {
+        setFormData(prev => ({ ...prev, contributors: prev.contributors.filter(id => id !== uid) }));
+        setSelectedContributors(prev => prev.filter(u => u.uid !== uid));
+    };
+
+    const [selectedContributors, setSelectedContributors] = useState(
+        (initialData?.contributorsList || []).map(c => ({ uid: c.uid || c.id, name: c.name, avatar: c.avatar }))
+    );
 
     // Create mutation
     const createMutation = useMutation({
@@ -128,6 +178,7 @@ export default function ProjectForm({ initialData = null, projectId = null, isAd
             title: formData.title.trim(),
             description: formData.description.trim(),
             techStack: formData.techStack,
+            contributors: formData.contributors,
             githubUrl: formData.githubUrl.trim(),
             demoUrl: formData.demoUrl.trim(),
             domain: formData.domain,
@@ -321,7 +372,6 @@ export default function ProjectForm({ initialData = null, projectId = null, isAd
                                     <div className="flex flex-wrap gap-2">
                                         {availableTags
                                             .filter(tag => !formData.techStack.includes(tag.name))
-                                            .slice(0, 10)
                                             .map(tag => (
                                                 <button
                                                     key={tag.id}
@@ -338,10 +388,86 @@ export default function ProjectForm({ initialData = null, projectId = null, isAd
                         </div>
                     </div>
 
-                    {/* section 3: Links & Media */}
+                    {/* section 3: Contributors */}
                     <div className="space-y-6">
                         <h3 className="text-xl font-bold flex items-center gap-2">
                             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-acm-blue text-[10px] text-white">3</span>
+                            Contributors
+                        </h3>
+
+                        <div className="space-y-4">
+                            {/* Search input */}
+                            <div className="relative">
+                                <div className="relative flex items-center">
+                                    <Search className="absolute left-4 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                    <Input
+                                        value={contributorSearch}
+                                        onChange={(e) => setContributorSearch(e.target.value)}
+                                        onFocus={() => setSearchFocused(true)}
+                                        onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
+                                        placeholder="Search members by name or email..."
+                                        className="h-12 rounded-2xl border-border/50 bg-muted/20 pl-10"
+                                    />
+                                    {searchLoading && <Loader2 className="absolute right-4 h-4 w-4 animate-spin text-muted-foreground" />}
+                                </div>
+
+                                {/* Dropdown results */}
+                                {searchFocused && searchResults.length > 0 && (
+                                    <div className="absolute z-50 mt-2 w-full rounded-2xl border border-border/50 bg-card shadow-xl overflow-hidden">
+                                        {searchResults.map(user => (
+                                            <button
+                                                key={user.uid}
+                                                type="button"
+                                                onMouseDown={() => addContributor(user)}
+                                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-acm-blue/5 transition-colors text-left"
+                                            >
+                                                <div className="h-8 w-8 rounded-xl bg-acm-blue/20 flex items-center justify-center flex-shrink-0 font-black text-acm-blue text-sm">
+                                                    {(user.name || user.email || '?').charAt(0).toUpperCase()}
+                                                </div>
+                                                <div className="flex flex-col min-w-0">
+                                                    <span className="text-sm font-bold text-foreground truncate">{user.name || 'Unnamed'}</span>
+                                                    <span className="text-xs text-muted-foreground truncate">{user.email}</span>
+                                                </div>
+                                                <span className={`ml-auto text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${user.role === 'admin' ? 'bg-amber-500/10 text-amber-500' : 'bg-green-500/10 text-green-500'}`}>
+                                                    {user.role}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                                {searchFocused && contributorSearch.trim() && !searchLoading && searchResults.length === 0 && (
+                                    <div className="absolute z-50 mt-2 w-full rounded-2xl border border-border/50 bg-card shadow-xl px-4 py-3 text-sm text-muted-foreground">
+                                        No contributors or admins found.
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Selected contributors */}
+                            <div className="min-h-[60px] rounded-3xl border border-dashed border-border/50 p-4 flex flex-wrap gap-2 items-center bg-muted/5">
+                                {selectedContributors.length === 0 ? (
+                                    <span className="text-xs text-muted-foreground uppercase font-black tracking-widest pl-2">No contributors added yet</span>
+                                ) : (
+                                    selectedContributors.map(user => (
+                                        <Badge
+                                            key={user.uid}
+                                            className="bg-green-600/80 text-white hover:bg-green-700 gap-1.5 px-3 py-1.5 rounded-xl border-none shadow-sm animate-in zoom-in-50 duration-200"
+                                        >
+                                            <UserPlus className="h-3 w-3" />
+                                            {user.name || user.email}
+                                            <button type="button" onClick={() => removeContributor(user.uid)} className="hover:text-black">
+                                                <X className="h-3 w-3" />
+                                            </button>
+                                        </Badge>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* section 4: Links & Media */}
+                    <div className="space-y-6">
+                        <h3 className="text-xl font-bold flex items-center gap-2">
+                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-acm-blue text-[10px] text-white">4</span>
                             Assets & Links
                         </h3>
 

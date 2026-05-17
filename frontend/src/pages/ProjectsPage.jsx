@@ -20,7 +20,7 @@ function ProjectsContent() {
     const status = searchParams.get("status") || "";
     const techStack = searchParams.get("tech") || "";
     const domain = searchParams.get("domain") || "";
-    const limit = parseInt(searchParams.get("limit")) || 20;
+    const limit = parseInt(searchParams.get("limit")) || 100;
 
     const { data: projectsData, isLoading, isError, refetch } = useQuery({
         queryKey: ["projects", { status, techStack, domain, limit }],
@@ -32,7 +32,9 @@ function ProjectsContent() {
         queryFn: () => tagsAPI.getAll(),
     });
 
-    const projects = projectsData?.data?.projects || [];
+    const projects = (projectsData?.data?.projects || [])
+        .slice()
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     const tags = tagsData?.data?.tags || [];
 
     const handleFilterChange = (key, value) => {
