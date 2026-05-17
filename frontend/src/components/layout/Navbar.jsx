@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
-import { useTheme } from "@/hooks/useTheme";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
-    Sun, Moon, Menu, X, FolderOpen, Shield, Search,
+    Menu, X, FolderOpen, Shield, Search,
     PlusCircle, LogIn, User as UserIcon, Users, Home,
     FolderGit2
 } from "lucide-react";
@@ -21,7 +20,6 @@ const navItems = [
     { label: "Home", href: "/", icon: Home },
     { label: "Archive", href: "/projects", icon: FolderOpen },
     { label: "Members", href: "/members", icon: Users },
-    { label: "Domains", href: "/domains", icon: Shield },
     { label: "Search", href: "/search", icon: Search },
 ];
 
@@ -33,7 +31,6 @@ const ROLE_BADGE_STYLES = {
 };
 
 export default function Navbar() {
-    const { theme, toggleTheme } = useTheme();
     const { user, logout, isAuthenticated, canCreateProjects } = useAuthStore();
     const navigate = useNavigate();
     const [isScrolled, setIsScrolled] = useState(false);
@@ -90,23 +87,9 @@ export default function Navbar() {
                                     </Link>
                                 );
                             })}
-                            {user?.role === 'admin' && (
-                                <Link to="/admin" className="px-4 py-2 rounded-xl text-sm font-bold text-acm-blue hover:bg-acm-blue/10 transition-all flex items-center gap-2">
-                                    <Shield className="h-4 w-4" /> ADMIN
-                                </Link>
-                            )}
                         </nav>
 
                         <div className="flex items-center gap-2">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={toggleTheme}
-                                className="w-10 h-10 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-border/50"
-                            >
-                                {theme === "dark" ? <Moon className="h-4 w-4 text-acm-blue" /> : <Sun className="h-4 w-4 text-amber-500" />}
-                            </Button>
-
                             <Separator orientation="vertical" className="h-6 bg-border/50 mx-2 hidden md:block" />
 
                             {user ? (

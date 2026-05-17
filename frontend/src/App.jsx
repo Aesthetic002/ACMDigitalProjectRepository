@@ -12,20 +12,14 @@ import SearchPage from '@/pages/SearchPage';
 import CreateProjectPage from '@/pages/CreateProjectPage';
 import ProfilePage from '@/pages/ProfilePage';
 import EditProjectPage from '@/pages/EditProjectPage';
-import AdminPage from '@/pages/AdminPage';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
-import CreateEventPage from '@/pages/CreateEventPage';
 import MembersPage from '@/pages/MembersPage';
-import DomainsPage from '@/pages/DomainsPage';
-import AdminModerationPage from '@/pages/AdminModerationPage';
-import AdminPreAddPage from '@/pages/AdminPreAddPage';
 import AdminMembersPage from '@/pages/AdminMembersPage';
 import AdminMemberProfilePage from '@/pages/AdminMemberProfilePage';
 import MemberProfilePage from '@/pages/MemberProfilePage';
 import AdminProjectsPage from '@/pages/AdminProjectsPage';
 import AdminProjectDetailPage from '@/pages/AdminProjectDetailPage';
-import AdminDomainsPage from '@/pages/AdminDomainsPage';
 import AdminLayout from '@/components/AdminLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import BigBangAnimation from '@/components/BigBangAnimation';
@@ -69,9 +63,6 @@ function RootApp() {
                         <Route path="/members/:uid" element={
                             <ProtectedRoute><MemberProfilePage /></ProtectedRoute>
                         } />
-                        <Route path="/domains" element={
-                            <ProtectedRoute><DomainsPage /></ProtectedRoute>
-                        } />
                         <Route path="/search" element={
                             <ProtectedRoute><SearchPage /></ProtectedRoute>
                         } />
@@ -89,15 +80,11 @@ function RootApp() {
                                 <AdminLayout />
                             </ProtectedRoute>
                         }>
-                            <Route index element={<AdminPage />} />
+                            <Route index element={<Navigate to="members" replace />} />
                             <Route path="members" element={<AdminMembersPage />} />
                             <Route path="members/:uid" element={<AdminMemberProfilePage />} />
                             <Route path="projects" element={<AdminProjectsPage />} />
                             <Route path="projects/:id" element={<AdminProjectDetailPage />} />
-                            <Route path="moderation" element={<AdminModerationPage />} />
-                            <Route path="pre-add" element={<AdminPreAddPage />} />
-                            <Route path="events/new" element={<CreateEventPage />} />
-                            <Route path="domains" element={<AdminDomainsPage />} />
                         </Route>
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>

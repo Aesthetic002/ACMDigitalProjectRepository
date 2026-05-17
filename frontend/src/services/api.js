@@ -59,6 +59,14 @@ export const domainsAPI = {
     getStats: () => axiosInstance.get('/domains/stats'),
 };
 
+export const statsAPI = {
+    getPublic: () => axiosInstance.get('/stats'),
+};
+
+export const techStacksAPI = {
+    getAll: () => axiosInstance.get('/techstacks'),
+};
+
 // ── Comments ──────────────────────────────────────────────────────────────────
 
 export const commentsAPI = {
@@ -87,16 +95,6 @@ export const assetsAPI = {
     delete: (assetId) => axiosInstance.delete(`/assets/${assetId}`),
     deleteFromProject: (projectId, assetId) => 
         axiosInstance.delete(`/projects/${projectId}/assets/${assetId}`),
-};
-
-// ── Events ────────────────────────────────────────────────────────────────────
-
-export const eventsAPI = {
-    getAll: () => axiosInstance.get('/events'),
-    getById: (id) => axiosInstance.get(`/events/${id}`),
-    create: (data) => axiosInstance.post('/events', data),
-    update: (id, data) => axiosInstance.put(`/events/${id}`, data),
-    delete: (id) => axiosInstance.delete(`/events/${id}`),
 };
 
 // ── Search ────────────────────────────────────────────────────────────────────

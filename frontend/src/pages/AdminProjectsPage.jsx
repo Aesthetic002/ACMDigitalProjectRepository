@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { projectsAPI, adminAPI } from "@/services/api";
 import {
-    FolderPlus, Search, Trash2, CheckCircle2, XCircle,
+    Search, Trash2, CheckCircle2, XCircle,
     Clock, FolderGit2, RotateCcw, Filter, Loader2, Eye
 } from "lucide-react";
 import Loader from "@/components/common/Loader";
@@ -96,13 +96,13 @@ export default function AdminProjectsPage() {
         try {
             const res = await projectsAPI.delete(id);
             if (res.data?.success || res === true) {
-                toast.success(`"${project?.title || id}" archived`);
+                toast.success(`"${project?.title || id}" deleted`);
             }
         } catch (error) {
             console.error("Failed to delete project:", error);
             // Rollback on failure
             setProjects(prev => [...prev, project]);
-            toast.error(error.response?.data?.message || "Failed to archive project");
+            toast.error(error.response?.data?.message || "Failed to delete project");
         }
     };
 
@@ -113,11 +113,6 @@ export default function AdminProjectsPage() {
                     <h1 className="text-3xl font-black tracking-tight uppercase italic text-white underline decoration-amber-500 decoration-4 underline-offset-8">Global Repository</h1>
                     <p className="text-muted-foreground mt-1">Management console for all submitted projects.</p>
                 </div>
-                <Button asChild className="bg-amber-500 hover:bg-amber-600 rounded-xl font-bold px-6 shadow-lg shadow-amber-500/20 text-white">
-                    <Link to="/admin/pre-add" className="flex items-center gap-2">
-                        <FolderPlus className="h-4 w-4" /> ADD PROJECT
-                    </Link>
-                </Button>
             </div>
 
             <div className="flex flex-col md:flex-row gap-4">

@@ -1,14 +1,9 @@
 import { useNavigate, useLocation, Link, Outlet } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
 import {
-    LayoutDashboard,
     ShieldCheck,
-    PlusCircle,
-    Calendar,
-    Layers,
     LogOut,
     ChevronRight,
-    Search,
     Home,
     Users,
     FolderGit2
@@ -18,12 +13,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
 const sidebarItems = [
-    { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { label: "Members", href: "/admin/members", icon: Users },
     { label: "Projects", href: "/admin/projects", icon: FolderGit2 },
-    { label: "Pre-add Project", href: "/admin/pre-add", icon: PlusCircle },
-    { label: "Events", href: "/admin/events/new", icon: Calendar },
-    { label: "Domains", href: "/admin/domains", icon: Layers },
 ];
 
 export default function AdminLayout() {

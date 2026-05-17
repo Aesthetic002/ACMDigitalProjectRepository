@@ -20,7 +20,6 @@ export default function Footer() {
         ],
         chapter: [
             { label: "About ACM", href: "#" },
-            { label: "Events", href: "#" },
             { label: "Contact", href: "#" },
         ],
     };
